@@ -214,6 +214,8 @@ export class Game {
     this.randomAmbientAudio = new RandomAmbientAudio({
       tracks: CONFIG.audio.ambientTrackSrcs,
       volume: CONFIG.audio.ambientVolume,
+      minGapMs: CONFIG.audio.ambientMinGapMs,
+      maxGapMs: CONFIG.audio.ambientMaxGapMs,
     });
     this.comfortModel = new ComfortModel(CONFIG.comfort);
     this.trackSampler = new TrackSampler(this.trackSpline, CONFIG.minimap);

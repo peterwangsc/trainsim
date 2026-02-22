@@ -47,6 +47,8 @@ export const CONFIG = {
       "/ambient4.mp3",
     ],
     ambientVolume: 0.28,
+    ambientMinGapMs: 20_000,
+    ambientMaxGapMs: 60_000,
   },
   track: {
     segmentCount: 640,
