@@ -5,19 +5,30 @@ import {
   BufferGeometry,
   Color,
   DirectionalLight,
+  DynamicDrawUsage,
   Fog,
   HemisphereLight,
+  InstancedBufferAttribute,
+  InstancedMesh,
   MathUtils,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
+  MeshLambertMaterial,
   Object3D,
   OrthographicCamera,
+  PlaneGeometry,
   PerspectiveCamera,
   Points,
-  PointsMaterial,
+  Quaternion,
+  REVISION,
+  SRGBColorSpace,
   Scene,
   ShaderMaterial,
   SphereGeometry,
+  Spherical,
+  Texture,
+  TextureLoader,
   Vector3,
 } from "three";
 import { Sky } from "three/examples/jsm/objects/Sky.js";
@@ -25,9 +36,14 @@ import { Sky } from "three/examples/jsm/objects/Sky.js";
 const DEFAULT_DAY_CYCLE_DURATION_SECONDS = 300;
 const SUN_CYCLE_PHASE_OFFSET_RADIANS = Math.PI * 1.95;
 
-const SKY_DOME_SCALE = 9500;
-const STAR_FIELD_RADIUS = 2000;
-const STAR_COUNT = 1300;
+const SKY_DOME_SCALE = 16000;
+const STAR_RADIUS = 820;
+const STAR_DEPTH = 560;
+const STAR_COUNT = 5000;
+const STAR_SATURATION = 0;
+const STAR_SIZE_FACTOR = 24;
+const STAR_TWINKLE_SPEED = 1;
+const STAR_SOFT_FADE = true;
 
 const SUN_ORBIT_RADIUS = 700;
 const SUN_ORBIT_Z_OFFSET = 180;
@@ -62,6 +78,27 @@ const SKY_CLOUD_DENSITY_DAY = 0.28;
 const SKY_CLOUD_DENSITY_TWILIGHT = 0.62;
 const SKY_CLOUD_ELEVATION_DAY = 0.56;
 const SKY_CLOUD_ELEVATION_NIGHT = 0.44;
+const CLOUD_TEXTURE_URL = "/cloud.png";
+const CLOUD_SPRITE_LIMIT = 90;
+const CLOUD_LAYER_RADIUS = 540;
+const CLOUD_WRAP_RADIUS = 620;
+const CLOUD_FADE_RADIUS = 760;
+const CLOUD_ALTITUDE_MIN = 180;
+const CLOUD_ALTITUDE_VARIATION = 220;
+const CLOUD_VOLUME_MIN = 74;
+const CLOUD_VOLUME_MAX = 180;
+const CLOUD_GROWTH_MIN = 18;
+const CLOUD_GROWTH_MAX = 54;
+const CLOUD_DENSITY_MIN = 0.24;
+const CLOUD_DENSITY_MAX = 0.82;
+const CLOUD_DRIFT_SPEED_MIN = 1.4;
+const CLOUD_DRIFT_SPEED_MAX = 6.1;
+const CLOUD_ROTATION_FACTOR_MIN = -0.1;
+const CLOUD_ROTATION_FACTOR_MAX = 0.1;
+const CLOUD_OPACITY_MIN = 0.23;
+const CLOUD_OPACITY_MAX = 0.58;
+const CLOUD_BRIGHTNESS_MIN = 0.84;
+const CLOUD_BRIGHTNESS_MAX = 1.18;
 
 const SUN_LIGHT_DAY_INTENSITY = 5.55;
 const SUN_SHADOW_ENABLE_THRESHOLD = 0.1;
@@ -91,8 +128,93 @@ type SkyUniforms = {
   cloudCoverage: { value: number };
   cloudDensity: { value: number };
   cloudElevation: { value: number };
+  cloudNightFactor: { value: number };
   time: { value: number };
 };
+
+type SpriteCloudInstance = {
+  matrix: Matrix4;
+  position: Vector3;
+  driftDirection: Vector3;
+  driftSpeed: number;
+  rotation: number;
+  rotationFactor: number;
+  volume: number;
+  growth: number;
+  density: number;
+  opacity: number;
+  brightness: number;
+  dist: number;
+};
+
+type SpriteCloudLayer = {
+  mesh: InstancedMesh<PlaneGeometry, MeshLambertMaterial>;
+  material: MeshLambertMaterial;
+  texture: Texture;
+  opacities: Float32Array;
+  opacityAttribute: InstancedBufferAttribute;
+  instances: SpriteCloudInstance[];
+};
+
+type StarfieldUniforms = {
+  time: { value: number };
+  fade: { value: number };
+  alpha: { value: number };
+};
+
+class StarfieldMaterial extends ShaderMaterial {
+  declare uniforms: StarfieldUniforms;
+
+  constructor(fade: boolean) {
+    const colorSpaceInclude =
+      Number.parseInt(REVISION.replace(/\D+/g, ""), 10) >= 154
+        ? "colorspace_fragment"
+        : "encodings_fragment";
+
+    super({
+      uniforms: {
+        time: { value: 0 },
+        fade: { value: fade ? 1 : 0 },
+        alpha: { value: 1 },
+      },
+      vertexShader: /* glsl */ `
+uniform float time;
+attribute float size;
+varying vec3 vColor;
+
+void main() {
+  vColor = color;
+  vec4 mvPosition = modelViewMatrix * vec4(position, 0.5);
+  gl_PointSize = size * (30.0 / -mvPosition.z) * (3.0 + sin(time + 100.0));
+  gl_Position = projectionMatrix * mvPosition;
+}
+`,
+      fragmentShader: /* glsl */ `
+uniform float fade;
+uniform float alpha;
+varying vec3 vColor;
+
+void main() {
+  float opacity = 1.0;
+  if (fade == 1.0) {
+    float d = distance(gl_PointCoord, vec2(0.5, 0.5));
+    opacity = 1.0 / (1.0 + exp(16.0 * (d - 0.25)));
+  }
+
+  gl_FragColor = vec4(vColor, opacity * alpha);
+
+  #include <tonemapping_fragment>
+  #include <${colorSpaceInclude}>
+}
+`,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      transparent: true,
+      vertexColors: true,
+      fog: false,
+    });
+  }
+}
 
 export class DayNightSky {
   readonly ambientLight: AmbientLight;
@@ -114,6 +236,9 @@ export class DayNightSky {
   private readonly dayAmbientColor = new Color("#cfe0ff");
   private readonly twilightAmbientColor = new Color("#b49ab6");
   private readonly nightAmbientColor = new Color("#1d2f54");
+  private readonly cloudDayColor = new Color("#f4f7ff");
+  private readonly cloudTwilightColor = new Color("#ffe0c2");
+  private readonly cloudNightColor = new Color("#8a9fca");
   private readonly moonLowColor = new Color("#92aad8");
   private readonly moonHighColor = new Color("#d4e1ff");
 
@@ -123,7 +248,8 @@ export class DayNightSky {
   private readonly skyUniforms: SkyUniforms;
 
   private readonly stars: Points;
-  private readonly starsMaterial: PointsMaterial;
+  private readonly starsMaterial: StarfieldMaterial;
+  private readonly spriteCloudLayer: SpriteCloudLayer;
 
   private readonly sunMesh: Mesh;
   private readonly sunMaterial: MeshBasicMaterial;
@@ -147,6 +273,12 @@ export class DayNightSky {
   private readonly hemisphereGroundColor = new Color();
   private readonly ambientColor = new Color();
   private readonly moonLightColor = new Color();
+  private readonly cloudColor = new Color();
+  private readonly cloudInstanceColor = new Color();
+  private readonly cloudBillboardQuaternion = new Quaternion();
+  private readonly cloudSpinQuaternion = new Quaternion();
+  private readonly cloudScale = new Vector3();
+  private readonly cloudForward = new Vector3(0, 0, 1);
   private sunShadowHalfExtent = SUN_SHADOW_FRUSTUM_HALF_EXTENT_MIN;
   private sunShadowFar = SUN_SHADOW_CAMERA_FAR_MIN;
 
@@ -176,12 +308,16 @@ export class DayNightSky {
     this.skyUniforms.cloudCoverage.value = 0.4;
     this.skyUniforms.cloudDensity.value = 0.45;
     this.skyUniforms.cloudElevation.value = 0.5;
+    this.skyUniforms.cloudNightFactor.value = 0;
     this.skyUniforms.time.value = 0;
     this.scene.add(this.sky);
 
     this.stars = this.createStarField();
-    this.starsMaterial = this.stars.material as PointsMaterial;
+    this.starsMaterial = this.stars.material as StarfieldMaterial;
     this.scene.add(this.stars);
+
+    this.spriteCloudLayer = this.createSpriteCloudLayer();
+    this.scene.add(this.spriteCloudLayer.mesh);
 
     this.sunMaterial = new MeshBasicMaterial({
       color: "#ffe2a7",
@@ -281,6 +417,8 @@ export class DayNightSky {
     this.lightAnchor.copy(camera.position);
     this.sky.position.copy(this.lightAnchor);
     this.stars.position.copy(this.lightAnchor);
+    this.starsMaterial.uniforms.time.value =
+      this.elapsedSeconds * STAR_TWINKLE_SPEED;
 
     this.sunOffset.set(
       Math.cos(angle) * SUN_ORBIT_RADIUS,
@@ -289,8 +427,8 @@ export class DayNightSky {
     );
 
     const sunHeight = this.sunOffset.y / SUN_ORBIT_RADIUS;
-    const dayFactor = MathUtils.smoothstep(sunHeight, -0.02, 0.12);
-    const nightFactor = 1 - MathUtils.smoothstep(sunHeight, -0.02, 0.08);
+    const dayFactor = MathUtils.smoothstep(sunHeight, -0.02, 0.08);
+    const nightFactor = 1 - MathUtils.smoothstep(sunHeight, -0.04, 0.18);
     this.nightFactor = nightFactor;
     const twilightFactor = 1 - Math.abs(dayFactor * 2 - 1);
     const deepNightFactor = MathUtils.smoothstep(nightFactor, 0.62, 1);
@@ -298,6 +436,7 @@ export class DayNightSky {
 
     this.sunDirection.copy(this.sunOffset).normalize();
     this.moonDirection.copy(this.sunDirection).multiplyScalar(-1);
+    this.updateSpriteClouds(dt, camera, dayFactor, twilightFactor, nightFactor);
 
     this.uniformSunPosition
       .copy(this.sunDirection)
@@ -310,7 +449,7 @@ export class DayNightSky {
     this.skyUniforms.rayleigh.value =
       MathUtils.lerp(0.5, 3.5, nightFactor) * deepNightScatteringDarken;
     this.skyUniforms.mieCoefficient.value =
-      MathUtils.lerp(0.00001, 0.007, nightFactor) * deepNightScatteringDarken;
+      MathUtils.lerp(0.00001, 0.65, nightFactor) * deepNightScatteringDarken;
     this.skyUniforms.mieDirectionalG.value = MathUtils.lerp(
       0.05,
       0.7,
@@ -330,6 +469,11 @@ export class DayNightSky {
       SKY_CLOUD_ELEVATION_NIGHT,
       SKY_CLOUD_ELEVATION_DAY,
       dayFactor,
+    );
+    this.skyUniforms.cloudNightFactor.value = MathUtils.smoothstep(
+      nightFactor,
+      0.22,
+      0.86,
     );
     this.skyUniforms.time.value = this.elapsedSeconds * SKY_CLOUD_TIME_SCALE;
 
@@ -449,7 +593,7 @@ export class DayNightSky {
     this.moonHaloMaterial.opacity = 0.52 * moonGlowFactor;
 
     this.stars.visible = nightFactor > 0.01;
-    this.starsMaterial.opacity = nightFactor * 0.95;
+    this.starsMaterial.uniforms.alpha.value = nightFactor * 0.95;
 
     const twilightWarmth = twilightFactor * (1 - nightFactor * 0.45);
     this.hemisphereSkyColor.lerpColors(
@@ -516,6 +660,7 @@ export class DayNightSky {
     this.scene.remove(
       this.sky,
       this.stars,
+      this.spriteCloudLayer.mesh,
       this.sunMesh,
       this.moonMesh,
       this.moonHalo,
@@ -531,6 +676,9 @@ export class DayNightSky {
     this.skyMaterial.dispose();
     this.stars.geometry.dispose();
     this.starsMaterial.dispose();
+    this.spriteCloudLayer.mesh.geometry.dispose();
+    this.spriteCloudLayer.material.dispose();
+    this.spriteCloudLayer.texture.dispose();
     this.sunMesh.geometry.dispose();
     this.sunMaterial.dispose();
     this.moonMesh.geometry.dispose();
@@ -547,6 +695,7 @@ export class DayNightSky {
     uniforms.cloudCoverage ??= { value: 0.4 };
     uniforms.cloudDensity ??= { value: 0.4 };
     uniforms.cloudElevation ??= { value: 0.5 };
+    uniforms.cloudNightFactor ??= { value: 0 };
     uniforms.time ??= { value: 0 };
 
     const hasCloudUniformsInShader =
@@ -556,6 +705,9 @@ export class DayNightSky {
       this.skyMaterial.fragmentShader.includes("uniform float cloudDensity;") &&
       this.skyMaterial.fragmentShader.includes(
         "uniform float cloudElevation;",
+      ) &&
+      this.skyMaterial.fragmentShader.includes(
+        "uniform float cloudNightFactor;",
       ) &&
       this.skyMaterial.fragmentShader.includes("uniform float time;");
 
@@ -571,6 +723,7 @@ export class DayNightSky {
 		uniform float cloudCoverage;
 		uniform float cloudDensity;
 		uniform float cloudElevation;
+		uniform float cloudNightFactor;
 		uniform float time;`,
     );
 
@@ -622,22 +775,252 @@ export class DayNightSky {
 			);
 			float horizonMask = smoothstep( cloudElevation - 0.28, cloudElevation + 0.35, uv.y );
 			float cloudMask = cloudShape * horizonMask;
-			vec3 cloudTint = mix(
-				vec3( 1.0 ),
-				vec3( 1.25, 0.72, 0.42 ),
-				clamp( 1.0 - direction.y * 1.4, 0.0, 1.0 )
-			);
-			texColor = mix( texColor, texColor * 0.6 + cloudTint * 0.08, cloudMask * cloudDensity );`,
+				vec3 cloudTintDay = mix(
+					vec3( 1.0 ),
+					vec3( 1.25, 0.72, 0.42 ),
+					clamp( 1.0 - direction.y * 1.4, 0.0, 1.0 )
+				);
+				vec3 cloudTintNight = mix(
+					vec3( 0.74, 0.81, 0.95 ),
+					vec3( 0.58, 0.66, 0.8 ),
+					clamp( 1.0 - direction.y * 1.2, 0.0, 1.0 )
+				);
+				vec3 cloudTint = mix( cloudTintDay, cloudTintNight, cloudNightFactor );
+				float cloudDensityMix = cloudDensity * mix( 1.0, 0.35, cloudNightFactor );
+				float cloudDarken = mix( 0.6, 0.78, cloudNightFactor );
+				float cloudTintStrength = mix( 0.08, 0.03, cloudNightFactor );
+				texColor = mix(
+					texColor,
+					texColor * cloudDarken + cloudTint * cloudTintStrength,
+					cloudMask * cloudDensityMix
+				);`,
     );
 
     this.skyMaterial.fragmentShader = fragmentShader;
     this.skyMaterial.needsUpdate = true;
   }
 
-  private updateSunShadowFrustum(
-    halfExtent: number,
-    far: number,
+  private createSpriteCloudLayer(): SpriteCloudLayer {
+    const texture = new TextureLoader().load(CLOUD_TEXTURE_URL);
+    texture.colorSpace = SRGBColorSpace;
+    texture.anisotropy = 4;
+
+    const geometry = new PlaneGeometry(1, 1);
+    const opacities = new Float32Array(CLOUD_SPRITE_LIMIT);
+    opacities.fill(1);
+    const opacityAttribute = new InstancedBufferAttribute(opacities, 1);
+    opacityAttribute.setUsage(DynamicDrawUsage);
+    geometry.setAttribute("cloudOpacity", opacityAttribute);
+
+    const material = new MeshLambertMaterial({
+      map: texture,
+      color: "#ffffff",
+      transparent: true,
+      depthWrite: false,
+      fog: false,
+    });
+    material.onBeforeCompile = (shader) => {
+      shader.vertexShader =
+        `attribute float cloudOpacity;
+varying float vCloudOpacity;
+` +
+        shader.vertexShader.replace(
+          "#include <fog_vertex>",
+          `#include <fog_vertex>
+vCloudOpacity = cloudOpacity;`,
+        );
+
+      let fragmentShader = shader.fragmentShader;
+      fragmentShader =
+        `varying float vCloudOpacity;
+` + fragmentShader;
+
+      if (fragmentShader.includes("#include <opaque_fragment>")) {
+        fragmentShader = fragmentShader.replace(
+          "#include <opaque_fragment>",
+          `#include <opaque_fragment>
+gl_FragColor = vec4( outgoingLight, diffuseColor.a * vCloudOpacity );`,
+        );
+      } else if (fragmentShader.includes("#include <output_fragment>")) {
+        fragmentShader = fragmentShader.replace(
+          "#include <output_fragment>",
+          `#include <output_fragment>
+gl_FragColor = vec4( outgoingLight, diffuseColor.a * vCloudOpacity );`,
+        );
+      }
+
+      shader.fragmentShader = fragmentShader;
+    };
+    material.needsUpdate = true;
+
+    const mesh = new InstancedMesh(geometry, material, CLOUD_SPRITE_LIMIT);
+    mesh.frustumCulled = false;
+    mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    const colors = new Float32Array(CLOUD_SPRITE_LIMIT * 3);
+    colors.fill(1);
+    mesh.instanceColor = new InstancedBufferAttribute(colors, 3);
+    mesh.instanceColor.setUsage(DynamicDrawUsage);
+
+    const instances: SpriteCloudInstance[] = [];
+    const initialQuaternion = new Quaternion();
+    const initialScale = new Vector3(1, 1, 1);
+    const initialColor = new Color("#ffffff");
+
+    for (let index = 0; index < CLOUD_SPRITE_LIMIT; index += 1) {
+      const ringAngle = Math.random() * Math.PI * 2;
+      const ringRadius = Math.sqrt(Math.random()) * CLOUD_LAYER_RADIUS;
+      const driftAngle = Math.random() * Math.PI * 2;
+      const cloud = {
+        matrix: new Matrix4(),
+        position: new Vector3(
+          Math.cos(ringAngle) * ringRadius,
+          CLOUD_ALTITUDE_MIN + Math.random() * CLOUD_ALTITUDE_VARIATION,
+          Math.sin(ringAngle) * ringRadius,
+        ),
+        driftDirection: new Vector3(
+          Math.cos(driftAngle),
+          0,
+          Math.sin(driftAngle),
+        ),
+        driftSpeed: this.randomRange(
+          CLOUD_DRIFT_SPEED_MIN,
+          CLOUD_DRIFT_SPEED_MAX,
+        ),
+        rotation: Math.random() * Math.PI * 2,
+        rotationFactor: this.randomRange(
+          CLOUD_ROTATION_FACTOR_MIN,
+          CLOUD_ROTATION_FACTOR_MAX,
+        ),
+        volume: this.randomRange(CLOUD_VOLUME_MIN, CLOUD_VOLUME_MAX),
+        growth: this.randomRange(CLOUD_GROWTH_MIN, CLOUD_GROWTH_MAX),
+        density: this.randomRange(CLOUD_DENSITY_MIN, CLOUD_DENSITY_MAX),
+        opacity: this.randomRange(CLOUD_OPACITY_MIN, CLOUD_OPACITY_MAX),
+        brightness: this.randomRange(
+          CLOUD_BRIGHTNESS_MIN,
+          CLOUD_BRIGHTNESS_MAX,
+        ),
+        dist: 0,
+      } satisfies SpriteCloudInstance;
+
+      cloud.matrix.compose(cloud.position, initialQuaternion, initialScale);
+      instances.push(cloud);
+      opacities[index] = cloud.opacity;
+      mesh.setMatrixAt(index, cloud.matrix);
+      mesh.setColorAt(index, initialColor);
+    }
+
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) {
+      mesh.instanceColor.needsUpdate = true;
+    }
+    opacityAttribute.needsUpdate = true;
+
+    return {
+      mesh,
+      material,
+      texture,
+      opacities,
+      opacityAttribute,
+      instances,
+    };
+  }
+
+  private updateSpriteClouds(
+    dt: number,
+    camera: PerspectiveCamera,
+    dayFactor: number,
+    twilightFactor: number,
+    nightFactor: number,
   ): void {
+    const cloudLayer = this.spriteCloudLayer;
+    const cloudMesh = cloudLayer.mesh;
+
+    cloudMesh.position.copy(this.lightAnchor);
+    cloudMesh.updateMatrixWorld();
+
+    this.cloudColor.lerpColors(
+      this.cloudDayColor,
+      this.cloudNightColor,
+      nightFactor,
+    );
+    this.cloudColor.lerp(this.cloudTwilightColor, twilightFactor * 0.5);
+
+    this.cloudBillboardQuaternion.copy(camera.quaternion);
+
+    for (let index = 0; index < cloudLayer.instances.length; index += 1) {
+      const cloud = cloudLayer.instances[index];
+      cloud.rotation += dt * cloud.rotationFactor;
+      cloud.position.addScaledVector(
+        cloud.driftDirection,
+        cloud.driftSpeed * dt,
+      );
+
+      const horizontalDistance = Math.hypot(cloud.position.x, cloud.position.z);
+      if (horizontalDistance > CLOUD_WRAP_RADIUS) {
+        const wrapAngle =
+          Math.atan2(cloud.position.z, cloud.position.x) + Math.PI;
+        const wrappedRadius = this.randomRange(
+          CLOUD_LAYER_RADIUS * 0.58,
+          CLOUD_LAYER_RADIUS * 0.95,
+        );
+        cloud.position.set(
+          Math.cos(wrapAngle) * wrappedRadius,
+          CLOUD_ALTITUDE_MIN + Math.random() * CLOUD_ALTITUDE_VARIATION,
+          Math.sin(wrapAngle) * wrappedRadius,
+        );
+      }
+
+      const cloudVolume =
+        cloud.volume +
+        (1 + Math.sin(this.elapsedSeconds * cloud.density)) *
+          0.5 *
+          cloud.growth;
+      this.cloudScale.setScalar(cloudVolume);
+      this.cloudSpinQuaternion
+        .setFromAxisAngle(this.cloudForward, cloud.rotation)
+        .premultiply(this.cloudBillboardQuaternion);
+      cloud.matrix.compose(
+        cloud.position,
+        this.cloudSpinQuaternion,
+        this.cloudScale,
+      );
+      cloud.dist = cloud.position.length();
+    }
+
+    cloudLayer.instances.sort((a, b) => b.dist - a.dist);
+    const dayVisibility = MathUtils.lerp(0.48, 0.92, dayFactor);
+    const nightVisibility = MathUtils.lerp(1, 0.62, nightFactor);
+
+    for (let index = 0; index < cloudLayer.instances.length; index += 1) {
+      const cloud = cloudLayer.instances[index];
+      const edgeFade =
+        1 -
+        MathUtils.smoothstep(
+          CLOUD_FADE_RADIUS * 0.72,
+          CLOUD_FADE_RADIUS,
+          cloud.dist,
+        );
+      cloudLayer.opacities[index] =
+        cloud.opacity * edgeFade * dayVisibility * nightVisibility;
+      cloudMesh.setMatrixAt(index, cloud.matrix);
+      this.cloudInstanceColor
+        .copy(this.cloudColor)
+        .multiplyScalar(cloud.brightness + twilightFactor * 0.06);
+      cloudMesh.setColorAt(index, this.cloudInstanceColor);
+    }
+
+    cloudLayer.opacityAttribute.needsUpdate = true;
+    cloudMesh.instanceMatrix.needsUpdate = true;
+    if (cloudMesh.instanceColor) {
+      cloudMesh.instanceColor.needsUpdate = true;
+    }
+  }
+
+  private randomRange(min: number, max: number): number {
+    return min + (max - min) * Math.random();
+  }
+
+  private updateSunShadowFrustum(halfExtent: number, far: number): void {
     const shouldUpdate =
       Math.abs(this.sunShadowHalfExtent - halfExtent) > 0.5 ||
       Math.abs(this.sunShadowFar - far) > 1;
@@ -658,31 +1041,41 @@ export class DayNightSky {
 
   private createStarField(): Points {
     const positions = new Float32Array(STAR_COUNT * 3);
+    const colors = new Float32Array(STAR_COUNT * 3);
+    const sizes = new Float32Array(STAR_COUNT);
+    const starColor = new Color();
+    const starPosition = new Vector3();
+    const spherical = new Spherical();
+    let radius = STAR_RADIUS + STAR_DEPTH;
+    const increment = STAR_DEPTH / STAR_COUNT;
 
     for (let i = 0; i < STAR_COUNT; i += 1) {
-      const azimuth = Math.random() * Math.PI * 2;
-      const y = MathUtils.lerp(-0.1, 1, Math.random());
-      const ring = Math.sqrt(1 - y * y);
-      const radius = STAR_FIELD_RADIUS * MathUtils.lerp(0.82, 1, Math.random());
+      radius -= increment * Math.random();
+      spherical.set(
+        radius,
+        Math.acos(1 - Math.random() * 2),
+        Math.random() * Math.PI * 2,
+      );
+      starPosition.setFromSpherical(spherical);
+      positions[i * 3] = starPosition.x;
+      positions[i * 3 + 1] = starPosition.y;
+      positions[i * 3 + 2] = starPosition.z;
 
-      positions[i * 3] = Math.cos(azimuth) * ring * radius;
-      positions[i * 3 + 1] = y * radius;
-      positions[i * 3 + 2] = Math.sin(azimuth) * ring * radius;
+      starColor.setHSL(i / STAR_COUNT, STAR_SATURATION, 0.9);
+      colors[i * 3] = starColor.r;
+      colors[i * 3 + 1] = starColor.g;
+      colors[i * 3 + 2] = starColor.b;
+
+      sizes[i] = (0.5 + 0.5 * Math.random()) * STAR_SIZE_FACTOR;
     }
 
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(positions, 3));
+    geometry.setAttribute("color", new BufferAttribute(colors, 3));
+    geometry.setAttribute("size", new BufferAttribute(sizes, 1));
 
-    const material = new PointsMaterial({
-      color: "#f7f8ff",
-      size: 1.5,
-      sizeAttenuation: false,
-      transparent: true,
-      opacity: 0,
-      depthWrite: false,
-      toneMapped: false,
-      fog: false,
-    });
+    const material = new StarfieldMaterial(STAR_SOFT_FADE);
+    material.uniforms.alpha.value = 0;
 
     const stars = new Points(geometry, material);
     stars.frustumCulled = false;

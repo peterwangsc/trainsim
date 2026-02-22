@@ -7,7 +7,7 @@ export const CONFIG = {
   camera: {
     fov: 64,
     near: 0.1,
-    far: 1500,
+    far: 16000,
     lookAheadDistance: 28,
     eyeHeight: 2.2,
     eyeBackOffset: 1.0,
@@ -36,7 +36,7 @@ export const CONFIG = {
   audio: {
     movementTrackSrcs: Array.from(
       { length: 12 },
-      (_, i) => `${ASSETS_CDN_BASE}/loops/tt${i + 1}.mp3`
+      (_, i) => `${ASSETS_CDN_BASE}/loops/tt${i + 1}.mp3`,
     ),
     movementThreshold: 0.0,
     minVolume: 0.0,
@@ -44,7 +44,7 @@ export const CONFIG = {
     movementReleaseFadeSeconds: 0.5,
     brakeTrackSrcs: Array.from(
       { length: 4 },
-      (_, i) => `${ASSETS_CDN_BASE}/loops/tb${i + 1}.mp3`
+      (_, i) => `${ASSETS_CDN_BASE}/loops/tb${i + 1}.mp3`,
     ),
     brakePressureThreshold: 0.02,
     brakeMinVolume: 0,
