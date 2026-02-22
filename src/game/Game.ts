@@ -1,29 +1,32 @@
-import { MathUtils, Object3D, Scene, SpotLight, Vector3 } from 'three';
-import { CONFIG } from './Config';
-import { GameLoop } from './GameLoop';
-import { GameState } from './GameState';
-import { ComfortModel } from '../sim/ComfortModel';
-import { TrackSampler } from '../sim/TrackSampler';
-import { TrainSim } from '../sim/TrainSim';
-import { DesktopControls } from '../input/DesktopControls';
-import { InputManager } from '../input/InputManager';
-import { CameraRig } from '../render/CameraRig';
-import { DayNightSky } from '../render/DayNightSky';
-import { Renderer } from '../render/Renderer';
-import { createScene } from '../render/SceneSetup';
-import { CabinChrome } from '../ui/CabinChrome';
-import { HudController } from '../ui/HudController';
-import { ThrottleOverlayCanvas } from '../ui/ThrottleOverlayCanvas';
-import { TrackGenerator } from '../world/Track/TrackGenerator';
-import { TrackMeshBuilder } from '../world/Track/TrackMeshBuilder';
-import { TrackSpline } from '../world/Track/TrackSpline';
-import { ForestLayer } from '../world/Foliage/ForestLayer';
-import { GrassLayer } from '../world/Foliage/GrassLayer';
-import { TerrainLayer } from '../world/Terrain/TerrainLayer';
-import { BirdFlock } from '../world/Fauna/BirdFlock';
-import type { CurvaturePreviewSample, MinimapPathPoint } from '../sim/TrackSampler';
-import { TrainMovementAudio } from '../audio/TrainMovementAudio';
-import { RandomAmbientAudio } from '../audio/RandomAmbientAudio';
+import { MathUtils, Object3D, Scene, SpotLight, Vector3 } from "three";
+import { CONFIG } from "./Config";
+import { GameLoop } from "./GameLoop";
+import { GameState } from "./GameState";
+import { ComfortModel } from "../sim/ComfortModel";
+import { TrackSampler } from "../sim/TrackSampler";
+import { TrainSim } from "../sim/TrainSim";
+import { DesktopControls } from "../input/DesktopControls";
+import { InputManager } from "../input/InputManager";
+import { CameraRig } from "../render/CameraRig";
+import { DayNightSky } from "../render/DayNightSky";
+import { Renderer } from "../render/Renderer";
+import { createScene } from "../render/SceneSetup";
+import { CabinChrome } from "../ui/CabinChrome";
+import { HudController } from "../ui/HudController";
+import { ThrottleOverlayCanvas } from "../ui/ThrottleOverlayCanvas";
+import { TrackGenerator } from "../world/Track/TrackGenerator";
+import { TrackMeshBuilder } from "../world/Track/TrackMeshBuilder";
+import { TrackSpline } from "../world/Track/TrackSpline";
+import { ForestLayer } from "../world/Foliage/ForestLayer";
+import { GrassLayer } from "../world/Foliage/GrassLayer";
+import { TerrainLayer } from "../world/Terrain/TerrainLayer";
+import { BirdFlock } from "../world/Fauna/BirdFlock";
+import type {
+  CurvaturePreviewSample,
+  MinimapPathPoint,
+} from "../sim/TrackSampler";
+import { TrainMovementAudio } from "../audio/TrainMovementAudio";
+import { RandomAmbientAudio } from "../audio/RandomAmbientAudio";
 
 type FrameMetrics = {
   speed: number;
@@ -77,24 +80,30 @@ export class Game {
     safeSpeed: 0,
     samples: this.trackSamplerSamplesPlaceholder(),
     pathPoints: this.trackPreviewPathPlaceholder(),
-    failed: false
+    failed: false,
   };
 
   constructor(private readonly container: HTMLElement) {
-    const trackPoints = new TrackGenerator(CONFIG.seed, CONFIG.track).generate();
+    const trackPoints = new TrackGenerator(
+      CONFIG.seed,
+      CONFIG.track,
+    ).generate();
 
     this.trackSpline = new TrackSpline(trackPoints, { closed: false });
     const sceneSetup = createScene();
     this.scene = sceneSetup.scene;
     this.dayNightSky = sceneSetup.dayNightSky;
 
-    const trackMesh = new TrackMeshBuilder(this.trackSpline, CONFIG.track).build();
+    const trackMesh = new TrackMeshBuilder(
+      this.trackSpline,
+      CONFIG.track,
+    ).build();
     this.scene.add(trackMesh);
     this.terrainLayer = new TerrainLayer(
       this.scene,
       this.trackSpline,
       CONFIG.seed,
-      CONFIG.terrain
+      CONFIG.terrain,
     );
     this.forestLayer = new ForestLayer(
       this.scene,
@@ -102,7 +111,7 @@ export class Game {
       CONFIG.seed,
       CONFIG.forest,
       this.terrainLayer.getHeightAt.bind(this.terrainLayer),
-      this.terrainLayer.getDistanceToTrack.bind(this.terrainLayer)
+      this.terrainLayer.getDistanceToTrack.bind(this.terrainLayer),
     );
     this.grassLayer = new GrassLayer(
       this.scene,
@@ -110,17 +119,17 @@ export class Game {
       CONFIG.seed,
       CONFIG.grass,
       this.terrainLayer.getHeightAt.bind(this.terrainLayer),
-      this.terrainLayer.getDistanceToTrack.bind(this.terrainLayer)
+      this.terrainLayer.getDistanceToTrack.bind(this.terrainLayer),
     );
     this.birdFlock = new BirdFlock(this.scene, CONFIG.birds);
 
     this.trainHeadlight = new SpotLight(
-      '#ffe8c4',
+      "#ffe8c4",
       0,
       220,
       Math.PI * 0.16,
       0.36,
-      1.6
+      1.6,
     );
     this.trainHeadlightTarget = new Object3D();
     this.trainHeadlight.castShadow = true;
@@ -139,22 +148,19 @@ export class Game {
     this.cameraRig = new CameraRig(
       this.trackSpline,
       CONFIG.camera,
-      container.clientWidth / container.clientHeight
+      container.clientWidth / container.clientHeight,
     );
 
     const desktopControls = new DesktopControls({
       throttleRatePerSecond: CONFIG.train.throttleRatePerSecond,
-      brakeRampSeconds: CONFIG.train.brakeRampSeconds
+      brakeRampSeconds: CONFIG.train.brakeRampSeconds,
     });
 
     this.inputManager = new InputManager(desktopControls);
     this.cabinChrome = new CabinChrome(container);
-    this.throttleOverlay = new ThrottleOverlayCanvas(
-      container,
-      (value) => {
-        desktopControls.setThrottle(value);
-      }
-    );
+    this.throttleOverlay = new ThrottleOverlayCanvas(container, (value) => {
+      desktopControls.setThrottle(value);
+    });
 
     this.trainSim = new TrainSim(CONFIG.train);
     this.trainMovementAudio = new TrainMovementAudio({
@@ -164,7 +170,7 @@ export class Game {
       minPlaybackRate: CONFIG.audio.minPlaybackRate,
       maxPlaybackRate: CONFIG.audio.maxPlaybackRate,
       minVolume: CONFIG.audio.minVolume,
-      maxVolume: CONFIG.audio.maxVolume
+      maxVolume: CONFIG.audio.maxVolume,
     });
     this.brakePressureAudio = new TrainMovementAudio({
       src: CONFIG.audio.brakeTrackSrc,
@@ -174,11 +180,11 @@ export class Game {
       maxPlaybackRate: 1,
       minVolume: CONFIG.audio.brakeMinVolume,
       maxVolume: CONFIG.audio.brakeMaxVolume,
-      releaseFadeSeconds: CONFIG.audio.brakeReleaseFadeSeconds
+      releaseFadeSeconds: CONFIG.audio.brakeReleaseFadeSeconds,
     });
     this.randomAmbientAudio = new RandomAmbientAudio({
       tracks: CONFIG.audio.ambientTrackSrcs,
-      volume: CONFIG.audio.ambientVolume
+      volume: CONFIG.audio.ambientVolume,
     });
     this.comfortModel = new ComfortModel(CONFIG.comfort);
     this.trackSampler = new TrackSampler(this.trackSpline, CONFIG.minimap);
@@ -188,7 +194,7 @@ export class Game {
 
     this.loop = new GameLoop(CONFIG.simDt, this.simulate, this.render);
 
-    window.addEventListener('resize', this.onResize);
+    window.addEventListener("resize", this.onResize);
     this.onResize();
   }
 
@@ -215,7 +221,7 @@ export class Game {
     this.scene.remove(this.trainHeadlight);
     this.scene.remove(this.trainHeadlightTarget);
     this.renderer.dispose();
-    window.removeEventListener('resize', this.onResize);
+    window.removeEventListener("resize", this.onResize);
   }
 
   private simulate = (dt: number): void => {
@@ -245,9 +251,9 @@ export class Game {
         speed: train.speed,
         safeSpeed,
         accel: train.accel,
-        jerk: train.jerk
+        jerk: train.jerk,
       },
-      dt
+      dt,
     );
 
     if (comfort <= 0) {
@@ -265,23 +271,31 @@ export class Game {
       safeSpeed,
       samples,
       pathPoints,
-      failed: this.state === GameState.Failed
+      failed: this.state === GameState.Failed,
     };
-    const trainSpeedRatio = MathUtils.clamp(train.speed / CONFIG.train.maxSpeed, 0, 1);
+    const trainSpeedRatio = MathUtils.clamp(
+      train.speed / CONFIG.train.maxSpeed,
+      0,
+      1,
+    );
     const brakeAudioDrive = controls.brake * trainSpeedRatio;
     this.trainMovementAudio.update(train.speed, dt);
     this.brakePressureAudio.update(brakeAudioDrive, dt);
 
     this.cameraRig.update(this.wrappedDistance, train.speed, dt);
     this.dayNightSky.update(dt, this.cameraRig.camera);
-    this.birdFlock.update(dt, this.cameraRig.camera, this.dayNightSky.getNightFactor());
+    this.birdFlock.update(
+      dt,
+      this.cameraRig.camera,
+      this.dayNightSky.getNightFactor(),
+    );
     this.grassLayer.update(dt);
     const targetExposure = this.dayNightSky.getRecommendedExposure();
     this.toneMappingExposure = MathUtils.damp(
       this.toneMappingExposure,
       targetExposure,
       2.25,
-      dt
+      dt,
     );
     this.renderer.setToneMappingExposure(this.toneMappingExposure);
     this.updateTrainHeadlight();
@@ -338,7 +352,7 @@ export class Game {
       curvature: 0,
       safeSpeed: CONFIG.minimap.safeSpeedMax,
       lateral: 0,
-      forward: distanceAhead
+      forward: distanceAhead,
     }));
   }
 
@@ -347,7 +361,11 @@ export class Game {
     const lookAhead = Math.max(1, CONFIG.minimap.pathLookAheadDistance);
     const spacing = Math.max(0.5, CONFIG.minimap.pathSampleSpacing);
 
-    for (let distanceAhead = 0; distanceAhead <= lookAhead; distanceAhead += spacing) {
+    for (
+      let distanceAhead = 0;
+      distanceAhead <= lookAhead;
+      distanceAhead += spacing
+    ) {
       points.push({ distanceAhead, lateral: 0, forward: distanceAhead });
     }
 

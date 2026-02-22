@@ -2,6 +2,8 @@ import {
   BufferAttribute,
   ConeGeometry,
   CylinderGeometry,
+  DoubleSide,
+  FrontSide,
   Group,
   MathUtils,
   Mesh,
@@ -129,11 +131,20 @@ const TALL_TREE_THICKNESS_REDUCTION_END = 1.8;
 const TALL_TREE_THICKNESS_MIN_SCALE = 0.82;
 const TRUNK_RADIAL_SEGMENTS = 12;
 const TRUNK_HEIGHT_SEGMENTS = 14;
-const CANOPY_RADIAL_SEGMENTS = 11;
-const CANOPY_HEIGHT_SEGMENTS = 1;
+const CANOPY_RADIAL_SEGMENTS = 14;
+const CANOPY_HEIGHT_SEGMENTS = 2;
 const SEED_PRIME_A = 127.1;
 const SEED_PRIME_B = 311.7;
 const SEED_PRIME_C = 74.7;
+const CANOPY_WRAP_LIGHT_STRENGTH = 0.32;
+const CANOPY_BACKSCATTER_STRENGTH = 0.14;
+const CANOPY_BACKSCATTER_POWER = 2.6;
+
+type FoliageShaderUniforms = {
+  foliageWrap: { value: number };
+  foliageBackscatter: { value: number };
+  foliageBackscatterPower: { value: number };
+};
 
 function hash(seed: number): number {
   const value = Math.sin(seed * 12.9898) * 43758.5453123;
@@ -186,6 +197,35 @@ function createMonumentTaperedTrunkGeometry(
   positions.needsUpdate = true;
   geometry.computeVertexNormals();
   return geometry;
+}
+
+function tuneCanopyMaterialShader(material: MeshStandardMaterial): void {
+  material.onBeforeCompile = (shader): void => {
+    const uniforms = shader.uniforms as typeof shader.uniforms & FoliageShaderUniforms;
+
+    uniforms.foliageWrap = { value: CANOPY_WRAP_LIGHT_STRENGTH };
+    uniforms.foliageBackscatter = { value: CANOPY_BACKSCATTER_STRENGTH };
+    uniforms.foliageBackscatterPower = { value: CANOPY_BACKSCATTER_POWER };
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+uniform float foliageWrap;
+uniform float foliageBackscatter;
+uniform float foliageBackscatterPower;`
+      )
+      .replace(
+        '#include <lights_fragment_begin>',
+        `#include <lights_fragment_begin>
+float foliageNoV = saturate( dot( geometryNormal, geometryViewDir ) );
+float foliageTranslucency = pow( 1.0 - foliageNoV, foliageBackscatterPower );
+reflectedLight.directDiffuse *= 1.0 + foliageWrap;
+reflectedLight.indirectDiffuse *= 1.0 + foliageWrap * 0.24;
+totalEmissiveRadiance += diffuseColor.rgb * foliageBackscatter * foliageTranslucency;`
+      );
+  };
+  material.customProgramCacheKey = () => 'single-tree-canopy-foliage-v1';
 }
 
 function createSingleTreeShape(
@@ -329,7 +369,8 @@ export class SingleTreeFactory {
     1,
     1,
     CANOPY_RADIAL_SEGMENTS,
-    CANOPY_HEIGHT_SEGMENTS
+    CANOPY_HEIGHT_SEGMENTS,
+    true
   );
   private readonly trunkMaterials = new Map<SingleTreeSpecies, MeshStandardMaterial>();
   private readonly canopyMaterials = new Map<string, MeshStandardMaterial>();
@@ -369,7 +410,7 @@ export class SingleTreeFactory {
       canopyMesh.rotation.set(0, layer.twist, 0);
       canopyMesh.scale.set(layer.radius, layer.height, layer.radius);
       canopyMesh.castShadow = true;
-      canopyMesh.receiveShadow = true;
+      canopyMesh.receiveShadow = false;
       group.add(canopyMesh);
     });
 
@@ -409,10 +450,12 @@ export class SingleTreeFactory {
 
     const material = new MeshStandardMaterial({
       color,
-      roughness: 0.9,
+      roughness: 0.74,
       metalness: 0.01,
-      flatShading: true
+      side: DoubleSide,
+      shadowSide: FrontSide
     });
+    tuneCanopyMaterialShader(material);
     this.canopyMaterials.set(color, material);
     return material;
   }

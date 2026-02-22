@@ -23,7 +23,7 @@ import {
 import { Sky } from "three/examples/jsm/objects/Sky.js";
 
 const DEFAULT_DAY_CYCLE_DURATION_SECONDS = 300;
-const SUN_CYCLE_PHASE_OFFSET_RADIANS = Math.PI * 1.95;
+const SUN_CYCLE_PHASE_OFFSET_RADIANS = Math.PI * 0.95;
 
 const SKY_DOME_SCALE = 9500;
 const STAR_FIELD_RADIUS = 2000;
@@ -33,7 +33,7 @@ const SUN_ORBIT_RADIUS = 700;
 const SUN_ORBIT_Z_OFFSET = 180;
 const SUN_VISUAL_DISTANCE = 5600;
 const MOON_VISUAL_DISTANCE = 5400;
-const LIGHT_DISTANCE = 5000;
+const SHADOW_LIGHT_DISTANCE = 260;
 
 const DAY_FOG_NEAR = 45;
 const DAY_FOG_FAR = 520;
@@ -211,11 +211,12 @@ export class DayNightSky {
     this.sunLight.shadow.mapSize.set(1024, 1024);
     const sunShadowCamera = this.sunLight.shadow.camera as OrthographicCamera;
     sunShadowCamera.near = 0.5;
-    sunShadowCamera.far = 900;
-    sunShadowCamera.left = -80;
-    sunShadowCamera.right = 80;
-    sunShadowCamera.top = 80;
-    sunShadowCamera.bottom = -80;
+    sunShadowCamera.far = 420;
+    sunShadowCamera.left = -140;
+    sunShadowCamera.right = 140;
+    sunShadowCamera.top = 140;
+    sunShadowCamera.bottom = -140;
+    sunShadowCamera.updateProjectionMatrix();
     this.sunLight.shadow.bias = -0.00035;
     this.sunLight.shadow.normalBias = 0.03;
     this.sunLight.target = this.sunTarget;
@@ -227,11 +228,12 @@ export class DayNightSky {
     this.moonLight.shadow.mapSize.set(512, 512);
     const moonShadowCamera = this.moonLight.shadow.camera as OrthographicCamera;
     moonShadowCamera.near = 0.5;
-    moonShadowCamera.far = 700;
-    moonShadowCamera.left = -68;
-    moonShadowCamera.right = 68;
-    moonShadowCamera.top = 68;
-    moonShadowCamera.bottom = -68;
+    moonShadowCamera.far = 420;
+    moonShadowCamera.left = -120;
+    moonShadowCamera.right = 120;
+    moonShadowCamera.top = 120;
+    moonShadowCamera.bottom = -120;
+    moonShadowCamera.updateProjectionMatrix();
     this.moonLight.shadow.bias = -0.00025;
     this.moonLight.shadow.normalBias = 0.025;
     this.moonLight.target = this.moonTarget;
@@ -288,15 +290,15 @@ export class DayNightSky {
     this.skyUniforms.sunPosition.value.copy(this.uniformSunPosition);
     const deepNightScatteringDarken = MathUtils.lerp(1, 0.56, deepNightFactor);
     this.skyUniforms.turbidity.value =
-      MathUtils.lerp(0.8, 9.4, nightFactor) *
+      MathUtils.lerp(2.0, 10.0, nightFactor) *
       MathUtils.lerp(1, 0.88, deepNightFactor);
     this.skyUniforms.rayleigh.value =
-      MathUtils.lerp(0.2, 0.06, nightFactor) * deepNightScatteringDarken;
+      MathUtils.lerp(0.5, 3.5, nightFactor) * deepNightScatteringDarken;
     this.skyUniforms.mieCoefficient.value =
-      MathUtils.lerp(0.0002, 0, nightFactor) * deepNightScatteringDarken;
+      MathUtils.lerp(0.00001, 0.007, nightFactor) * deepNightScatteringDarken;
     this.skyUniforms.mieDirectionalG.value = MathUtils.lerp(
-      0.6,
-      0.4,
+      0.05,
+      0.7,
       nightFactor,
     );
     this.skyUniforms.cloudCoverage.value = MathUtils.lerp(
@@ -340,7 +342,7 @@ export class DayNightSky {
 
     this.sunLight.position
       .copy(this.lightAnchor)
-      .addScaledVector(this.sunDirection, LIGHT_DISTANCE);
+      .addScaledVector(this.sunDirection, SHADOW_LIGHT_DISTANCE);
     this.sunTarget.position.copy(this.lightAnchor);
     this.sunTarget.updateMatrixWorld();
     this.sunLight.intensity = SUN_LIGHT_DAY_INTENSITY * sunLightFactor;
@@ -362,7 +364,7 @@ export class DayNightSky {
 
     this.moonLight.position
       .copy(this.lightAnchor)
-      .addScaledVector(this.moonDirection, LIGHT_DISTANCE);
+      .addScaledVector(this.moonDirection, SHADOW_LIGHT_DISTANCE);
     this.moonTarget.position.copy(this.lightAnchor);
     this.moonTarget.updateMatrixWorld();
     this.moonLight.intensity = moonGlowFactor * MOON_LIGHT_MAX_INTENSITY;
