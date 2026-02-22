@@ -23,7 +23,7 @@ import {
 import { Sky } from "three/examples/jsm/objects/Sky.js";
 
 const DEFAULT_DAY_CYCLE_DURATION_SECONDS = 300;
-const SUN_CYCLE_PHASE_OFFSET_RADIANS = Math.PI * 0.25;
+const SUN_CYCLE_PHASE_OFFSET_RADIANS = Math.PI * 1.95;
 
 const SKY_DOME_SCALE = 9500;
 const STAR_FIELD_RADIUS = 2000;
@@ -272,8 +272,8 @@ export class DayNightSky {
     );
 
     const sunHeight = this.sunOffset.y / SUN_ORBIT_RADIUS;
-    const dayFactor = MathUtils.smoothstep(sunHeight, -0.08, 0.12);
-    const nightFactor = 1 - MathUtils.smoothstep(sunHeight, -0.12, 0.08);
+    const dayFactor = MathUtils.smoothstep(sunHeight, -0.02, 0.12);
+    const nightFactor = 1 - MathUtils.smoothstep(sunHeight, -0.02, 0.08);
     this.nightFactor = nightFactor;
     const twilightFactor = 1 - Math.abs(dayFactor * 2 - 1);
     const deepNightFactor = MathUtils.smoothstep(nightFactor, 0.62, 1);

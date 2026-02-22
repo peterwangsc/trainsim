@@ -50,7 +50,7 @@ export class RandomAmbientAudio {
     this.currentHowl = new Howl({
       src: [this.tracks[nextIndex]],
       volume: this.volume,
-      html5: true, // Stream long ambient tracks to avoid loading full file into memory
+      html5: false, // Web Audio API — required for volume control on iOS (HTMLAudioElement.volume is read-only there)
       onend: () => {
         this.playNextTrack();
       },
