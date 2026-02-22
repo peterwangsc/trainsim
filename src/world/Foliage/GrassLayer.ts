@@ -20,7 +20,6 @@ import {
   type IUniform
 } from 'three'
 import { SeededRandom } from '../../util/SeededRandom'
-import { ASSETS_CDN_BASE } from "../../game/Config";
 import { TrackSpline } from '../Track/TrackSpline'
 
 export type TerrainHeightSampler = (x: number, z: number) => number
@@ -592,7 +591,7 @@ diffuseColor.a *= alphaMask;
 
     const loader = new TextureLoader()
 
-    loader.load(`${ASSETS_CDN_BASE}/simplex-noise.png`, (texture) => {
+    loader.load("/simplex-noise.png", (texture) => {
       if (this.disposed) {
         texture.dispose()
         return

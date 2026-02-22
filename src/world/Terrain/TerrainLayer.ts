@@ -13,7 +13,6 @@ import {
   Vector3
 } from 'three';
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js';
-import { ASSETS_CDN_BASE } from "../../game/Config";
 import { TrackSpline } from '../Track/TrackSpline';
 
 export type TerrainConfig = {
@@ -339,7 +338,7 @@ export class TerrainLayer {
 
     const image = new Image();
     image.decoding = 'async';
-    image.src = `${ASSETS_CDN_BASE}/simplex-noise.png`;
+    image.src = "/simplex-noise.png";
     image.onload = () => {
       if (this.disposed) {
         return;
