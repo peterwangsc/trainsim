@@ -4,6 +4,9 @@ import type {
 } from "../sim/TrackSampler";
 import { MinimapCurvatureWidget } from "./MinimapCurvatureWidget";
 
+const LOCKED_VIEWPORT_CONTENT =
+  "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover";
+
 type HudMetrics = {
   speed: number;
   brake: number;
@@ -16,6 +19,7 @@ type HudMetrics = {
 };
 
 export class HudController {
+  private static viewportLockApplied = false;
   private readonly root: HTMLDivElement;
   private readonly statusBanner: HTMLDivElement;
   private readonly comfortGauge: HTMLDivElement;
@@ -34,6 +38,7 @@ export class HudController {
     onBrakeButtonChange: (isDown: boolean) => void = () => {},
   ) {
     this.onBrakeButtonChange = onBrakeButtonChange;
+    this.lockMobileViewportScale();
 
     this.root = document.createElement("div");
     this.root.className = "hud";
@@ -243,5 +248,24 @@ export class HudController {
     }
 
     return null;
+  }
+
+  private lockMobileViewportScale(): void {
+    if (HudController.viewportLockApplied || navigator.maxTouchPoints <= 0) {
+      return;
+    }
+
+    let viewportMeta = document.querySelector<HTMLMetaElement>(
+      'meta[name="viewport"]',
+    );
+
+    if (!viewportMeta) {
+      viewportMeta = document.createElement("meta");
+      viewportMeta.name = "viewport";
+      document.head.appendChild(viewportMeta);
+    }
+
+    viewportMeta.content = LOCKED_VIEWPORT_CONTENT;
+    HudController.viewportLockApplied = true;
   }
 }

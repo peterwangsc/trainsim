@@ -18,11 +18,20 @@ import {
 import { clamp, lerp } from "../util/Math";
 
 const OVERLAY_WIDTH_RATIO = 0.22;
+const OVERLAY_WIDTH_RATIO_COMPACT = 0.19;
 const OVERLAY_MIN_WIDTH = 150;
+const OVERLAY_MIN_WIDTH_COMPACT = 108;
 const OVERLAY_MAX_WIDTH = 300;
+const OVERLAY_MAX_WIDTH_COMPACT = 218;
 const OVERLAY_ASPECT = 0.72;
+const OVERLAY_MAX_HEIGHT_RATIO = 0.35;
+const OVERLAY_MAX_HEIGHT_RATIO_COMPACT = 0.27;
+const OVERLAY_MIN_RENDER_WIDTH = 80;
+const COMPACT_UI_BREAKPOINT = 1023;
 const OVERLAY_BOTTOM_MARGIN = 10;
+const OVERLAY_BOTTOM_MARGIN_COMPACT = 8;
 const OVERLAY_LEFT_MARGIN = 10;
+const OVERLAY_LEFT_MARGIN_COMPACT = 8;
 const LEVER_IDLE_ANGLE = 34;
 const LEVER_MAX_ANGLE = -24;
 const STEM_LENGTH = 0.45;
@@ -63,8 +72,8 @@ export class ThrottleOverlayCanvas {
     this.renderer.outputColorSpace = SRGBColorSpace;
     this.renderer.domElement.className = "throttle-overlay-canvas";
     this.renderer.domElement.style.position = "absolute";
-    this.renderer.domElement.style.left = `${OVERLAY_LEFT_MARGIN}px`;
-    this.renderer.domElement.style.bottom = `${OVERLAY_BOTTOM_MARGIN}px`;
+    this.renderer.domElement.style.left = `max(${OVERLAY_LEFT_MARGIN}px, env(safe-area-inset-left))`;
+    this.renderer.domElement.style.bottom = `max(${OVERLAY_BOTTOM_MARGIN}px, env(safe-area-inset-bottom))`;
     this.renderer.domElement.style.zIndex = "4";
     this.renderer.domElement.style.touchAction = "none";
 
@@ -123,15 +132,40 @@ export class ThrottleOverlayCanvas {
     this.renderer.domElement.remove();
   }
 
-  onResize(viewportWidth: number): void {
-    const width = Math.round(
-      clamp(
-        viewportWidth * OVERLAY_WIDTH_RATIO,
-        OVERLAY_MIN_WIDTH,
-        OVERLAY_MAX_WIDTH,
-      ),
+  onResize(viewportWidth: number, viewportHeight: number): void {
+    const isCompactUi = viewportWidth <= COMPACT_UI_BREAKPOINT;
+    const widthRatio = isCompactUi
+      ? OVERLAY_WIDTH_RATIO_COMPACT
+      : OVERLAY_WIDTH_RATIO;
+    const minWidth = isCompactUi
+      ? OVERLAY_MIN_WIDTH_COMPACT
+      : OVERLAY_MIN_WIDTH;
+    const maxWidth = isCompactUi
+      ? OVERLAY_MAX_WIDTH_COMPACT
+      : OVERLAY_MAX_WIDTH;
+    const maxHeightRatio = isCompactUi
+      ? OVERLAY_MAX_HEIGHT_RATIO_COMPACT
+      : OVERLAY_MAX_HEIGHT_RATIO;
+    const targetWidth = clamp(viewportWidth * widthRatio, minWidth, maxWidth);
+    const maxHeight = Math.max(
+      120,
+      Math.round(viewportHeight * maxHeightRatio),
     );
+    const widthFromHeight = Math.max(
+      OVERLAY_MIN_RENDER_WIDTH,
+      Math.round(maxHeight * OVERLAY_ASPECT),
+    );
+    const width = Math.round(Math.min(targetWidth, widthFromHeight));
     const height = Math.round(width / OVERLAY_ASPECT);
+    const leftMargin = isCompactUi
+      ? OVERLAY_LEFT_MARGIN_COMPACT
+      : OVERLAY_LEFT_MARGIN;
+    const bottomMargin = isCompactUi
+      ? OVERLAY_BOTTOM_MARGIN_COMPACT
+      : OVERLAY_BOTTOM_MARGIN;
+
+    this.renderer.domElement.style.left = `max(${leftMargin}px, env(safe-area-inset-left))`;
+    this.renderer.domElement.style.bottom = `max(${bottomMargin}px, env(safe-area-inset-bottom))`;
 
     this.renderer.domElement.style.width = `${width}px`;
     this.renderer.domElement.style.height = `${height}px`;
@@ -300,7 +334,7 @@ export class ThrottleOverlayCanvas {
     }
 
     const rect = this.renderer.domElement.getBoundingClientRect();
-    const dragRange = clamp(rect.height * 0.7, 130, 280);
+    const dragRange = clamp(rect.height * 0.72, 90, 220);
     const delta = (this.dragStartClientY - event.clientY) / dragRange;
     const nextThrottle = clamp(this.dragStartThrottle + delta, 0, 1);
 

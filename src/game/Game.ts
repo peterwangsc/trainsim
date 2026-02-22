@@ -237,6 +237,8 @@ export class Game {
     this.loop = new GameLoop(CONFIG.simDt, this.simulate, this.render);
 
     window.addEventListener("resize", this.onResize);
+    window.visualViewport?.addEventListener("resize", this.onResize);
+    window.visualViewport?.addEventListener("scroll", this.onResize);
     this.onResize();
   }
 
@@ -270,6 +272,8 @@ export class Game {
     this.scene.remove(this.trainHeadlightTarget);
     this.renderer.dispose();
     window.removeEventListener("resize", this.onResize);
+    window.visualViewport?.removeEventListener("resize", this.onResize);
+    window.visualViewport?.removeEventListener("scroll", this.onResize);
   }
 
   private simulate = (dt: number): void => {
@@ -388,7 +392,7 @@ export class Game {
 
     this.renderer.resize(width, height);
     this.cameraRig.onResize(width, height);
-    this.throttleOverlay.onResize(width);
+    this.throttleOverlay.onResize(width, height);
   };
 
   private computeTerminalGuidanceSafeSpeed(distance: number): number {

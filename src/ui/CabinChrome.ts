@@ -1,3 +1,5 @@
+const DYNAMIC_HEIGHT_CSS_VAR = "--app-dynamic-height";
+
 export class CabinChrome {
   private readonly root: HTMLDivElement;
 
@@ -23,9 +25,24 @@ export class CabinChrome {
 
     this.root.append(roof, leftPillar, rightPillar, sill, glassSheen);
     container.appendChild(this.root);
+    this.syncViewportMetrics();
+    window.addEventListener("resize", this.syncViewportMetrics);
+    window.visualViewport?.addEventListener("resize", this.syncViewportMetrics);
+    window.visualViewport?.addEventListener("scroll", this.syncViewportMetrics);
   }
 
   dispose(): void {
+    window.removeEventListener("resize", this.syncViewportMetrics);
+    window.visualViewport?.removeEventListener("resize", this.syncViewportMetrics);
+    window.visualViewport?.removeEventListener("scroll", this.syncViewportMetrics);
     this.root.remove();
   }
+
+  private syncViewportMetrics = (): void => {
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    document.documentElement.style.setProperty(
+      DYNAMIC_HEIGHT_CSS_VAR,
+      `${Math.round(viewportHeight)}px`,
+    );
+  };
 }

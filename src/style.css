@@ -12,13 +12,15 @@ html,
 body,
 #app {
   width: 100%;
-  height: 100%;
+  height: var(--app-dynamic-height, 100dvh);
+  min-height: var(--app-dynamic-height, 100dvh);
   margin: 0;
   overflow: hidden;
 }
 
 #app {
   position: relative;
+  touch-action: manipulation;
 }
 
 canvas {
@@ -60,7 +62,7 @@ canvas {
 
 .mobile-splash__logo {
   width: min(84vw, 480px);
-  max-height: min(40vh, 320px);
+  max-height: min(40dvh, 320px);
   object-fit: contain;
   filter: drop-shadow(0 14px 28px rgb(0 0 0 / 56%));
 }
@@ -125,7 +127,7 @@ canvas {
 
 .mouse-lock-splash__logo {
   width: min(82vw, 880px);
-  max-height: min(64vh, 560px);
+  max-height: min(64dvh, 560px);
   object-fit: contain;
   filter: drop-shadow(0 14px 24px rgb(0 0 0 / 48%));
 }
@@ -183,7 +185,7 @@ canvas {
 
 .run-end-overlay__logo {
   width: min(84vw, 560px);
-  max-height: min(36vh, 260px);
+  max-height: min(36dvh, 260px);
   object-fit: contain;
   filter: drop-shadow(0 12px 20px rgb(0 0 0 / 42%));
 }
@@ -253,7 +255,7 @@ canvas {
   top: 0;
   left: 0;
   right: 0;
-  height: clamp(78px, 14vh, 176px);
+  height: clamp(78px, 14dvh, 176px);
   background:
     linear-gradient(180deg, #48525d 0%, #2e363f 48%, #161c22 100%),
     repeating-linear-gradient(
@@ -285,7 +287,7 @@ canvas {
 .cabin-chrome__pillar {
   position: absolute;
   top: 0;
-  bottom: clamp(88px, 16vh, 200px);
+  bottom: clamp(88px, 16dvh, 200px);
   width: clamp(52px, 7vw, 112px);
   background:
     linear-gradient(180deg, #4a545f 0%, #283039 44%, #12171d 100%),
@@ -315,7 +317,7 @@ canvas {
   left: 0;
   right: 0;
   bottom: 0;
-  height: clamp(88px, 16vh, 200px);
+  height: clamp(88px, 16dvh, 200px);
   background:
     linear-gradient(180deg, #39434e 0%, #202730 54%, #10141a 100%),
     repeating-linear-gradient(
@@ -335,7 +337,7 @@ canvas {
   transform: translateX(-50%);
   bottom: 0;
   width: clamp(190px, 45vw, 620px);
-  height: clamp(52px, 11vh, 142px);
+  height: clamp(52px, 11dvh, 142px);
   border-top-left-radius: 42% 100%;
   border-top-right-radius: 42% 100%;
   background: linear-gradient(180deg, #4e5a68 0%, #1b222b 56%, #0d1116 100%);
@@ -346,10 +348,10 @@ canvas {
 
 .cabin-chrome__glass-sheen {
   position: absolute;
-  top: clamp(86px, 14vh, 186px);
+  top: clamp(86px, 14dvh, 186px);
   left: clamp(54px, 8vw, 128px);
   right: clamp(54px, 8vw, 128px);
-  bottom: clamp(92px, 17vh, 214px);
+  bottom: clamp(92px, 17dvh, 214px);
   border-radius: clamp(10px, 2.6vw, 24px);
   background:
     linear-gradient(
@@ -509,7 +511,7 @@ canvas {
 
 .comfort-gauge {
   position: fixed;
-  top: 50%;
+  top: 50dvh;
   right: 18px;
   transform: translateY(-50%);
   display: flex;
@@ -639,55 +641,180 @@ canvas {
     0 12px 24px rgb(0 0 0 / 46%);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 1023px) {
+  .cabin-chrome__roof {
+    height: clamp(62px, 11dvh, 142px);
+  }
+
+  .cabin-chrome__pillar {
+    bottom: clamp(72px, 13dvh, 162px);
+    width: clamp(40px, 6.4vw, 86px);
+  }
+
+  .cabin-chrome__sill {
+    height: clamp(72px, 13dvh, 162px);
+  }
+
+  .cabin-chrome__sill::before {
+    width: clamp(160px, 42vw, 560px);
+    height: clamp(42px, 8dvh, 108px);
+  }
+
+  .cabin-chrome__glass-sheen {
+    top: clamp(70px, 11dvh, 146px);
+    left: clamp(42px, 6.8vw, 98px);
+    right: clamp(42px, 6.8vw, 98px);
+    bottom: clamp(76px, 14dvh, 174px);
+  }
+
   .hud-status-banner {
-    top: 8px;
-    max-width: min(94vw, 720px);
-    padding: 7px 11px;
-    font-size: clamp(0.64rem, 2.4vw, 0.8rem);
+    top: 10px;
+    max-width: min(80vw, 620px);
+    padding: 7px 12px;
+    font-size: clamp(0.64rem, 1.25vw, 0.8rem);
   }
 
   .hud-preview-cluster {
-    top: 38px;
-    left: 10px;
+    top: 12px;
+    left: 12px;
     gap: 8px;
   }
 
   .hud-speed-floating {
-    top: 38px;
-    right: 10px;
+    top: 7px;
+    right: 7px;
+  }
+
+  .hud-speed-value {
+    font-size: clamp(1.35rem, 2.9vw, 1.95rem);
+  }
+
+  .hud-speed-unit {
+    font-size: clamp(0.66rem, 1.35vw, 0.82rem);
   }
 
   .minimap-canvas {
-    width: min(220px, 56vw);
-    height: 102px;
+    width: min(218px, 30vw);
+    height: 98px;
   }
 
   .speed-limit-sign {
-    top: 38px;
-    width: 74px;
-    min-height: 96px;
-    border-width: 4px;
-    padding: 7px 5px;
+    top: 12px;
+    right: 12px;
+    width: clamp(38px, 7.3vw, 56px);
+    min-height: 62px;
+    border-width: 3px;
+    padding: 6px 5px;
+    border-radius: 7px;
+  }
+
+  .speed-limit-label {
+    font-size: 0.42rem;
+  }
+
+  .speed-limit-value {
+    margin-top: 4px;
+    font-size: clamp(1.05rem, 2.5vw, 1.45rem);
+  }
+
+  .speed-limit-unit {
+    margin-top: 2px;
+    font-size: 0.44rem;
   }
 
   .comfort-gauge {
-    top: 142px;
-    right: 10px;
-    width: 58px;
+    top: 50dvh;
+    right: 12px;
+    width: 50px;
+    gap: 4px;
   }
 
   .comfort-gauge-track {
-    height: 108px;
+    width: 18px;
+    height: 92px;
+  }
+
+  .comfort-gauge-value {
+    font-size: 0.52rem;
   }
 
   .brake-button {
-    right: max(10px, env(safe-area-inset-right));
-    bottom: max(10px, env(safe-area-inset-bottom));
-    width: min(35vw, 132px);
-    height: min(35vw, 132px);
-    min-width: 98px;
-    min-height: 98px;
-    font-size: clamp(0.72rem, 2.8vw, 0.85rem);
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: min(29vw, 112px);
+    height: min(29vw, 112px);
+    min-width: 88px;
+    min-height: 88px;
+    font-size: clamp(0.66rem, 1.8vw, 0.78rem);
+    letter-spacing: 0.1em;
+  }
+}
+
+@media (max-width: 720px) {
+  .hud-status-banner {
+    top: 8px;
+    max-width: min(94vw, 620px);
+    padding: 6px 10px;
+    font-size: clamp(0.58rem, 2.2vw, 0.72rem);
+  }
+
+  .hud-preview-cluster {
+    top: 36px;
+    left: 8px;
+    gap: 6px;
+  }
+
+  .hud-speed-floating {
+    top: 32px;
+    right: 8px;
+  }
+
+  .minimap-canvas {
+    width: min(178px, 50vw);
+    height: 82px;
+  }
+
+  .speed-limit-sign {
+    top: 36px;
+    right: 8px;
+    width: 56px;
+    min-height: 72px;
+    border-width: 3px;
+    padding: 6px 4px;
+  }
+
+  .speed-limit-label {
+    font-size: 0.4rem;
+  }
+
+  .speed-limit-value {
+    margin-top: 4px;
+    font-size: clamp(0.95rem, 4vw, 1.25rem);
+  }
+
+  .speed-limit-unit {
+    margin-top: 2px;
+    font-size: 0.42rem;
+  }
+
+  .comfort-gauge {
+    top: 50dvh;
+    right: 8px;
+    width: 46px;
+  }
+
+  .comfort-gauge-track {
+    width: 16px;
+    height: 80px;
+  }
+
+  .brake-button {
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    width: min(28vw, 96px);
+    height: min(28vw, 96px);
+    min-width: 78px;
+    min-height: 78px;
+    font-size: clamp(0.6rem, 2.4vw, 0.72rem);
   }
 }
