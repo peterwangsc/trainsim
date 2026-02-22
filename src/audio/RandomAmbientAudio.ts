@@ -1,3 +1,4 @@
+import { Howl } from 'howler';
 import { clamp } from '../util/Math';
 
 export type RandomAmbientAudioConfig = {
@@ -6,90 +7,66 @@ export type RandomAmbientAudioConfig = {
 };
 
 export class RandomAmbientAudio {
-  private readonly audio: HTMLAudioElement;
-  private readonly onUserGesture = (): void => {
-    this.playBlocked = false;
-    this.tryStartRandomTrack();
-  };
-  private readonly onTrackEnded = (): void => {
-    this.tryStartRandomTrack();
-  };
-
+  private currentHowl: Howl | null = null;
   private isActive = false;
-  private playBlocked = false;
   private currentTrackIndex = -1;
+  private readonly volume: number;
+  private readonly tracks: readonly string[];
 
-  constructor(private readonly config: RandomAmbientAudioConfig) {
-    this.audio = new Audio();
-    this.audio.preload = 'auto';
-    this.audio.loop = false;
-    this.audio.volume = clamp(config.volume, 0, 1);
-    this.audio.addEventListener('ended', this.onTrackEnded);
-
-    window.addEventListener('pointerdown', this.onUserGesture);
-    window.addEventListener('keydown', this.onUserGesture);
-    window.addEventListener('touchstart', this.onUserGesture, { passive: true });
+  constructor(config: RandomAmbientAudioConfig) {
+    this.volume = clamp(config.volume, 0, 1);
+    this.tracks = config.tracks;
   }
 
   start(): void {
-    if (this.isActive) {
-      return;
-    }
-
+    if (this.isActive) return;
     this.isActive = true;
-    this.tryStartRandomTrack();
+    this.playNextTrack();
   }
 
   stop(): void {
     this.isActive = false;
-    this.audio.pause();
-    this.audio.currentTime = 0;
+    if (this.currentHowl) {
+      this.currentHowl.stop();
+      this.currentHowl.unload();
+      this.currentHowl = null;
+    }
   }
 
   dispose(): void {
     this.stop();
-    this.audio.removeEventListener('ended', this.onTrackEnded);
-    window.removeEventListener('pointerdown', this.onUserGesture);
-    window.removeEventListener('keydown', this.onUserGesture);
-    window.removeEventListener('touchstart', this.onUserGesture);
-    this.audio.src = '';
-    this.audio.load();
   }
 
-  private tryStartRandomTrack(): void {
-    if (!this.isActive || this.playBlocked || this.config.tracks.length === 0) {
-      return;
+  private playNextTrack(): void {
+    if (!this.isActive || this.tracks.length === 0) return;
+
+    const nextIndex = this.pickNextTrackIndex();
+    this.currentTrackIndex = nextIndex;
+
+    if (this.currentHowl) {
+      this.currentHowl.unload();
     }
 
-    const nextTrackIndex = this.pickNextTrackIndex();
-    const nextTrackSrc = this.config.tracks[nextTrackIndex];
-    this.currentTrackIndex = nextTrackIndex;
-    this.audio.src = nextTrackSrc;
-    this.audio.currentTime = 0;
+    this.currentHowl = new Howl({
+      src: [this.tracks[nextIndex]],
+      volume: this.volume,
+      html5: true, // Stream long ambient tracks to avoid loading full file into memory
+      onend: () => {
+        this.playNextTrack();
+      },
+    });
 
-    this.audio
-      .play()
-      .then(() => {
-        this.playBlocked = false;
-      })
-      .catch(() => {
-        this.playBlocked = true;
-      });
+    this.currentHowl.play();
   }
 
   private pickNextTrackIndex(): number {
-    const trackCount = this.config.tracks.length;
+    const count = this.tracks.length;
+    if (count <= 1) return 0;
 
-    if (trackCount <= 1) {
-      return 0;
+    let index = Math.floor(Math.random() * count);
+    if (index === this.currentTrackIndex) {
+      index = (index + 1) % count;
     }
-
-    let randomIndex = Math.floor(Math.random() * trackCount);
-
-    if (randomIndex === this.currentTrackIndex) {
-      randomIndex = (randomIndex + 1) % trackCount;
-    }
-
-    return randomIndex;
+    return index;
   }
 }
