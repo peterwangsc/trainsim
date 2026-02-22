@@ -255,7 +255,7 @@ canvas {
   top: 0;
   left: 0;
   right: 0;
-  height: clamp(78px, 14dvh, 176px);
+  height: clamp(34px, 6.8dvh, 84px);
   background:
     linear-gradient(180deg, #48525d 0%, #2e363f 48%, #161c22 100%),
     repeating-linear-gradient(
@@ -273,7 +273,7 @@ canvas {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 14px;
+  bottom: 8px;
   width: min(72vw, 760px);
   height: 2px;
   background: linear-gradient(
@@ -287,8 +287,8 @@ canvas {
 .cabin-chrome__pillar {
   position: absolute;
   top: 0;
-  bottom: clamp(88px, 16dvh, 200px);
-  width: clamp(52px, 7vw, 112px);
+  bottom: clamp(30px, 5.6dvh, 74px);
+  width: clamp(10px, 2vw, 24px);
   background:
     linear-gradient(180deg, #4a545f 0%, #283039 44%, #12171d 100%),
     repeating-linear-gradient(
@@ -317,7 +317,7 @@ canvas {
   left: 0;
   right: 0;
   bottom: 0;
-  height: clamp(88px, 16dvh, 200px);
+  height: clamp(30px, 5.6dvh, 74px);
   background:
     linear-gradient(180deg, #39434e 0%, #202730 54%, #10141a 100%),
     repeating-linear-gradient(
@@ -336,8 +336,8 @@ canvas {
   left: 50%;
   transform: translateX(-50%);
   bottom: 0;
-  width: clamp(190px, 45vw, 620px);
-  height: clamp(52px, 11dvh, 142px);
+  width: clamp(120px, 32vw, 420px);
+  height: clamp(16px, 3dvh, 40px);
   border-top-left-radius: 42% 100%;
   border-top-right-radius: 42% 100%;
   background: linear-gradient(180deg, #4e5a68 0%, #1b222b 56%, #0d1116 100%);
@@ -348,10 +348,10 @@ canvas {
 
 .cabin-chrome__glass-sheen {
   position: absolute;
-  top: clamp(86px, 14dvh, 186px);
-  left: clamp(54px, 8vw, 128px);
-  right: clamp(54px, 8vw, 128px);
-  bottom: clamp(92px, 17dvh, 214px);
+  top: clamp(40px, 7dvh, 88px);
+  left: clamp(14px, 2.8vw, 36px);
+  right: clamp(14px, 2.8vw, 36px);
+  bottom: clamp(34px, 6.4dvh, 90px);
   border-radius: clamp(10px, 2.6vw, 24px);
   background:
     linear-gradient(
@@ -643,28 +643,28 @@ canvas {
 
 @media (max-width: 1023px) {
   .cabin-chrome__roof {
-    height: clamp(62px, 11dvh, 142px);
+    height: clamp(30px, 5.6dvh, 62px);
   }
 
   .cabin-chrome__pillar {
-    bottom: clamp(72px, 13dvh, 162px);
-    width: clamp(40px, 6.4vw, 86px);
+    bottom: clamp(28px, 5.2dvh, 62px);
+    width: clamp(8px, 1.8vw, 16px);
   }
 
   .cabin-chrome__sill {
-    height: clamp(72px, 13dvh, 162px);
+    height: clamp(28px, 5.2dvh, 62px);
   }
 
   .cabin-chrome__sill::before {
-    width: clamp(160px, 42vw, 560px);
-    height: clamp(42px, 8dvh, 108px);
+    width: clamp(108px, 30vw, 300px);
+    height: clamp(12px, 2.5dvh, 28px);
   }
 
   .cabin-chrome__glass-sheen {
-    top: clamp(70px, 11dvh, 146px);
-    left: clamp(42px, 6.8vw, 98px);
-    right: clamp(42px, 6.8vw, 98px);
-    bottom: clamp(76px, 14dvh, 174px);
+    top: clamp(34px, 5.8dvh, 74px);
+    left: clamp(10px, 2.1vw, 22px);
+    right: clamp(10px, 2.1vw, 22px);
+    bottom: clamp(28px, 5.2dvh, 64px);
   }
 
   .hud-status-banner {
@@ -741,10 +741,10 @@ canvas {
   .brake-button {
     right: max(12px, env(safe-area-inset-right));
     bottom: max(12px, env(safe-area-inset-bottom));
-    width: min(29vw, 112px);
-    height: min(29vw, 112px);
-    min-width: 88px;
-    min-height: 88px;
+    width: min(20vw, 92px);
+    height: min(20vw, 92px);
+    min-width: 72px;
+    min-height: 72px;
     font-size: clamp(0.66rem, 1.8vw, 0.78rem);
     letter-spacing: 0.1em;
   }
@@ -811,10 +811,10 @@ canvas {
   .brake-button {
     right: max(8px, env(safe-area-inset-right));
     bottom: max(8px, env(safe-area-inset-bottom));
-    width: min(28vw, 96px);
-    height: min(28vw, 96px);
-    min-width: 78px;
-    min-height: 78px;
+    width: min(10vw, 72px);
+    height: min(10vw, 72px);
+    min-width: 64px;
+    min-height: 64px;
     font-size: clamp(0.6rem, 2.4vw, 0.72rem);
   }
 }
