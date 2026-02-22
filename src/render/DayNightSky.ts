@@ -33,7 +33,20 @@ const SUN_ORBIT_RADIUS = 700;
 const SUN_ORBIT_Z_OFFSET = 180;
 const SUN_VISUAL_DISTANCE = 5600;
 const MOON_VISUAL_DISTANCE = 5400;
-const SHADOW_LIGHT_DISTANCE = 260;
+const SUN_SHADOW_LIGHT_DISTANCE_MIN = 260;
+const SUN_SHADOW_LIGHT_DISTANCE_MAX = 900;
+const SUN_SHADOW_CAMERA_NEAR = 0.5;
+const SUN_SHADOW_CAMERA_FAR_MIN = 420;
+const SUN_SHADOW_CAMERA_FAR_MAX = 1320;
+const SUN_SHADOW_FRUSTUM_HALF_EXTENT_MIN = 140;
+const SUN_SHADOW_FRUSTUM_HALF_EXTENT_MAX = 240;
+const SUN_SHADOW_LOW_ELEVATION_MIN = 0.08;
+const SUN_SHADOW_LOW_ELEVATION_MAX = 0.42;
+const SUN_SHADOW_BIAS_DAY = -0.00035;
+const SUN_SHADOW_BIAS_LOW = -0.00022;
+const SUN_SHADOW_NORMAL_BIAS_DAY = 0.03;
+const SUN_SHADOW_NORMAL_BIAS_LOW = 0.09;
+const MOON_SHADOW_LIGHT_DISTANCE = 260;
 
 const DAY_FOG_NEAR = 45;
 const DAY_FOG_FAR = 520;
@@ -134,6 +147,8 @@ export class DayNightSky {
   private readonly hemisphereGroundColor = new Color();
   private readonly ambientColor = new Color();
   private readonly moonLightColor = new Color();
+  private sunShadowHalfExtent = SUN_SHADOW_FRUSTUM_HALF_EXTENT_MIN;
+  private sunShadowFar = SUN_SHADOW_CAMERA_FAR_MIN;
 
   private elapsedSeconds = 0;
   private nightFactor = 0;
@@ -210,15 +225,15 @@ export class DayNightSky {
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.set(1024, 1024);
     const sunShadowCamera = this.sunLight.shadow.camera as OrthographicCamera;
-    sunShadowCamera.near = 0.5;
-    sunShadowCamera.far = 420;
-    sunShadowCamera.left = -140;
-    sunShadowCamera.right = 140;
-    sunShadowCamera.top = 140;
-    sunShadowCamera.bottom = -140;
+    sunShadowCamera.near = SUN_SHADOW_CAMERA_NEAR;
+    sunShadowCamera.far = SUN_SHADOW_CAMERA_FAR_MIN;
+    sunShadowCamera.left = -SUN_SHADOW_FRUSTUM_HALF_EXTENT_MIN;
+    sunShadowCamera.right = SUN_SHADOW_FRUSTUM_HALF_EXTENT_MIN;
+    sunShadowCamera.top = SUN_SHADOW_FRUSTUM_HALF_EXTENT_MIN;
+    sunShadowCamera.bottom = -SUN_SHADOW_FRUSTUM_HALF_EXTENT_MIN;
     sunShadowCamera.updateProjectionMatrix();
-    this.sunLight.shadow.bias = -0.00035;
-    this.sunLight.shadow.normalBias = 0.03;
+    this.sunLight.shadow.bias = SUN_SHADOW_BIAS_DAY;
+    this.sunLight.shadow.normalBias = SUN_SHADOW_NORMAL_BIAS_DAY;
     this.sunLight.target = this.sunTarget;
     this.scene.add(this.sunLight);
     this.scene.add(this.sunTarget);
@@ -340,18 +355,52 @@ export class DayNightSky {
       this.scene.fog.color.copy(this.blendedSkyColor);
     }
 
-    this.sunLight.position
-      .copy(this.lightAnchor)
-      .addScaledVector(this.sunDirection, SHADOW_LIGHT_DISTANCE);
-    this.sunTarget.position.copy(this.lightAnchor);
-    this.sunTarget.updateMatrixWorld();
-    this.sunLight.intensity = SUN_LIGHT_DAY_INTENSITY * sunLightFactor;
-    this.sunLight.castShadow = sunLightFactor > SUN_SHADOW_ENABLE_THRESHOLD;
     const sunElevationFactor = MathUtils.smoothstep(
       Math.max(0, sunHeight),
       0.02,
       0.68,
     );
+    const lowSunShadowBoost =
+      1 -
+      MathUtils.smoothstep(
+        Math.max(0, sunHeight),
+        SUN_SHADOW_LOW_ELEVATION_MIN,
+        SUN_SHADOW_LOW_ELEVATION_MAX,
+      );
+    const sunShadowDistance = MathUtils.lerp(
+      SUN_SHADOW_LIGHT_DISTANCE_MIN,
+      SUN_SHADOW_LIGHT_DISTANCE_MAX,
+      lowSunShadowBoost,
+    );
+    const sunShadowHalfExtent = MathUtils.lerp(
+      SUN_SHADOW_FRUSTUM_HALF_EXTENT_MIN,
+      SUN_SHADOW_FRUSTUM_HALF_EXTENT_MAX,
+      lowSunShadowBoost,
+    );
+    const sunShadowFar = MathUtils.clamp(
+      sunShadowDistance + 360,
+      SUN_SHADOW_CAMERA_FAR_MIN,
+      SUN_SHADOW_CAMERA_FAR_MAX,
+    );
+    this.updateSunShadowFrustum(sunShadowHalfExtent, sunShadowFar);
+    this.sunLight.shadow.bias = MathUtils.lerp(
+      SUN_SHADOW_BIAS_DAY,
+      SUN_SHADOW_BIAS_LOW,
+      lowSunShadowBoost,
+    );
+    this.sunLight.shadow.normalBias = MathUtils.lerp(
+      SUN_SHADOW_NORMAL_BIAS_DAY,
+      SUN_SHADOW_NORMAL_BIAS_LOW,
+      lowSunShadowBoost,
+    );
+
+    this.sunLight.position
+      .copy(this.lightAnchor)
+      .addScaledVector(this.sunDirection, sunShadowDistance);
+    this.sunTarget.position.copy(this.lightAnchor);
+    this.sunTarget.updateMatrixWorld();
+    this.sunLight.intensity = SUN_LIGHT_DAY_INTENSITY * sunLightFactor;
+    this.sunLight.castShadow = sunLightFactor > SUN_SHADOW_ENABLE_THRESHOLD;
     this.sunLightColor.lerpColors(
       this.sunriseLightColor,
       this.noonLightColor,
@@ -364,7 +413,7 @@ export class DayNightSky {
 
     this.moonLight.position
       .copy(this.lightAnchor)
-      .addScaledVector(this.moonDirection, SHADOW_LIGHT_DISTANCE);
+      .addScaledVector(this.moonDirection, MOON_SHADOW_LIGHT_DISTANCE);
     this.moonTarget.position.copy(this.lightAnchor);
     this.moonTarget.updateMatrixWorld();
     this.moonLight.intensity = moonGlowFactor * MOON_LIGHT_MAX_INTENSITY;
@@ -583,6 +632,28 @@ export class DayNightSky {
 
     this.skyMaterial.fragmentShader = fragmentShader;
     this.skyMaterial.needsUpdate = true;
+  }
+
+  private updateSunShadowFrustum(
+    halfExtent: number,
+    far: number,
+  ): void {
+    const shouldUpdate =
+      Math.abs(this.sunShadowHalfExtent - halfExtent) > 0.5 ||
+      Math.abs(this.sunShadowFar - far) > 1;
+    if (!shouldUpdate) {
+      return;
+    }
+
+    this.sunShadowHalfExtent = halfExtent;
+    this.sunShadowFar = far;
+    const shadowCamera = this.sunLight.shadow.camera as OrthographicCamera;
+    shadowCamera.left = -halfExtent;
+    shadowCamera.right = halfExtent;
+    shadowCamera.top = halfExtent;
+    shadowCamera.bottom = -halfExtent;
+    shadowCamera.far = far;
+    shadowCamera.updateProjectionMatrix();
   }
 
   private createStarField(): Points {
