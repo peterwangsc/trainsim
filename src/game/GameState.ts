@@ -1,5 +1,6 @@
 export enum GameState {
-  Ready = 'READY',
-  Running = 'RUNNING',
-  Failed = 'FAILED'
+  Ready = "READY",
+  Running = "RUNNING",
+  Won = "WON",
+  Failed = "FAILED",
 }

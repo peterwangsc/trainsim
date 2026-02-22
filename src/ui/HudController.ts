@@ -10,10 +10,13 @@ type HudMetrics = {
   safeSpeed: number;
   samples: CurvaturePreviewSample[];
   pathPoints: MinimapPathPoint[];
+  status: "running" | "won" | "failed";
+  statusMessage: string;
 };
 
 export class HudController {
   private readonly root: HTMLDivElement;
+  private readonly statusBanner: HTMLDivElement;
   private readonly speedValue: HTMLSpanElement;
   private readonly speedLimitValue: HTMLSpanElement;
   private readonly minimapWidget: MinimapCurvatureWidget;
@@ -30,6 +33,11 @@ export class HudController {
 
     this.root = document.createElement("div");
     this.root.className = "hud";
+
+    this.statusBanner = document.createElement("div");
+    this.statusBanner.className = "hud-status-banner";
+    this.statusBanner.textContent =
+      "Drive to the terminal station and stop before the platform ends.";
 
     const speedReadout = document.createElement("p");
     speedReadout.className = "hud-speed hud-speed-floating";
@@ -90,7 +98,12 @@ export class HudController {
     window.addEventListener("touchcancel", this.onBrakeTouchEnd);
     window.addEventListener("blur", this.onWindowBlur);
 
-    this.root.append(previewCluster, speedLimitSign, this.brakeButton);
+    this.root.append(
+      this.statusBanner,
+      previewCluster,
+      speedLimitSign,
+      this.brakeButton,
+    );
     container.appendChild(this.root);
   }
 
@@ -108,6 +121,10 @@ export class HudController {
     this.speedLimitValue.textContent = Math.round(
       metrics.safeSpeed * 3.6,
     ).toString();
+    this.statusBanner.textContent = metrics.statusMessage;
+    this.statusBanner.classList.toggle("is-running", metrics.status === "running");
+    this.statusBanner.classList.toggle("is-won", metrics.status === "won");
+    this.statusBanner.classList.toggle("is-failed", metrics.status === "failed");
     this.setBrakeVisual(metrics.brake);
     this.minimapWidget.draw(metrics.pathPoints, metrics.samples, metrics.speed);
   }

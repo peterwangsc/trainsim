@@ -18,6 +18,7 @@ import { ThrottleOverlayCanvas } from "../ui/ThrottleOverlayCanvas";
 import { TrackGenerator } from "../world/Track/TrackGenerator";
 import { TrackMeshBuilder } from "../world/Track/TrackMeshBuilder";
 import { TrackSpline } from "../world/Track/TrackSpline";
+import { TrackEndSet, type TrackEndLayout } from "../world/Track/TrackEndSet";
 import { ForestLayer } from "../world/Foliage/ForestLayer";
 import { GrassLayer } from "../world/Foliage/GrassLayer";
 import { TerrainLayer } from "../world/Terrain/TerrainLayer";
@@ -29,6 +30,9 @@ import type {
 import { TrainMovementAudio } from "../audio/TrainMovementAudio";
 import { RandomAmbientAudio } from "../audio/RandomAmbientAudio";
 
+type HudStatus = "running" | "won" | "failed";
+type FailureReason = "COMFORT" | "BUMPER";
+
 type FrameMetrics = {
   speed: number;
   throttle: number;
@@ -38,7 +42,8 @@ type FrameMetrics = {
   safeSpeed: number;
   samples: CurvaturePreviewSample[];
   pathPoints: MinimapPathPoint[];
-  failed: boolean;
+  status: HudStatus;
+  statusMessage: string;
 };
 
 export class Game {
@@ -50,6 +55,8 @@ export class Game {
   private readonly grassLayer: GrassLayer;
   private readonly birdFlock: BirdFlock;
   private readonly trackSpline: TrackSpline;
+  private readonly trackEndSet: TrackEndSet;
+  private readonly trackEndLayout: TrackEndLayout;
   private readonly cameraRig: CameraRig;
   private readonly inputManager: InputManager;
   private readonly cabinChrome: CabinChrome;
@@ -71,6 +78,7 @@ export class Game {
   private toneMappingExposure = 1;
 
   private state = GameState.Ready;
+  private failureReason: FailureReason | null = null;
   private wrappedDistance = 0;
 
   private frameMetrics: FrameMetrics = {
@@ -82,7 +90,8 @@ export class Game {
     safeSpeed: 0,
     samples: this.trackSamplerSamplesPlaceholder(),
     pathPoints: this.trackPreviewPathPlaceholder(),
-    failed: false,
+    status: "running",
+    statusMessage: "Drive to the terminal station and stop before the platform ends.",
   };
 
   constructor(private readonly container: HTMLElement) {
@@ -101,6 +110,12 @@ export class Game {
       CONFIG.track,
     ).build();
     this.scene.add(trackMesh);
+    this.trackEndSet = new TrackEndSet(this.trackSpline, {
+      ...CONFIG.terminal,
+      railGauge: CONFIG.track.railGauge,
+    });
+    this.trackEndLayout = this.trackEndSet.getLayout();
+    this.scene.add(this.trackEndSet.root);
     this.terrainLayer = new TerrainLayer(
       this.scene,
       this.trackSpline,
@@ -203,6 +218,7 @@ export class Game {
 
   start(): void {
     this.state = GameState.Running;
+    this.failureReason = null;
     this.randomAmbientAudio.start();
     this.loop.start();
   }
@@ -222,6 +238,7 @@ export class Game {
     this.trainMovementAudio.dispose();
     this.brakePressureAudio.dispose();
     this.randomAmbientAudio.dispose();
+    this.trackEndSet.dispose();
     this.scene.remove(this.trainHeadlight);
     this.scene.remove(this.trainHeadlightTarget);
     this.renderer.dispose();
@@ -231,7 +248,7 @@ export class Game {
   private simulate = (dt: number): void => {
     const input = this.inputManager.update(dt);
 
-    if (this.state === GameState.Failed) {
+    if (this.state !== GameState.Running) {
       this.trainSim.setControls({ throttle: 0, brake: 1 });
     } else {
       this.trainSim.setControls(input);
@@ -248,23 +265,39 @@ export class Game {
     const samples = this.trackSampler.sampleAhead(this.wrappedDistance);
     const pathPoints = this.trackSampler.samplePathAhead(this.wrappedDistance);
     const safetyProbe = samples[Math.min(1, samples.length - 1)];
-    const safeSpeed = safetyProbe?.safeSpeed ?? CONFIG.minimap.safeSpeedMax;
+    const curvatureSafeSpeed =
+      safetyProbe?.safeSpeed ?? CONFIG.minimap.safeSpeedMax;
+    const terminalGuidanceSafeSpeed = this.computeTerminalGuidanceSafeSpeed(
+      train.distance,
+    );
+    const hudSafeSpeed = Math.min(curvatureSafeSpeed, terminalGuidanceSafeSpeed);
 
     const comfort = this.comfortModel.update(
       {
         speed: train.speed,
-        safeSpeed,
+        safeSpeed: curvatureSafeSpeed,
         accel: train.accel,
         jerk: train.jerk,
       },
       dt,
     );
 
-    if (comfort <= 0) {
-      this.state = GameState.Failed;
+    if (this.state === GameState.Running) {
+      if (train.distance >= this.trackEndLayout.bumperDistance) {
+        this.state = GameState.Failed;
+        this.failureReason = "BUMPER";
+      } else if (this.isStoppedInStation(train.distance, train.speed)) {
+        this.state = GameState.Won;
+      } else if (comfort <= 0) {
+        this.state = GameState.Failed;
+        this.failureReason = "COMFORT";
+      }
     }
 
-    const controls = this.trainSim.getControls();
+    const controls =
+      this.state === GameState.Running
+        ? this.trainSim.getControls()
+        : { throttle: 0, brake: 1 };
 
     this.frameMetrics = {
       speed: train.speed,
@@ -272,10 +305,11 @@ export class Game {
       brake: controls.brake,
       distance: train.distance,
       comfort,
-      safeSpeed,
+      safeSpeed: hudSafeSpeed,
       samples,
       pathPoints,
-      failed: this.state === GameState.Failed,
+      status: this.getHudStatus(),
+      statusMessage: this.getStatusMessage(train.distance),
     };
     const trainSpeedRatio = MathUtils.clamp(
       train.speed / CONFIG.train.maxSpeed,
@@ -323,6 +357,69 @@ export class Game {
     this.cameraRig.onResize(width, height);
     this.throttleOverlay.onResize(width);
   };
+
+  private computeTerminalGuidanceSafeSpeed(distance: number): number {
+    const distanceToStationEnd = Math.max(
+      0,
+      this.trackEndLayout.stationEndDistance - distance,
+    );
+    if (distanceToStationEnd <= 0) {
+      return 0;
+    }
+
+    const desiredDecel = 1.15;
+    const safeSpeed = Math.sqrt(2 * desiredDecel * distanceToStationEnd);
+    return MathUtils.clamp(safeSpeed, 0, CONFIG.minimap.safeSpeedMax);
+  }
+
+  private isStoppedInStation(distance: number, speed: number): boolean {
+    return (
+      speed <= CONFIG.terminal.stopSpeedThreshold &&
+      distance >= this.trackEndLayout.stationStartDistance &&
+      distance <= this.trackEndLayout.stationEndDistance
+    );
+  }
+
+  private getHudStatus(): HudStatus {
+    if (this.state === GameState.Won) {
+      return "won";
+    }
+    if (this.state === GameState.Failed) {
+      return "failed";
+    }
+    return "running";
+  }
+
+  private getStatusMessage(distance: number): string {
+    if (this.state === GameState.Won) {
+      return "Station stop complete. You win.";
+    }
+
+    if (this.state === GameState.Failed) {
+      if (this.failureReason === "BUMPER") {
+        return "Bumper impact. You lose.";
+      }
+      return "Ride comfort collapsed. You lose.";
+    }
+
+    const distanceToStationEnd = this.trackEndLayout.stationEndDistance - distance;
+    if (distanceToStationEnd > 260) {
+      return `Terminal station in ${Math.ceil(distanceToStationEnd)} m`;
+    }
+    if (distanceToStationEnd > 80) {
+      return `Station ahead. Begin braking (${Math.ceil(distanceToStationEnd)} m).`;
+    }
+    if (distanceToStationEnd > 0) {
+      return `Stop before platform end: ${Math.max(1, Math.ceil(distanceToStationEnd))} m`;
+    }
+
+    const distanceToBumper = this.trackEndLayout.bumperDistance - distance;
+    if (distanceToBumper > 0) {
+      return `Past station end. Bumper in ${Math.max(1, Math.ceil(distanceToBumper))} m`;
+    }
+
+    return "Bumper impact. You lose.";
+  }
 
   private updateTrainHeadlight(): void {
     const camera = this.cameraRig.camera;

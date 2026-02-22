@@ -209,6 +209,44 @@ canvas {
   z-index: 5;
 }
 
+.hud-status-banner {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(74vw, 720px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 22%);
+  background: rgb(14 22 34 / 62%);
+  color: rgb(233 244 255 / 95%);
+  text-align: center;
+  font-size: clamp(0.72rem, 1.2vw, 0.9rem);
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 6px rgb(0 0 0 / 36%);
+  box-shadow: 0 10px 18px rgb(0 0 0 / 22%);
+  backdrop-filter: blur(2px);
+}
+
+.hud-status-banner.is-running {
+  border-color: rgb(170 211 255 / 30%);
+  background: rgb(16 30 46 / 62%);
+}
+
+.hud-status-banner.is-won {
+  border-color: rgb(182 255 206 / 56%);
+  background: rgb(10 46 31 / 72%);
+  color: rgb(225 255 236 / 98%);
+}
+
+.hud-status-banner.is-failed {
+  border-color: rgb(255 186 186 / 56%);
+  background: rgb(60 14 14 / 72%);
+  color: rgb(255 228 228 / 99%);
+}
+
 .hud-preview-cluster {
   position: absolute;
   top: 14px;
@@ -362,14 +400,21 @@ canvas {
 }
 
 @media (max-width: 720px) {
+  .hud-status-banner {
+    top: 8px;
+    max-width: min(94vw, 720px);
+    padding: 7px 11px;
+    font-size: clamp(0.64rem, 2.4vw, 0.8rem);
+  }
+
   .hud-preview-cluster {
-    top: 10px;
+    top: 38px;
     left: 10px;
     gap: 8px;
   }
 
   .hud-speed-floating {
-    top: 10px;
+    top: 38px;
     right: 10px;
   }
 
@@ -379,6 +424,7 @@ canvas {
   }
 
   .speed-limit-sign {
+    top: 38px;
     width: 74px;
     min-height: 96px;
     border-width: 4px;
