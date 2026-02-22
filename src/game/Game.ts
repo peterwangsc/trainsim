@@ -30,6 +30,7 @@ import type {
 } from "../sim/TrackSampler";
 import { TrainMovementAudio } from "../audio/TrainMovementAudio";
 import { RandomAmbientAudio } from "../audio/RandomAmbientAudio";
+import { GameMusic } from "../audio/GameMusic";
 
 type HudStatus = "running" | "won" | "failed";
 type FailureReason = "COMFORT" | "BUMPER";
@@ -76,6 +77,7 @@ export class Game {
   private readonly trainMovementAudio: TrainMovementAudio;
   private readonly brakePressureAudio: TrainMovementAudio;
   private readonly randomAmbientAudio: RandomAmbientAudio;
+  private readonly gameMusic: GameMusic;
   private readonly trainHeadlight: SpotLight;
   private readonly trainHeadlightTarget: Object3D;
   private readonly cameraForward = new Vector3();
@@ -197,14 +199,15 @@ export class Game {
 
     this.trainSim = new TrainSim(CONFIG.train);
     this.trainMovementAudio = new TrainMovementAudio({
-      src: CONFIG.audio.movementTrackSrc,
+      srcs: CONFIG.audio.movementTrackSrcs,
       maxTrainSpeed: CONFIG.train.maxSpeed,
       movementThreshold: CONFIG.audio.movementThreshold,
       minVolume: CONFIG.audio.minVolume,
       maxVolume: CONFIG.audio.maxVolume,
+      releaseFadeSeconds: CONFIG.audio.movementReleaseFadeSeconds,
     });
     this.brakePressureAudio = new TrainMovementAudio({
-      src: CONFIG.audio.brakeTrackSrc,
+      srcs: CONFIG.audio.brakeTrackSrcs,
       maxTrainSpeed: 1,
       movementThreshold: CONFIG.audio.brakePressureThreshold,
       minVolume: CONFIG.audio.brakeMinVolume,
@@ -216,6 +219,14 @@ export class Game {
       volume: CONFIG.audio.ambientVolume,
       minGapMs: CONFIG.audio.ambientMinGapMs,
       maxGapMs: CONFIG.audio.ambientMaxGapMs,
+    });
+    this.gameMusic = new GameMusic({
+      tracks: CONFIG.audio.musicTrackSrcs,
+      volume: CONFIG.audio.musicVolume,
+      fadeInMs: CONFIG.audio.musicFadeInMs,
+      fadeOutAtMs: CONFIG.audio.musicFadeOutAtMs,
+      fadeOutMs: CONFIG.audio.musicFadeOutMs,
+      gapMs: CONFIG.audio.musicGapMs,
     });
     this.comfortModel = new ComfortModel(CONFIG.comfort);
     this.trackSampler = new TrackSampler(this.trackSpline, CONFIG.minimap);
@@ -232,6 +243,7 @@ export class Game {
   start(): void {
     this.state = GameState.Running;
     this.failureReason = null;
+    this.gameMusic.start();
     this.randomAmbientAudio.start();
     this.loop.start();
   }
@@ -252,6 +264,7 @@ export class Game {
     this.trainMovementAudio.dispose();
     this.brakePressureAudio.dispose();
     this.randomAmbientAudio.dispose();
+    this.gameMusic.dispose();
     this.trackEndSet.dispose();
     this.scene.remove(this.trainHeadlight);
     this.scene.remove(this.trainHeadlightTarget);
