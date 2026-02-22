@@ -353,7 +353,11 @@ export class Game {
       0,
       1,
     );
-    const brakeAudioDrive = controls.brake * trainSpeedRatio;
+    const brakeLinear = controls.brake * trainSpeedRatio;
+    const brakeAudioDrive =
+      brakeLinear <= 0
+        ? 0
+        : Math.log(1 + 9 * brakeLinear) / Math.log(10);
     this.trainMovementAudio.update(train.speed, dt);
     this.brakePressureAudio.update(brakeAudioDrive, dt);
 
