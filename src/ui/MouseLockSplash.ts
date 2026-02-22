@@ -1,3 +1,5 @@
+import { ASSETS_CDN_BASE } from "../game/Config";
+
 const SPLASH_FADE_DURATION_MS = 8_000;
 
 export class MouseLockSplash {
@@ -13,7 +15,7 @@ export class MouseLockSplash {
 
     const logo = document.createElement("img");
     logo.className = "mouse-lock-splash__logo";
-    logo.src = "/og.png";
+    logo.src = `${ASSETS_CDN_BASE}/og.png`;
     logo.alt = "TrainSim";
     logo.decoding = "async";
     logo.loading = "eager";

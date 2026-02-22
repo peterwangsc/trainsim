@@ -1,3 +1,5 @@
+import { ASSETS_CDN_BASE } from "../game/Config";
+
 export type RunEndTone = "won" | "failed";
 
 export type RunEndOverlayOptions = {
@@ -24,7 +26,7 @@ export class RunEndOverlay {
 
     const logo = document.createElement("img");
     logo.className = "run-end-overlay__logo";
-    logo.src = "/og.png";
+    logo.src = `${ASSETS_CDN_BASE}/og.png`;
     logo.alt = "TrainSim";
     logo.decoding = "async";
 

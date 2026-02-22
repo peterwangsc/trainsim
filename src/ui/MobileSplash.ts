@@ -1,3 +1,5 @@
+import { ASSETS_CDN_BASE } from "../game/Config";
+
 export class MobileSplash {
   private readonly root: HTMLDivElement;
   private dismissed = false;
@@ -13,7 +15,7 @@ export class MobileSplash {
 
     const logo = document.createElement("img");
     logo.className = "mobile-splash__logo";
-    logo.src = "/og.png";
+    logo.src = `${ASSETS_CDN_BASE}/og.png`;
     logo.alt = "TrainSim";
     logo.decoding = "async";
     logo.loading = "eager";
