@@ -13,6 +13,7 @@ import { Renderer } from "../render/Renderer";
 import { createScene } from "../render/SceneSetup";
 import { CabinChrome } from "../ui/CabinChrome";
 import { HudController } from "../ui/HudController";
+import { MouseLockSplash } from "../ui/MouseLockSplash";
 import { ThrottleOverlayCanvas } from "../ui/ThrottleOverlayCanvas";
 import { TrackGenerator } from "../world/Track/TrackGenerator";
 import { TrackMeshBuilder } from "../world/Track/TrackMeshBuilder";
@@ -52,6 +53,7 @@ export class Game {
   private readonly cameraRig: CameraRig;
   private readonly inputManager: InputManager;
   private readonly cabinChrome: CabinChrome;
+  private readonly mouseLockSplash: MouseLockSplash;
   private readonly throttleOverlay: ThrottleOverlayCanvas;
   private readonly trainSim: TrainSim;
   private readonly comfortModel: ComfortModel;
@@ -144,6 +146,10 @@ export class Game {
     this.scene.add(this.trainHeadlightTarget);
 
     this.renderer = new Renderer(container);
+    this.mouseLockSplash = new MouseLockSplash(
+      container,
+      this.renderer.getCanvas(),
+    );
 
     this.cameraRig = new CameraRig(
       this.trackSpline,
@@ -207,6 +213,7 @@ export class Game {
   stop(): void {
     this.loop.stop();
     this.cabinChrome.dispose();
+    this.mouseLockSplash.dispose();
     this.throttleOverlay.dispose();
     this.inputManager.dispose();
     this.hud.dispose();
