@@ -14,6 +14,7 @@ import { createScene } from "../render/SceneSetup";
 import { CabinChrome } from "../ui/CabinChrome";
 import { HudController } from "../ui/HudController";
 import { MouseLockSplash } from "../ui/MouseLockSplash";
+import { RunEndOverlay } from "../ui/RunEndOverlay";
 import { ThrottleOverlayCanvas } from "../ui/ThrottleOverlayCanvas";
 import { TrackGenerator } from "../world/Track/TrackGenerator";
 import { TrackMeshBuilder } from "../world/Track/TrackMeshBuilder";
@@ -32,6 +33,9 @@ import { RandomAmbientAudio } from "../audio/RandomAmbientAudio";
 
 type HudStatus = "running" | "won" | "failed";
 type FailureReason = "COMFORT" | "BUMPER";
+type GameOptions = {
+  onRestartRequested?: () => void;
+};
 
 type FrameMetrics = {
   speed: number;
@@ -39,6 +43,7 @@ type FrameMetrics = {
   brake: number;
   distance: number;
   comfort: number;
+  comfortRatio: number;
   safeSpeed: number;
   samples: CurvaturePreviewSample[];
   pathPoints: MinimapPathPoint[];
@@ -61,6 +66,7 @@ export class Game {
   private readonly inputManager: InputManager;
   private readonly cabinChrome: CabinChrome;
   private readonly mouseLockSplash: MouseLockSplash;
+  private readonly runEndOverlay: RunEndOverlay;
   private readonly throttleOverlay: ThrottleOverlayCanvas;
   private readonly trainSim: TrainSim;
   private readonly comfortModel: ComfortModel;
@@ -76,6 +82,7 @@ export class Game {
   private readonly headlightAnchor = new Vector3();
   private readonly headlightTargetPosition = new Vector3();
   private toneMappingExposure = 1;
+  private readonly onRestartRequested: () => void;
 
   private state = GameState.Ready;
   private failureReason: FailureReason | null = null;
@@ -87,6 +94,7 @@ export class Game {
     brake: 0,
     distance: 0,
     comfort: 100,
+    comfortRatio: 1,
     safeSpeed: 0,
     samples: this.trackSamplerSamplesPlaceholder(),
     pathPoints: this.trackPreviewPathPlaceholder(),
@@ -94,7 +102,13 @@ export class Game {
     statusMessage: "Drive to the terminal station and stop before the platform ends.",
   };
 
-  constructor(private readonly container: HTMLElement) {
+  constructor(
+    private readonly container: HTMLElement,
+    options: GameOptions = {},
+  ) {
+    this.onRestartRequested =
+      options.onRestartRequested ?? (() => window.location.reload());
+
     const trackPoints = new TrackGenerator(
       CONFIG.seed,
       CONFIG.track,
@@ -162,6 +176,7 @@ export class Game {
 
     this.renderer = new Renderer(container);
     this.mouseLockSplash = new MouseLockSplash(container);
+    this.runEndOverlay = new RunEndOverlay(container);
 
     this.cameraRig = new CameraRig(
       this.trackSpline,
@@ -227,6 +242,7 @@ export class Game {
     this.loop.stop();
     this.cabinChrome.dispose();
     this.mouseLockSplash.dispose();
+    this.runEndOverlay.dispose();
     this.throttleOverlay.dispose();
     this.inputManager.dispose();
     this.hud.dispose();
@@ -246,6 +262,7 @@ export class Game {
   }
 
   private simulate = (dt: number): void => {
+    const previousState = this.state;
     const input = this.inputManager.update(dt);
 
     if (this.state !== GameState.Running) {
@@ -294,6 +311,10 @@ export class Game {
       }
     }
 
+    if (previousState === GameState.Running && this.state !== GameState.Running) {
+      this.showRunEndOverlay();
+    }
+
     const controls =
       this.state === GameState.Running
         ? this.trainSim.getControls()
@@ -305,6 +326,7 @@ export class Game {
       brake: controls.brake,
       distance: train.distance,
       comfort,
+      comfortRatio: MathUtils.clamp(comfort / CONFIG.comfort.max, 0, 1),
       safeSpeed: hudSafeSpeed,
       samples,
       pathPoints,
@@ -378,6 +400,28 @@ export class Game {
       distance >= this.trackEndLayout.stationStartDistance &&
       distance <= this.trackEndLayout.stationEndDistance
     );
+  }
+
+  private showRunEndOverlay(): void {
+    if (this.state === GameState.Won) {
+      this.runEndOverlay.show({
+        tone: "won",
+        title: "Station Stop Complete",
+        message: "You stopped before the platform end.",
+        onRestart: this.onRestartRequested,
+      });
+      return;
+    }
+
+    const isBumperImpact = this.failureReason === "BUMPER";
+    this.runEndOverlay.show({
+      tone: "failed",
+      title: isBumperImpact ? "Bumper Impact" : "Run Failed",
+      message: isBumperImpact
+        ? "You hit the terminal bumper."
+        : "Passengers could not tolerate the ride.",
+      onRestart: this.onRestartRequested,
+    });
   }
 
   private getHudStatus(): HudStatus {

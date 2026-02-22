@@ -7,6 +7,7 @@ import { MinimapCurvatureWidget } from "./MinimapCurvatureWidget";
 type HudMetrics = {
   speed: number;
   brake: number;
+  comfortRatio: number;
   safeSpeed: number;
   samples: CurvaturePreviewSample[];
   pathPoints: MinimapPathPoint[];
@@ -17,6 +18,9 @@ type HudMetrics = {
 export class HudController {
   private readonly root: HTMLDivElement;
   private readonly statusBanner: HTMLDivElement;
+  private readonly comfortGauge: HTMLDivElement;
+  private readonly comfortFill: HTMLDivElement;
+  private readonly comfortValue: HTMLSpanElement;
   private readonly speedValue: HTMLSpanElement;
   private readonly speedLimitValue: HTMLSpanElement;
   private readonly minimapWidget: MinimapCurvatureWidget;
@@ -84,6 +88,26 @@ export class HudController {
     );
     previewCluster.appendChild(speedReadout);
 
+    this.comfortGauge = document.createElement("div");
+    this.comfortGauge.className = "comfort-gauge";
+
+    const comfortLabel = document.createElement("span");
+    comfortLabel.className = "comfort-gauge-label";
+    comfortLabel.textContent = "Safety";
+
+    const comfortTrack = document.createElement("div");
+    comfortTrack.className = "comfort-gauge-track";
+
+    this.comfortFill = document.createElement("div");
+    this.comfortFill.className = "comfort-gauge-fill";
+    comfortTrack.appendChild(this.comfortFill);
+
+    this.comfortValue = document.createElement("span");
+    this.comfortValue.className = "comfort-gauge-value";
+    this.comfortValue.textContent = "100%";
+
+    this.comfortGauge.append(comfortLabel, comfortTrack, this.comfortValue);
+
     this.brakeButton = document.createElement("button");
     this.brakeButton.type = "button";
     this.brakeButton.className = "brake-button";
@@ -102,6 +126,7 @@ export class HudController {
       this.statusBanner,
       previewCluster,
       speedLimitSign,
+      this.comfortGauge,
       this.brakeButton,
     );
     container.appendChild(this.root);
@@ -114,6 +139,7 @@ export class HudController {
     window.removeEventListener("touchcancel", this.onBrakeTouchEnd);
     window.removeEventListener("blur", this.onWindowBlur);
     this.setBrakeButtonDown(false);
+    this.root.remove();
   }
 
   update(metrics: HudMetrics): void {
@@ -121,10 +147,24 @@ export class HudController {
     this.speedLimitValue.textContent = Math.round(
       metrics.safeSpeed * 3.6,
     ).toString();
+    const comfortRatio = Math.min(1, Math.max(0, metrics.comfortRatio));
+    this.comfortFill.style.height = `${Math.round(comfortRatio * 100)}%`;
+    this.comfortValue.textContent = `${Math.round(comfortRatio * 100)}%`;
+    this.comfortGauge.classList.toggle("is-low", comfortRatio < 0.3);
+    this.comfortGauge.classList.toggle(
+      "is-warning",
+      comfortRatio >= 0.3 && comfortRatio < 0.55,
+    );
     this.statusBanner.textContent = metrics.statusMessage;
-    this.statusBanner.classList.toggle("is-running", metrics.status === "running");
+    this.statusBanner.classList.toggle(
+      "is-running",
+      metrics.status === "running",
+    );
     this.statusBanner.classList.toggle("is-won", metrics.status === "won");
-    this.statusBanner.classList.toggle("is-failed", metrics.status === "failed");
+    this.statusBanner.classList.toggle(
+      "is-failed",
+      metrics.status === "failed",
+    );
     this.setBrakeVisual(metrics.brake);
     this.minimapWidget.draw(metrics.pathPoints, metrics.samples, metrics.speed);
   }
