@@ -79,7 +79,7 @@ export class HudController {
     this.brakeButton = document.createElement("button");
     this.brakeButton.type = "button";
     this.brakeButton.className = "brake-button";
-    this.brakeButton.textContent = "Brake";
+    this.brakeButton.textContent = "STOP";
     this.brakeButton.addEventListener("pointerdown", this.onBrakePointerDown);
     this.brakeButton.addEventListener("touchstart", this.onBrakeTouchStart, {
       passive: false,
