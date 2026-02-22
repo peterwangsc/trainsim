@@ -146,10 +146,7 @@ export class Game {
     this.scene.add(this.trainHeadlightTarget);
 
     this.renderer = new Renderer(container);
-    this.mouseLockSplash = new MouseLockSplash(
-      container,
-      this.renderer.getCanvas(),
-    );
+    this.mouseLockSplash = new MouseLockSplash(container);
 
     this.cameraRig = new CameraRig(
       this.trackSpline,

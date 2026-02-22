@@ -1,26 +1,15 @@
-type PointerLockTarget = HTMLElement & {
-  requestPointerLock: () => Promise<void> | void;
-};
+const SPLASH_FADE_DURATION_MS = 8_000;
 
 export class MouseLockSplash {
   private readonly root: HTMLDivElement;
-  private readonly lockTarget: PointerLockTarget;
-  private readonly hasPointerLockSupport: boolean;
+  private fadeStartFrameId: number | null = null;
+  private dismissTimeoutId: number | null = null;
+  private dismissed = false;
 
-  constructor(container: HTMLElement, lockTarget: HTMLElement) {
-    this.lockTarget = lockTarget as PointerLockTarget;
-    this.hasPointerLockSupport =
-      typeof document.pointerLockElement !== "undefined" &&
-      typeof this.lockTarget.requestPointerLock === "function";
-
+  constructor(container: HTMLElement) {
     this.root = document.createElement("div");
     this.root.className = "mouse-lock-splash";
-    this.root.tabIndex = 0;
-    this.root.setAttribute("role", "button");
-    this.root.setAttribute(
-      "aria-label",
-      "Click to recapture mouse and continue driving",
-    );
+    this.root.setAttribute("aria-hidden", "true");
 
     const logo = document.createElement("img");
     logo.className = "mouse-lock-splash__logo";
@@ -29,74 +18,40 @@ export class MouseLockSplash {
     logo.decoding = "async";
     logo.loading = "eager";
 
-    const hint = document.createElement("p");
-    hint.className = "mouse-lock-splash__hint";
-    hint.textContent = "Click to continue";
-
-    this.root.append(logo, hint);
+    this.root.appendChild(logo);
     container.appendChild(this.root);
 
-    this.root.addEventListener("click", this.onActivate);
-    this.root.addEventListener("keydown", this.onKeyDown);
-    document.addEventListener("pointerlockchange", this.onPointerLockChange);
-    document.addEventListener("pointerlockerror", this.onPointerLockChange);
-    window.addEventListener("blur", this.onPointerLockChange);
-
-    this.syncVisibility();
+    this.fadeStartFrameId = window.requestAnimationFrame(() => {
+      this.fadeStartFrameId = null;
+      this.root.classList.add("mouse-lock-splash--fading");
+      this.dismissTimeoutId = window.setTimeout(
+        this.dismiss,
+        SPLASH_FADE_DURATION_MS,
+      );
+    });
   }
 
   dispose(): void {
-    this.root.removeEventListener("click", this.onActivate);
-    this.root.removeEventListener("keydown", this.onKeyDown);
-    document.removeEventListener("pointerlockchange", this.onPointerLockChange);
-    document.removeEventListener("pointerlockerror", this.onPointerLockChange);
-    window.removeEventListener("blur", this.onPointerLockChange);
+    if (this.fadeStartFrameId !== null) {
+      window.cancelAnimationFrame(this.fadeStartFrameId);
+      this.fadeStartFrameId = null;
+    }
+
+    if (this.dismissTimeoutId !== null) {
+      window.clearTimeout(this.dismissTimeoutId);
+      this.dismissTimeoutId = null;
+    }
+
+    this.dismiss();
+  }
+
+  private dismiss = (): void => {
+    if (this.dismissed) {
+      return;
+    }
+
+    this.dismissed = true;
+    this.root.classList.add("mouse-lock-splash--hidden");
     this.root.remove();
-  }
-
-  private onActivate = (): void => {
-    this.requestPointerLock();
   };
-
-  private onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key !== "Enter" && event.key !== " ") {
-      return;
-    }
-
-    event.preventDefault();
-    this.requestPointerLock();
-  };
-
-  private onPointerLockChange = (): void => {
-    this.syncVisibility();
-  };
-
-  private syncVisibility(): void {
-    if (!this.hasPointerLockSupport) {
-      this.root.classList.add("mouse-lock-splash--hidden");
-      this.root.setAttribute("aria-hidden", "true");
-      return;
-    }
-
-    const isLocked = document.pointerLockElement === this.lockTarget;
-    this.root.classList.toggle("mouse-lock-splash--hidden", isLocked);
-    this.root.setAttribute("aria-hidden", isLocked ? "true" : "false");
-  }
-
-  private requestPointerLock(): void {
-    if (!this.hasPointerLockSupport) {
-      return;
-    }
-
-    if (document.pointerLockElement === this.lockTarget) {
-      return;
-    }
-
-    const requestResult = this.lockTarget.requestPointerLock();
-    if (requestResult && typeof requestResult.then === "function") {
-      void requestResult.catch(() => {
-        this.syncVisibility();
-      });
-    }
-  }
 }
