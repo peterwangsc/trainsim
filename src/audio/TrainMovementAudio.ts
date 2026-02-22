@@ -5,8 +5,6 @@ export type TrainMovementAudioConfig = {
   src: string;
   maxTrainSpeed: number;
   movementThreshold: number;
-  minPlaybackRate: number;
-  maxPlaybackRate: number;
   minVolume: number;
   maxVolume: number;
   releaseFadeSeconds?: number;
@@ -23,7 +21,7 @@ export class TrainMovementAudio {
       src: [config.src],
       loop: true,
       volume: 0,
-      html5: false, // Use Web Audio API — critical for real-time rate/volume changes on mobile Safari
+      html5: false,
       preload: true,
     });
   }
@@ -54,9 +52,6 @@ export class TrainMovementAudio {
     }
 
     const speedRatio = clamp(speed / this.config.maxTrainSpeed, 0, 1);
-    const targetRate =
-      this.config.minPlaybackRate +
-      (this.config.maxPlaybackRate - this.config.minPlaybackRate) * speedRatio;
     this.currentVolume = clamp(
       this.config.minVolume + (this.config.maxVolume - this.config.minVolume) * speedRatio,
       0,
@@ -71,7 +66,6 @@ export class TrainMovementAudio {
       this.isPaused = false;
     }
 
-    this.howl.rate(targetRate, this.soundId);
     this.howl.volume(this.currentVolume, this.soundId);
   }
 

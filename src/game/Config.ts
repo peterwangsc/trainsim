@@ -33,8 +33,6 @@ export const CONFIG = {
   audio: {
     movementTrackSrc: "/looping_track.mp3",
     movementThreshold: 0.12,
-    minPlaybackRate: 0.7,
-    maxPlaybackRate: 1.45,
     minVolume: 0.12,
     maxVolume: 0.9,
     brakeTrackSrc: "/looping_brake.mp3",

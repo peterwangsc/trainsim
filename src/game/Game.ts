@@ -200,8 +200,6 @@ export class Game {
       src: CONFIG.audio.movementTrackSrc,
       maxTrainSpeed: CONFIG.train.maxSpeed,
       movementThreshold: CONFIG.audio.movementThreshold,
-      minPlaybackRate: CONFIG.audio.minPlaybackRate,
-      maxPlaybackRate: CONFIG.audio.maxPlaybackRate,
       minVolume: CONFIG.audio.minVolume,
       maxVolume: CONFIG.audio.maxVolume,
     });
@@ -209,8 +207,6 @@ export class Game {
       src: CONFIG.audio.brakeTrackSrc,
       maxTrainSpeed: 1,
       movementThreshold: CONFIG.audio.brakePressureThreshold,
-      minPlaybackRate: 1,
-      maxPlaybackRate: 1,
       minVolume: CONFIG.audio.brakeMinVolume,
       maxVolume: CONFIG.audio.brakeMaxVolume,
       releaseFadeSeconds: CONFIG.audio.brakeReleaseFadeSeconds,
