@@ -77,7 +77,7 @@ export class RandomAmbientAudio {
     const howl = new Howl({
       src: [this.tracks[nextIndex]],
       volume: 0, // fade in from silence
-      html5: true, // Stream instead of decoding into memory — volume is writable on all modern iOS
+      html5: false, // Web Audio API — required for volume/fade to work on iOS (audio.volume is read-only there)
       onplay: () => {
         if (!this.isActive) {
           howl.stop();

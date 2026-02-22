@@ -72,7 +72,7 @@ export class GameMusic {
     const howl = new Howl({
       src: [src],
       volume: 0, // fade in from silence
-      html5: true,
+      html5: false, // Web Audio API — required for volume/fade to work on iOS (audio.volume is read-only there)
       onplay: () => {
         if (!this.isActive) {
           howl.stop();
