@@ -460,7 +460,7 @@ export class SingleTreeFactory {
       canopyMesh.rotation.set(0, layer.twist, 0);
       canopyMesh.scale.set(layer.radius, layer.height, layer.radius);
       canopyMesh.castShadow = true;
-      canopyMesh.receiveShadow = false;
+      canopyMesh.receiveShadow = true;
       group.add(canopyMesh);
     });
 
