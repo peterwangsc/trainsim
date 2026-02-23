@@ -74,7 +74,7 @@ export const CONFIG = {
     musicGapMs: 4_000,
   },
   track: {
-    segmentCount: 640,
+    segmentCount: 10,
     segmentLength: 12,
     stemLength: 40,
     maxHeadingDelta: 0.08,

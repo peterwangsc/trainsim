@@ -40,6 +40,9 @@ type GameOptions = {
   onRestartRequested?: () => void;
   onNextLevelRequested?: () => void;
   preloadedAssets: CriticalPreloadedAssets;
+  onLogin?: (username: string, targetLevel: number) => void;
+  onLogout?: () => void;
+  username?: string | null;
 };
 
 type FrameMetrics = {
@@ -90,6 +93,9 @@ export class Game {
   private toneMappingExposure = 1;
   private readonly onRestartRequested: () => void;
   private readonly onNextLevelRequested?: () => void;
+  private readonly onLogin?: (username: string, targetLevel: number) => void;
+  private readonly onLogout?: () => void;
+  private readonly username: string | null;
   private readonly level: number;
 
   private state = GameState.Ready;
@@ -118,6 +124,9 @@ export class Game {
     this.onRestartRequested =
       options.onRestartRequested ?? (() => window.location.reload());
     this.onNextLevelRequested = options.onNextLevelRequested;
+    this.onLogin = options.onLogin;
+    this.onLogout = options.onLogout;
+    this.username = options.username ?? null;
     this.level = options.level;
     this.frameMetrics.statusMessage = `Drive to Level ${this.level} terminal and stop before the platform ends.`;
     const preloadedAssets = options.preloadedAssets;
@@ -506,6 +515,9 @@ export class Game {
         message: "You stopped before the platform end.",
         onRestart: this.onRestartRequested,
         onNextLevel: this.onNextLevelRequested,
+        onLogin: this.onLogin ? (username) => this.onLogin!(username, this.level + 1) : undefined,
+        onLogout: this.onLogout ? () => this.onLogout!() : undefined,
+        username: this.username,
       });
       return;
     }
@@ -518,6 +530,9 @@ export class Game {
         ? "You hit the terminal bumper."
         : "Passengers could not tolerate the ride.",
       onRestart: this.onRestartRequested,
+      onLogin: this.onLogin ? (username) => this.onLogin!(username, this.level) : undefined,
+      onLogout: this.onLogout ? () => this.onLogout!() : undefined,
+      username: this.username,
     });
   }
 

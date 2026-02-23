@@ -7,13 +7,15 @@ export class LoadingSplash {
   private readonly progressFill: HTMLDivElement;
   private readonly cta: HTMLButtonElement;
   private readonly progressContainer: HTMLDivElement;
+  private readonly usernameInput: HTMLInputElement | null = null;
   private dismissed = false;
   private isReady = false;
   private isStarting = false;
 
   constructor(
     container: HTMLElement,
-    private readonly onStart: () => Promise<void> | void,
+    private readonly onStart: (enteredUsername?: string) => Promise<void> | void,
+    currentUsername?: string | null,
   ) {
     this.root = document.createElement("div");
     this.root.className = "loading-splash";
@@ -61,6 +63,16 @@ export class LoadingSplash {
     ctaContainer.className = "loading-splash__cta-container";
     ctaContainer.appendChild(this.progressLabel);
     ctaContainer.appendChild(this.progressTrack);
+
+    if (!currentUsername) {
+      this.usernameInput = document.createElement("input");
+      this.usernameInput.type = "text";
+      this.usernameInput.placeholder = "Username (Optional)";
+      this.usernameInput.className = "loading-splash__username-input";
+      this.usernameInput.style.display = "none";
+      ctaContainer.appendChild(this.usernameInput);
+    }
+
     ctaContainer.appendChild(this.cta);
     this.progressContainer.appendChild(ctaContainer);
 
@@ -87,6 +99,9 @@ export class LoadingSplash {
     this.setProgress(1);
     this.progressLabel.style.display = "none";
     this.progressTrack.style.display = "none";
+    if (this.usernameInput) {
+      this.usernameInput.style.display = "block";
+    }
     this.cta.className = "loading-splash__cta";
   }
 
@@ -96,6 +111,9 @@ export class LoadingSplash {
     this.progressLabel.textContent = message;
     this.cta.disabled = true;
     this.cta.textContent = "Unavailable";
+    if (this.usernameInput) {
+      this.usernameInput.style.display = "none";
+    }
   }
 
   private onTap = async (): Promise<void> => {
@@ -106,10 +124,14 @@ export class LoadingSplash {
     this.isStarting = true;
     this.cta.disabled = true;
     this.cta.textContent = "Starting";
+    if (this.usernameInput) {
+      this.usernameInput.disabled = true;
+    }
     this.root.classList.add("loading-splash--out");
 
     try {
-      await this.onStart();
+      const enteredUsername = this.usernameInput?.value.trim() || undefined;
+      await this.onStart(enteredUsername);
       this.dismiss();
     } catch (error) {
       this.root.classList.remove("loading-splash--out");
@@ -118,6 +140,9 @@ export class LoadingSplash {
       if (this.isReady) {
         this.cta.disabled = false;
         this.cta.textContent = "Error. Try again";
+        if (this.usernameInput) {
+          this.usernameInput.disabled = false;
+        }
       }
     }
   };
