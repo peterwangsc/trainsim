@@ -1,4 +1,4 @@
-import { clamp } from '../util/Math';
+import { clamp } from "../util/Math";
 
 export type DesktopControlsConfig = {
   throttleRatePerSecond: number;
@@ -20,20 +20,20 @@ export class DesktopControls {
   private wasBrakeDown = false;
 
   constructor(private readonly config: DesktopControlsConfig) {
-    window.addEventListener('keydown', this.onKeyDown);
-    window.addEventListener('keyup', this.onKeyUp);
-    window.addEventListener('blur', this.onBlur);
+    window.addEventListener("keydown", this.onKeyDown);
+    window.addEventListener("keyup", this.onKeyUp);
+    window.addEventListener("blur", this.onBlur);
   }
 
   dispose(): void {
-    window.removeEventListener('keydown', this.onKeyDown);
-    window.removeEventListener('keyup', this.onKeyUp);
-    window.removeEventListener('blur', this.onBlur);
+    window.removeEventListener("keydown", this.onKeyDown);
+    window.removeEventListener("keyup", this.onKeyUp);
+    window.removeEventListener("blur", this.onBlur);
   }
 
   update(dt: number): InputState {
-    const throttleUp = this.isDown('KeyW') || this.isDown('ArrowUp');
-    const throttleDown = this.isDown('KeyS') || this.isDown('ArrowDown');
+    const throttleUp = this.isDown("KeyW") || this.isDown("ArrowUp");
+    const throttleDown = this.isDown("KeyS") || this.isDown("ArrowDown");
 
     const throttleDelta = this.config.throttleRatePerSecond * dt;
 
@@ -46,11 +46,15 @@ export class DesktopControls {
     }
 
     const brakeDown =
-      this.brakeButtonDown || this.isDown('Space') || this.isDown('KeyB');
+      this.brakeButtonDown || this.isDown("Space") || this.isDown("KeyB");
 
     if (brakeDown) {
       this.brakeHoldTime += dt;
-      this.brake = clamp(this.brakeHoldTime / this.config.brakeRampSeconds, 0, 1);
+      this.brake = clamp(
+        this.brakeHoldTime / this.config.brakeRampSeconds,
+        0,
+        1,
+      );
     } else {
       if (this.wasBrakeDown && this.brakeHoldTime < 0.2) {
         this.brakePulseTime = 0.16;
@@ -70,8 +74,18 @@ export class DesktopControls {
 
     return {
       throttle: this.throttle,
-      brake: this.brake
+      brake: this.brake,
     };
+  }
+
+  reset(): void {
+    this.throttle = 0;
+    this.brake = 0;
+    this.brakeHoldTime = 0;
+    this.brakePulseTime = 0;
+    this.wasBrakeDown = false;
+    this.brakeButtonDown = false;
+    this.pressedKeys.clear();
   }
 
   setThrottle(value: number): void {

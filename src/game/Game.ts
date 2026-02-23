@@ -13,7 +13,7 @@ import { Renderer } from "../render/Renderer";
 import { createScene } from "../render/SceneSetup";
 import { CabinChrome } from "../ui/CabinChrome";
 import { HudController } from "../ui/HudController";
-import { MouseLockSplash } from "../ui/MouseLockSplash";
+import { IntroSplash } from "../ui/IntroSplash";
 import { RunEndOverlay } from "../ui/RunEndOverlay";
 import { ThrottleOverlayCanvas } from "../ui/ThrottleOverlayCanvas";
 import { TrackGenerator } from "../world/Track/TrackGenerator";
@@ -31,11 +31,13 @@ import type {
 import { TrainMovementAudio } from "../audio/TrainMovementAudio";
 import { RandomAmbientAudio } from "../audio/RandomAmbientAudio";
 import { GameMusic } from "../audio/GameMusic";
+import type { CriticalPreloadedAssets } from "../loading/CriticalAssetPreloader";
 
 type HudStatus = "running" | "won" | "failed";
 type FailureReason = "COMFORT" | "BUMPER";
 type GameOptions = {
   onRestartRequested?: () => void;
+  preloadedAssets: CriticalPreloadedAssets;
 };
 
 type FrameMetrics = {
@@ -66,7 +68,7 @@ export class Game {
   private readonly cameraRig: CameraRig;
   private readonly inputManager: InputManager;
   private readonly cabinChrome: CabinChrome;
-  private readonly mouseLockSplash: MouseLockSplash;
+  private readonly introSplash: IntroSplash;
   private readonly runEndOverlay: RunEndOverlay;
   private readonly throttleOverlay: ThrottleOverlayCanvas;
   private readonly trainSim: TrainSim;
@@ -101,15 +103,17 @@ export class Game {
     samples: this.trackSamplerSamplesPlaceholder(),
     pathPoints: this.trackPreviewPathPlaceholder(),
     status: "running",
-    statusMessage: "Drive to the terminal station and stop before the platform ends.",
+    statusMessage:
+      "Drive to the terminal station and stop before the platform ends.",
   };
 
   constructor(
     private readonly container: HTMLElement,
-    options: GameOptions = {},
+    options: GameOptions,
   ) {
     this.onRestartRequested =
       options.onRestartRequested ?? (() => window.location.reload());
+    const preloadedAssets = options.preloadedAssets;
 
     const trackPoints = new TrackGenerator(
       CONFIG.seed,
@@ -117,7 +121,9 @@ export class Game {
     ).generate();
 
     this.trackSpline = new TrackSpline(trackPoints, { closed: false });
-    const sceneSetup = createScene();
+    const sceneSetup = createScene({
+      cloudTexture: preloadedAssets.cloudTexture,
+    });
     this.scene = sceneSetup.scene;
     this.dayNightSky = sceneSetup.dayNightSky;
 
@@ -137,6 +143,7 @@ export class Game {
       this.trackSpline,
       CONFIG.seed,
       CONFIG.terrain,
+      preloadedAssets.simplexNoiseTexture,
     );
     this.forestLayer = new ForestLayer(
       this.scene,
@@ -153,6 +160,9 @@ export class Game {
       CONFIG.grass,
       this.terrainLayer.getHeightAt.bind(this.terrainLayer),
       this.terrainLayer.getDistanceToTrack.bind(this.terrainLayer),
+      preloadedAssets.simplexNoiseTexture,
+      preloadedAssets.grassLeafTexture,
+      preloadedAssets.grassAccentTexture,
     );
     this.birdFlock = new BirdFlock(this.scene, CONFIG.birds);
 
@@ -177,7 +187,7 @@ export class Game {
     this.scene.add(this.trainHeadlightTarget);
 
     this.renderer = new Renderer(container);
-    this.mouseLockSplash = new MouseLockSplash(container);
+    this.introSplash = new IntroSplash(container);
     this.runEndOverlay = new RunEndOverlay(container);
 
     this.cameraRig = new CameraRig(
@@ -205,6 +215,7 @@ export class Game {
       minVolume: CONFIG.audio.minVolume,
       maxVolume: CONFIG.audio.maxVolume,
       releaseFadeSeconds: CONFIG.audio.movementReleaseFadeSeconds,
+      preloadedHowls: preloadedAssets.movementHowls,
     });
     this.brakePressureAudio = new TrainMovementAudio({
       srcs: CONFIG.audio.brakeTrackSrcs,
@@ -213,12 +224,14 @@ export class Game {
       minVolume: CONFIG.audio.brakeMinVolume,
       maxVolume: CONFIG.audio.brakeMaxVolume,
       releaseFadeSeconds: CONFIG.audio.brakeReleaseFadeSeconds,
+      preloadedHowls: preloadedAssets.brakeHowls,
     });
     this.randomAmbientAudio = new RandomAmbientAudio({
       tracks: CONFIG.audio.ambientTrackSrcs,
       volume: CONFIG.audio.ambientVolume,
       minGapMs: CONFIG.audio.ambientMinGapMs,
       maxGapMs: CONFIG.audio.ambientMaxGapMs,
+      preloadedHowls: preloadedAssets.ambientHowls,
     });
     this.gameMusic = new GameMusic({
       tracks: CONFIG.audio.musicTrackSrcs,
@@ -227,6 +240,7 @@ export class Game {
       fadeOutAtMs: CONFIG.audio.musicFadeOutAtMs,
       fadeOutMs: CONFIG.audio.musicFadeOutMs,
       gapMs: CONFIG.audio.musicGapMs,
+      preloadedFirstTrackHowl: preloadedAssets.musicTrack1Howl,
     });
     this.comfortModel = new ComfortModel(CONFIG.comfort);
     this.trackSampler = new TrackSampler(this.trackSpline, CONFIG.minimap);
@@ -240,11 +254,14 @@ export class Game {
     window.visualViewport?.addEventListener("resize", this.onResize);
     window.visualViewport?.addEventListener("scroll", this.onResize);
     this.onResize();
+    this.renderer.compile(this.scene, this.cameraRig.camera);
+    this.simulate(0);
   }
 
   start(): void {
     this.state = GameState.Running;
     this.failureReason = null;
+    this.introSplash.start();
     this.gameMusic.start();
     this.randomAmbientAudio.start();
     this.loop.start();
@@ -253,7 +270,7 @@ export class Game {
   stop(): void {
     this.loop.stop();
     this.cabinChrome.dispose();
-    this.mouseLockSplash.dispose();
+    this.introSplash.dispose();
     this.runEndOverlay.dispose();
     this.throttleOverlay.dispose();
     this.inputManager.dispose();
@@ -276,11 +293,26 @@ export class Game {
     window.visualViewport?.removeEventListener("scroll", this.onResize);
   }
 
+  restart(): void {
+    this.loop.stop();
+
+    this.failureReason = null;
+    this.runEndOverlay.reset();
+    this.cameraRig.reset();
+    this.trainSim.reset();
+    this.inputManager.reset();
+    this.throttleOverlay.reset();
+    this.comfortModel.reset();
+
+    this.state = GameState.Running;
+    this.loop.start();
+  }
+
   private simulate = (dt: number): void => {
     const previousState = this.state;
     const input = this.inputManager.update(dt);
 
-    if (this.state !== GameState.Running) {
+    if (this.state !== GameState.Running && this.state !== GameState.Ready) {
       this.trainSim.setControls({ throttle: 0, brake: 1 });
     } else {
       this.trainSim.setControls(input);
@@ -302,7 +334,10 @@ export class Game {
     const terminalGuidanceSafeSpeed = this.computeTerminalGuidanceSafeSpeed(
       train.distance,
     );
-    const hudSafeSpeed = Math.min(curvatureSafeSpeed, terminalGuidanceSafeSpeed);
+    const hudSafeSpeed = Math.min(
+      curvatureSafeSpeed,
+      terminalGuidanceSafeSpeed,
+    );
 
     const comfort = this.comfortModel.update(
       {
@@ -326,7 +361,10 @@ export class Game {
       }
     }
 
-    if (previousState === GameState.Running && this.state !== GameState.Running) {
+    if (
+      previousState === GameState.Running &&
+      this.state !== GameState.Running
+    ) {
       this.showRunEndOverlay();
     }
 
@@ -355,9 +393,7 @@ export class Game {
     );
     const brakeLinear = controls.brake * trainSpeedRatio;
     const brakeAudioDrive =
-      brakeLinear <= 0
-        ? 0
-        : Math.log(1 + 9 * brakeLinear) / Math.log(10);
+      brakeLinear <= 0 ? 0 : Math.log(1 + 9 * brakeLinear) / Math.log(10);
     this.trainMovementAudio.update(train.speed, dt);
     this.brakePressureAudio.update(brakeAudioDrive, dt);
 
@@ -465,7 +501,8 @@ export class Game {
       return "Ride comfort collapsed. You lose.";
     }
 
-    const distanceToStationEnd = this.trackEndLayout.stationEndDistance - distance;
+    const distanceToStationEnd =
+      this.trackEndLayout.stationEndDistance - distance;
     if (distanceToStationEnd > 260) {
       return `Terminal station in ${Math.ceil(distanceToStationEnd)} m`;
     }

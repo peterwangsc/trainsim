@@ -1,5 +1,5 @@
-import { PerspectiveCamera, Vector3 } from 'three';
-import { TrackSpline } from '../world/Track/TrackSpline';
+import { PerspectiveCamera, Vector3 } from "three";
+import { TrackSpline } from "../world/Track/TrackSpline";
 
 export type CameraRigConfig = {
   fov: number;
@@ -19,9 +19,14 @@ export class CameraRig {
   constructor(
     private readonly spline: TrackSpline,
     private readonly config: CameraRigConfig,
-    aspect: number
+    aspect: number,
   ) {
-    this.camera = new PerspectiveCamera(config.fov, aspect, config.near, config.far);
+    this.camera = new PerspectiveCamera(
+      config.fov,
+      aspect,
+      config.near,
+      config.far,
+    );
   }
 
   update(distance: number, speed: number, dt: number): void {
@@ -29,14 +34,17 @@ export class CameraRig {
 
     const position = this.spline.getPositionAtDistance(distance);
     const tangent = this.spline.getTangentAtDistance(distance);
-    const right = new Vector3().crossVectors(tangent, new Vector3(0, 1, 0)).normalize();
+    const right = new Vector3()
+      .crossVectors(tangent, new Vector3(0, 1, 0))
+      .normalize();
     const backOffset = this.spline.isClosed()
       ? this.config.eyeBackOffset
       : Math.min(this.config.eyeBackOffset, Math.max(0, distance));
 
-    const sway = Math.sin(this.elapsedTime * this.config.swayFrequency)
-      * this.config.swayAmplitude
-      * Math.min(speed / 30, 1);
+    const sway =
+      Math.sin(this.elapsedTime * this.config.swayFrequency) *
+      this.config.swayAmplitude *
+      Math.min(speed / 30, 1);
 
     const eyePosition = position
       .clone()
@@ -53,6 +61,10 @@ export class CameraRig {
 
     this.camera.position.copy(eyePosition);
     this.camera.lookAt(lookAt);
+  }
+
+  reset(): void {
+    this.elapsedTime = 0;
   }
 
   onResize(width: number, height: number): void {

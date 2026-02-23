@@ -1,4 +1,4 @@
-import { DesktopControls, type InputState } from './DesktopControls';
+import { DesktopControls, type InputState } from "./DesktopControls";
 
 export class InputManager {
   private readonly desktopControls: DesktopControls;
@@ -13,5 +13,9 @@ export class InputManager {
 
   dispose(): void {
     this.desktopControls.dispose();
+  }
+
+  reset(): void {
+    this.desktopControls.reset();
   }
 }

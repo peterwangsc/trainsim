@@ -3,6 +3,7 @@ import { clamp } from "../util/Math";
 
 export type RandomAmbientAudioConfig = {
   tracks: readonly string[];
+  preloadedHowls: Howl[];
   volume: number;
   // Range of silence between plays, in milliseconds.
   minGapMs: number;
@@ -20,12 +21,20 @@ export class RandomAmbientAudio {
   private currentTrackIndex = -1;
   private readonly volume: number;
   private readonly tracks: readonly string[];
+  private readonly preloadedHowls: Howl[];
   private readonly minGapMs: number;
   private readonly maxGapMs: number;
 
   constructor(config: RandomAmbientAudioConfig) {
+    if (config.preloadedHowls.length !== config.tracks.length) {
+      throw new Error(
+        "RandomAmbientAudio requires preloaded howls for every track.",
+      );
+    }
+
     this.volume = clamp(config.volume, 0, 0.2);
     this.tracks = config.tracks;
+    this.preloadedHowls = config.preloadedHowls;
     this.minGapMs = config.minGapMs;
     this.maxGapMs = config.maxGapMs;
   }
@@ -40,14 +49,18 @@ export class RandomAmbientAudio {
     this.isActive = false;
     this.clearTimers();
     if (this.currentHowl) {
-      this.currentHowl.stop();
-      this.currentHowl.unload();
+      this.resetHowl(this.currentHowl);
       this.currentHowl = null;
     }
   }
 
   dispose(): void {
     this.stop();
+    for (const howl of this.preloadedHowls) {
+      howl.off();
+      howl.stop();
+      howl.unload();
+    }
   }
 
   private clearTimers(): void {
@@ -73,42 +86,31 @@ export class RandomAmbientAudio {
 
     const nextIndex = this.pickNextTrackIndex();
     this.currentTrackIndex = nextIndex;
+    const howl = this.preloadedHowls[nextIndex];
 
-    const howl = new Howl({
-      src: [this.tracks[nextIndex]],
-      volume: 0, // fade in from silence
-      html5: false, // Web Audio API — required for volume/fade to work on iOS (audio.volume is read-only there)
-      onplay: () => {
-        if (!this.isActive) {
-          howl.stop();
-          howl.unload();
-          return;
-        }
-        howl.fade(0, this.volume, FADE_MS);
-        this.scheduleFadeOut(howl);
-      },
-      onend: () => {
-        // Fallback: fires only if scheduleFadeOut couldn't determine duration.
-        if (this.currentHowl === howl) this.currentHowl = null;
-        howl.unload();
-        if (this.isActive) this.scheduleNext();
-      },
-    });
-
-    if (this.currentHowl) {
-      this.currentHowl.stop();
-      this.currentHowl.unload();
+    if (this.currentHowl && this.currentHowl !== howl) {
+      this.resetHowl(this.currentHowl);
     }
     this.currentHowl = howl;
+
+    howl.off();
+    howl.stop();
+    howl.seek(0);
+    howl.volume(0);
+
+    howl.once("play", () => {
+      if (!this.isActive || this.currentHowl !== howl) {
+        return;
+      }
+      howl.fade(0, this.volume, FADE_MS);
+      this.scheduleFadeOut(howl);
+    });
+
     howl.play();
   }
 
-  // Schedule a fade-out to begin FADE_MS before the track's natural end.
-  // Falls back to onend if the duration isn't available (some HTTP streams).
   private scheduleFadeOut(howl: Howl): void {
     const durationSec = howl.duration();
-    if (!durationSec || !isFinite(durationSec) || durationSec <= 0) return;
-
     const elapsedMs = (howl.seek() as number) * 1000;
     const delay = durationSec * 1000 - elapsedMs - FADE_MS;
     if (delay <= 0) {
@@ -122,14 +124,19 @@ export class RandomAmbientAudio {
   }
 
   private beginFadeOut(howl: Howl): void {
-    howl.off("end"); // prevent onend from double-triggering scheduleNext
     howl.fade(howl.volume() as number, 0, FADE_MS);
     setTimeout(() => {
-      howl.stop();
-      howl.unload();
+      this.resetHowl(howl);
       if (this.currentHowl === howl) this.currentHowl = null;
       if (this.isActive) this.scheduleNext();
     }, FADE_MS);
+  }
+
+  private resetHowl(howl: Howl): void {
+    howl.off();
+    howl.stop();
+    howl.volume(0);
+    howl.seek(0);
   }
 
   private pickNextTrackIndex(): number {

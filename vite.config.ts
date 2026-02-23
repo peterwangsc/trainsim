@@ -13,6 +13,26 @@ export default defineConfig({
     host: true,
     port: 5173,
   },
+  build: {
+    chunkSizeWarningLimit: 550,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          const normalizedId = id.split("\\").join("/");
+          if (normalizedId.includes("/node_modules/three/examples/jsm/")) {
+            return "three-examples";
+          }
+          if (normalizedId.includes("/node_modules/three/")) {
+            return "three";
+          }
+          if (normalizedId.includes("/node_modules/howler/")) {
+            return "howler";
+          }
+          return undefined;
+        },
+      },
+    },
+  },
   plugins: [
     {
       name: "assets-cdn-env",

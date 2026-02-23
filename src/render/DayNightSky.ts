@@ -28,7 +28,6 @@ import {
   SphereGeometry,
   Spherical,
   Texture,
-  TextureLoader,
   Vector3,
 } from "three";
 import { Sky } from "three/examples/jsm/objects/Sky.js";
@@ -78,7 +77,6 @@ const SKY_CLOUD_DENSITY_DAY = 0.28;
 const SKY_CLOUD_DENSITY_TWILIGHT = 0.62;
 const SKY_CLOUD_ELEVATION_DAY = 0.56;
 const SKY_CLOUD_ELEVATION_NIGHT = 0.44;
-const CLOUD_TEXTURE_URL = "/cloud.png";
 const CLOUD_SPRITE_LIMIT = 90;
 const CLOUD_LAYER_RADIUS = 540;
 const CLOUD_WRAP_RADIUS = 620;
@@ -117,6 +115,7 @@ const EXPOSURE_MAX = 1.06;
 
 type DayNightSkyOptions = {
   dayCycleDurationSeconds?: number;
+  cloudTexture: Texture;
 };
 
 type SkyUniforms = {
@@ -288,7 +287,7 @@ export class DayNightSky {
 
   constructor(
     private readonly scene: Scene,
-    options: DayNightSkyOptions = {},
+    options: DayNightSkyOptions,
   ) {
     this.dayCycleDurationSeconds = Math.max(
       10,
@@ -316,7 +315,7 @@ export class DayNightSky {
     this.starsMaterial = this.stars.material as StarfieldMaterial;
     this.scene.add(this.stars);
 
-    this.spriteCloudLayer = this.createSpriteCloudLayer();
+    this.spriteCloudLayer = this.createSpriteCloudLayer(options.cloudTexture);
     this.scene.add(this.spriteCloudLayer.mesh);
 
     this.sunMaterial = new MeshBasicMaterial({
@@ -800,8 +799,8 @@ export class DayNightSky {
     this.skyMaterial.needsUpdate = true;
   }
 
-  private createSpriteCloudLayer(): SpriteCloudLayer {
-    const texture = new TextureLoader().load(CLOUD_TEXTURE_URL);
+  private createSpriteCloudLayer(preloadedTexture: Texture): SpriteCloudLayer {
+    const texture = preloadedTexture;
     texture.colorSpace = SRGBColorSpace;
     texture.anisotropy = 4;
 

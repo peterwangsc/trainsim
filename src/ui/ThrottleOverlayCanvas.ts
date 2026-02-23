@@ -182,6 +182,11 @@ export class ThrottleOverlayCanvas {
     this.render();
   }
 
+  reset(): void {
+    this.throttle = 0;
+    this.update(0);
+  }
+
   private render(): void {
     this.renderer.render(this.scene, this.camera);
   }

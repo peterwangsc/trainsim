@@ -6,7 +6,7 @@ export class GameLoop {
   constructor(
     private readonly fixedDt: number,
     private readonly simStep: (dt: number) => void,
-    private readonly render: (alpha: number) => void
+    private readonly render: (alpha: number) => void,
   ) {}
 
   start(): void {

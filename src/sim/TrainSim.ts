@@ -1,4 +1,4 @@
-import { clamp } from '../util/Math';
+import { clamp } from "../util/Math";
 
 export type TrainControls = {
   throttle: number;
@@ -37,8 +37,10 @@ export class TrainSim {
   }
 
   update(dt: number): void {
-    const tractionFactor = 1 - Math.min(this.speed / (this.config.maxSpeed * 1.15), 0.95);
-    const traction = this.throttle * this.config.tractionForceMax * tractionFactor;
+    const tractionFactor =
+      1 - Math.min(this.speed / (this.config.maxSpeed * 1.15), 0.95);
+    const traction =
+      this.throttle * this.config.tractionForceMax * tractionFactor;
     const brake = this.brake * this.config.brakeForceMax;
     const drag = this.config.dragCoefficient * this.speed * this.speed;
     const roll = this.config.rollingResistance;
@@ -51,21 +53,30 @@ export class TrainSim {
   }
 
   getState(dt: number): TrainState {
-    const jerk = (this.accel - this.prevAccel) / dt;
+    const jerk = dt !== 0 ? (this.accel - this.prevAccel) / dt : 0;
     this.prevAccel = this.accel;
 
     return {
       speed: this.speed,
       distance: this.distance,
       accel: this.accel,
-      jerk
+      jerk,
     };
   }
 
   getControls(): TrainControls {
     return {
       throttle: this.throttle,
-      brake: this.brake
+      brake: this.brake,
     };
+  }
+
+  reset(): void {
+    this.throttle = 0;
+    this.brake = 0;
+    this.speed = 0;
+    this.distance = 0;
+    this.accel = 0;
+    this.prevAccel = 0;
   }
 }

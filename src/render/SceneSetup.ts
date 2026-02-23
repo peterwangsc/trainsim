@@ -1,4 +1,4 @@
-import { Scene } from 'three';
+import { Scene, Texture } from "three";
 import { DayNightSky } from './DayNightSky';
 
 export type SceneSetup = {
@@ -6,9 +6,15 @@ export type SceneSetup = {
   dayNightSky: DayNightSky;
 };
 
-export const createScene = (): SceneSetup => {
+export type SceneSetupOptions = {
+  cloudTexture: Texture;
+};
+
+export const createScene = (options: SceneSetupOptions): SceneSetup => {
   const scene = new Scene();
-  const dayNightSky = new DayNightSky(scene);
+  const dayNightSky = new DayNightSky(scene, {
+    cloudTexture: options.cloudTexture,
+  });
 
   return {
     scene,

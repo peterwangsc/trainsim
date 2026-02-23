@@ -3,6 +3,7 @@ import { clamp } from "../util/Math";
 
 export type TrainMovementAudioConfig = {
   srcs: string[];
+  preloadedHowls: Howl[];
   maxTrainSpeed: number;
   movementThreshold: number;
   minVolume: number;
@@ -45,14 +46,16 @@ export class TrainMovementAudio {
 
   constructor(config: TrainMovementAudioConfig) {
     this.config = config;
-    for (const src of config.srcs) {
-      const howl = new Howl({
-        src: [src],
-        loop: config.srcs.length === 1,
-        volume: 0,
-        html5: false,
-        preload: true,
-      });
+    if (config.preloadedHowls.length !== config.srcs.length) {
+      throw new Error("TrainMovementAudio requires fully preloaded howls.");
+    }
+    const expectedLooping = config.srcs.length === 1;
+    for (let index = 0; index < config.preloadedHowls.length; index += 1) {
+      const howl = config.preloadedHowls[index];
+      howl.stop();
+      howl.off();
+      howl.loop(expectedLooping);
+      howl.volume(0);
       this.howls.push(howl);
     }
   }
@@ -276,6 +279,8 @@ export class TrainMovementAudio {
     }
     this.layers = [];
     for (const howl of this.howls) {
+      howl.off();
+      howl.stop();
       howl.unload();
     }
   }

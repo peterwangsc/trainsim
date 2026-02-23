@@ -4,8 +4,8 @@ import {
   PerspectiveCamera,
   SRGBColorSpace,
   Scene,
-  WebGLRenderer
-} from 'three';
+  WebGLRenderer,
+} from "three";
 
 export class Renderer {
   private readonly renderer: WebGLRenderer;
@@ -24,6 +24,10 @@ export class Renderer {
 
   getCanvas(): HTMLCanvasElement {
     return this.renderer.domElement;
+  }
+
+  compile(scene: Scene, camera: PerspectiveCamera): void {
+    this.renderer.compile(scene, camera);
   }
 
   render(scene: Scene, camera: PerspectiveCamera): void {

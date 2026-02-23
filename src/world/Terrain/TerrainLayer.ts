@@ -10,6 +10,7 @@ import {
   PlaneGeometry,
   SRGBColorSpace,
   Scene,
+  Texture,
   Vector3
 } from 'three';
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js';
@@ -66,20 +67,24 @@ export class TerrainLayer {
   private heightData: Float32Array = new Float32Array(0);
   private heightFieldWidth = 0;
   private heightFieldDepth = 0;
-  private simplexNoiseData: Float32Array | null = null;
-  private simplexNoiseWidth = 0;
-  private simplexNoiseHeight = 0;
-  private disposed = false;
+  private readonly simplexNoiseData: Float32Array;
+  private readonly simplexNoiseWidth: number;
+  private readonly simplexNoiseHeight: number;
 
   constructor(
     private readonly scene: Scene,
     private readonly spline: TrackSpline,
     private readonly seed: number,
-    private readonly config: TerrainConfig
+    private readonly config: TerrainConfig,
+    sharedSimplexTexture: Texture,
   ) {
     this.worldHalfSize = this.config.worldSize * 0.5;
     this.noiseZ = this.seed * 0.0127 + 17.3;
     this.trackSamples = this.buildTrackSamples();
+    const simplexNoise = this.decodeSimplexNoiseTexture(sharedSimplexTexture);
+    this.simplexNoiseData = simplexNoise.data;
+    this.simplexNoiseWidth = simplexNoise.width;
+    this.simplexNoiseHeight = simplexNoise.height;
 
     const { data, width, depth } = this.buildHeightData();
     this.heightData = data;
@@ -112,8 +117,6 @@ export class TerrainLayer {
     this.root.name = 'terrain-layer';
     this.root.add(this.mesh);
     this.scene.add(this.root);
-
-    this.loadSimplexNoiseTexture();
   }
 
   getHeightAt(worldX: number, worldZ: number): number {
@@ -125,7 +128,6 @@ export class TerrainLayer {
   }
 
   dispose(): void {
-    this.disposed = true;
     this.scene.remove(this.root);
     this.geometry.dispose();
     this.material.dispose();
@@ -331,68 +333,49 @@ export class TerrainLayer {
     return h11 + (h01 - h11) * invFx + (h10 - h11) * invFz;
   }
 
-  private loadSimplexNoiseTexture(): void {
-    if (typeof document === 'undefined' || typeof Image === 'undefined') {
-      return;
+  private decodeSimplexNoiseTexture(texture: Texture): {
+    data: Float32Array;
+    width: number;
+    height: number;
+  } {
+    if (typeof document === 'undefined') {
+      throw new Error("TerrainLayer requires document to decode simplex noise.");
     }
 
-    const image = new Image();
-    image.decoding = 'async';
-    image.src = "/simplex-noise.png";
-    image.onload = () => {
-      if (this.disposed) {
-        return;
-      }
+    const source = texture.image as
+      | (CanvasImageSource & { width: number; height: number })
+      | undefined;
+    if (!source || source.width <= 1 || source.height <= 1) {
+      throw new Error("TerrainLayer requires a decoded simplex noise texture.");
+    }
 
-      const canvas = document.createElement('canvas');
-      canvas.width = image.width;
-      canvas.height = image.height;
+    const width = source.width;
+    const height = source.height;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
 
-      const context = canvas.getContext('2d');
-      if (!context) {
-        return;
-      }
+    const context = canvas.getContext('2d');
+    if (!context) {
+      throw new Error("TerrainLayer could not read simplex noise texture.");
+    }
 
-      context.drawImage(image, 0, 0);
-      const pixels = context.getImageData(0, 0, image.width, image.height).data;
-      const grayscale = new Float32Array(image.width * image.height);
+    context.drawImage(source, 0, 0, width, height);
+    const pixels = context.getImageData(0, 0, width, height).data;
+    const grayscale = new Float32Array(width * height);
 
-      for (let i = 0; i < grayscale.length; i += 1) {
-        const pixelIndex = i * 4;
-        const red = pixels[pixelIndex];
-        const green = pixels[pixelIndex + 1];
-        const blue = pixels[pixelIndex + 2];
-        grayscale[i] = (red + green + blue) / (3 * 255);
-      }
+    for (let i = 0; i < grayscale.length; i += 1) {
+      const pixelIndex = i * 4;
+      const red = pixels[pixelIndex];
+      const green = pixels[pixelIndex + 1];
+      const blue = pixels[pixelIndex + 2];
+      grayscale[i] = (red + green + blue) / (3 * 255);
+    }
 
-      this.simplexNoiseData = grayscale;
-      this.simplexNoiseWidth = image.width;
-      this.simplexNoiseHeight = image.height;
-      this.rebuildTerrainData();
-    };
-  }
-
-  private rebuildTerrainData(): void {
-    const { data, width, depth } = this.buildHeightData();
-    this.heightData = data;
-    this.heightFieldWidth = width;
-    this.heightFieldDepth = depth;
-
-    this.applyHeightsToGeometry(this.geometry, data);
-    const textureCanvas = this.generateTerrainTexture(data, width, depth);
-    this.texture.image = textureCanvas;
-    this.texture.needsUpdate = true;
+    return { data: grayscale, width, height };
   }
 
   private sampleSimplexNoise(worldX: number, worldZ: number, frequency: number): number {
-    if (
-      !this.simplexNoiseData ||
-      this.simplexNoiseWidth <= 1 ||
-      this.simplexNoiseHeight <= 1
-    ) {
-      return this.grainAtPixel(worldX * frequency * 1000, worldZ * frequency * 1000);
-    }
-
     const u = this.fract(worldX * frequency + this.seed * 0.0131);
     const v = this.fract(worldZ * frequency - this.seed * 0.0097);
 

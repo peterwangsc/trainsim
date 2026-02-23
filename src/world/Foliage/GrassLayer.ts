@@ -14,7 +14,6 @@ import {
   Scene,
   SRGBColorSpace,
   Texture,
-  TextureLoader,
   Vector2,
   Vector3,
   type IUniform,
@@ -69,8 +68,6 @@ type GrassShaderUniforms = {
   uGrassLeaf: IUniform<Texture | null>;
   uGrassAccent: IUniform<Texture | null>;
   uPatchColor: IUniform<Color>;
-  uHasWindNoise: IUniform<number>;
-  uHasLeafTexture: IUniform<number>;
 };
 
 type GrassFieldData = {
@@ -103,7 +100,6 @@ export class GrassLayer {
   private readonly bladeRotation = new Euler(0, 0, 0, "YXZ");
   private readonly bladeQuaternion = new Quaternion();
   private elapsedTime = 0;
-  private disposed = false;
 
   constructor(
     private readonly scene: Scene,
@@ -112,6 +108,9 @@ export class GrassLayer {
     private readonly config: GrassConfig,
     private readonly sampleTerrainHeight: TerrainHeightSampler,
     private readonly sampleTrackDistance: TrackDistanceSampler,
+    sharedSimplexTexture: Texture,
+    grassLeafTexture: Texture,
+    grassAccentTexture: Texture,
   ) {
     this.geometry = new PlaneGeometry(1, 1, 1, 4);
     this.geometry.translate(0, 0.5, 0);
@@ -135,8 +134,6 @@ export class GrassLayer {
       uGrassLeaf: { value: null },
       uGrassAccent: { value: null },
       uPatchColor: { value: new Color(this.config.patchColor) },
-      uHasWindNoise: { value: 0 },
-      uHasLeafTexture: { value: 0 },
     };
 
     this.material = this.createMaterial();
@@ -167,7 +164,11 @@ export class GrassLayer {
     this.root.add(this.mesh);
     this.scene.add(this.root);
 
-    this.loadTextures();
+    this.bindPreloadedTextures(
+      sharedSimplexTexture,
+      grassLeafTexture,
+      grassAccentTexture,
+    );
   }
 
   update(dt: number): void {
@@ -176,7 +177,6 @@ export class GrassLayer {
   }
 
   dispose(): void {
-    this.disposed = true;
     this.scene.remove(this.root);
     this.geometry.dispose();
     this.material.dispose();
@@ -445,8 +445,6 @@ export class GrassLayer {
       shader.uniforms.uGrassLeaf = this.uniforms.uGrassLeaf;
       shader.uniforms.uGrassAccent = this.uniforms.uGrassAccent;
       shader.uniforms.uPatchColor = this.uniforms.uPatchColor;
-      shader.uniforms.uHasWindNoise = this.uniforms.uHasWindNoise;
-      shader.uniforms.uHasLeafTexture = this.uniforms.uHasLeafTexture;
 
       shader.vertexShader = shader.vertexShader
         .replace(
@@ -464,7 +462,6 @@ varying float vIsAccent;
 uniform float uTime;
 uniform vec3 uWind;
 uniform sampler2D uWindNoise;
-uniform float uHasWindNoise;
 `,
         )
         .replace(
@@ -486,17 +483,11 @@ vec3 instanceOrigin = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 vec3 instanceOrigin = vec3(0.0);
 #endif
 
-float windValue;
-if (uHasWindNoise > 0.5) {
-  vec2 uv1 = instanceOrigin.xz * uWind.z * 0.016 + vec2(uTime * uWind.y * 0.025, uTime * uWind.y * 0.018);
-  vec2 uv2 = instanceOrigin.xz * uWind.z * 0.011 + vec2(-uTime * uWind.y * 0.02, uTime * uWind.y * 0.021);
-  float n1 = texture2D(uWindNoise, uv1 + vec2(aBladeData.z, aBladeData.x)).r * 2.0 - 1.0;
-  float n2 = texture2D(uWindNoise, uv2 + vec2(aBladeData.x * 0.7, aBladeData.z * 0.6)).r * 2.0 - 1.0;
-  windValue = n1 * 0.68 + n2 * 0.32;
-} else {
-  float windPhase = uTime * uWind.y + dot(instanceOrigin.xz, vec2(uWind.z, uWind.z * 1.19)) + aBladeData.z * 6.28318;
-  windValue = sin(windPhase) * 0.72 + cos(windPhase * 1.63 + aBladeData.x * 4.0) * 0.28;
-}
+vec2 uv1 = instanceOrigin.xz * uWind.z * 0.016 + vec2(uTime * uWind.y * 0.025, uTime * uWind.y * 0.018);
+vec2 uv2 = instanceOrigin.xz * uWind.z * 0.011 + vec2(-uTime * uWind.y * 0.02, uTime * uWind.y * 0.021);
+float n1 = texture2D(uWindNoise, uv1 + vec2(aBladeData.z, aBladeData.x)).r * 2.0 - 1.0;
+float n2 = texture2D(uWindNoise, uv2 + vec2(aBladeData.x * 0.7, aBladeData.z * 0.6)).r * 2.0 - 1.0;
+float windValue = n1 * 0.68 + n2 * 0.32;
 
 float sway = windValue * uWind.x * (0.35 + aBladeData.y * 0.65);
 float bendMask = tip * tip;
@@ -523,8 +514,6 @@ uniform vec3 uPatchColor;
 uniform sampler2D uWindNoise;
 uniform sampler2D uGrassLeaf;
 uniform sampler2D uGrassAccent;
-uniform float uHasWindNoise;
-uniform float uHasLeafTexture;
 varying vec2 vGrassUv;
 varying float vGrassTip;
 varying float vGrassSeed;
@@ -550,33 +539,16 @@ uv.x *= (1.0 - uv.y) * fakePerspective + 1.0;
 uv.x += 0.5;
 uv.x = clamp(uv.x, 0.0, 1.0);
 
-vec3 leafRgb = vec3(1.0);
-float alphaMask = 1.0;
-if (uHasLeafTexture > 0.5) {
-  vec4 leafColor = vIsAccent > 0.5
-    ? texture2D(uGrassAccent, uv)
-    : texture2D(uGrassLeaf, uv);
-  if (leafColor.a < 0.5) discard;
-  leafRgb = leafColor.rgb;
-  alphaMask = leafColor.a;
-} else {
-  float sideMask = smoothstep(0.02, 0.28, vGrassUv.x) * (1.0 - smoothstep(0.72, 0.98, vGrassUv.x));
-  float tipTaper = 1.0 - smoothstep(0.68, 1.0, vGrassTip) * abs(vGrassUv.x - 0.5) * 2.0;
-  float bladeMask = sideMask * tipTaper;
-  if (bladeMask < 0.09) discard;
-  alphaMask = bladeMask;
-}
+vec4 leafColor = vIsAccent > 0.5
+  ? texture2D(uGrassAccent, uv)
+  : texture2D(uGrassLeaf, uv);
+if (leafColor.a < 0.5) discard;
+vec3 leafRgb = leafColor.rgb;
+float alphaMask = leafColor.a;
 
 float gradient = mix(uColorRamp.x, uColorRamp.y, smoothstep(0.0, 1.0, vGrassTip));
-float patch2 = 0.0;
-float patch3 = 0.0;
-if (uHasWindNoise > 0.5) {
-  patch2 = texture2D(uWindNoise, vGrassWorldPos.xz * 0.005).r;
-  patch3 = texture2D(uWindNoise, vGrassWorldPos.xz * 0.003 + vec2(0.41, 0.73)).r;
-} else {
-  patch2 = fract(sin(dot(vGrassWorldPos.xz * 0.01, vec2(127.1, 311.7))) * 43758.5453);
-  patch3 = fract(sin(dot(vGrassWorldPos.xz * 0.007 + vec2(4.3, 9.1), vec2(269.5, 183.3))) * 43758.5453);
-}
+float patch2 = texture2D(uWindNoise, vGrassWorldPos.xz * 0.005).r;
+float patch3 = texture2D(uWindNoise, vGrassWorldPos.xz * 0.003 + vec2(0.41, 0.73)).r;
 
 vec3 baseColor = diffuseColor.rgb;
 if (patch2 > 0.604) {
@@ -600,50 +572,21 @@ diffuseColor.a *= alphaMask;
     return material;
   }
 
-  private loadTextures(): void {
-    if (typeof document === "undefined" || typeof Image === "undefined") {
-      return;
-    }
+  private bindPreloadedTextures(
+    sharedSimplexTexture: Texture,
+    grassLeafTexture: Texture,
+    grassAccentTexture: Texture,
+  ): void {
+    sharedSimplexTexture.wrapS = RepeatWrapping;
+    sharedSimplexTexture.wrapT = RepeatWrapping;
+    grassLeafTexture.colorSpace = SRGBColorSpace;
+    grassAccentTexture.colorSpace = SRGBColorSpace;
 
-    const loader = new TextureLoader();
-
-    loader.load("/simplex-noise.png", (texture) => {
-      if (this.disposed) {
-        texture.dispose();
-        return;
-      }
-      texture.wrapS = RepeatWrapping;
-      texture.wrapT = RepeatWrapping;
-      this.textures.windNoise = texture;
-      this.uniforms.uWindNoise.value = texture;
-      this.uniforms.uHasWindNoise.value = 1;
-    });
-
-    loader.load(`/grassleaf.png`, (texture) => {
-      if (this.disposed) {
-        texture.dispose();
-        return;
-      }
-      texture.colorSpace = SRGBColorSpace;
-      this.textures.grassLeaf = texture;
-      this.uniforms.uGrassLeaf.value = texture;
-      this.updateLeafTextureState();
-    });
-
-    loader.load(`/accentleaf.png`, (texture) => {
-      if (this.disposed) {
-        texture.dispose();
-        return;
-      }
-      texture.colorSpace = SRGBColorSpace;
-      this.textures.grassAccent = texture;
-      this.uniforms.uGrassAccent.value = texture;
-      this.updateLeafTextureState();
-    });
-  }
-
-  private updateLeafTextureState(): void {
-    this.uniforms.uHasLeafTexture.value =
-      this.textures.grassLeaf && this.textures.grassAccent ? 1 : 0;
+    this.textures.windNoise = sharedSimplexTexture;
+    this.textures.grassLeaf = grassLeafTexture;
+    this.textures.grassAccent = grassAccentTexture;
+    this.uniforms.uWindNoise.value = sharedSimplexTexture;
+    this.uniforms.uGrassLeaf.value = grassLeafTexture;
+    this.uniforms.uGrassAccent.value = grassAccentTexture;
   }
 }

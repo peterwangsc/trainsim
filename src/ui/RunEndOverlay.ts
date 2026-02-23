@@ -78,6 +78,13 @@ export class RunEndOverlay {
     this.root.remove();
   }
 
+  reset(): void {
+    this.root.classList.remove("run-end-overlay--visible");
+    this.root.classList.add("run-end-overlay--hidden");
+    this.title.textContent = "";
+    this.message.textContent = "";
+  }
+
   private onRestartClick = (): void => {
     this.restartHandler?.();
   };
