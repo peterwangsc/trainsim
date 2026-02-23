@@ -203,4 +203,12 @@ export const CONFIG = {
     platformLateralOffset: 5.1,
     platformSegmentLength: 10,
   },
+  tunnel: {
+    startDistance: 2500,
+    length: 150,
+    archInnerWidth: 4.0,
+    archInnerHeight: 4.5,
+    wallThickness: 0.75,
+    archRingSpacing: 8.0,
+  },
 } as const;

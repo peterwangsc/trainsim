@@ -9,12 +9,11 @@ import {
   Material,
   Mesh,
   MeshStandardMaterial,
-  Object3D,
   PlaneGeometry,
   SRGBColorSpace,
-  Vector3,
 } from "three";
 import { TrackSpline } from "./TrackSpline";
+import { placeAlongTrack } from "./TrackPlacement";
 
 export type TrackEndSetConfig = {
   bumperOffsetFromTrackEnd: number;
@@ -35,8 +34,6 @@ export type TrackEndLayout = {
   stationEndDistance: number;
 };
 
-const UP = new Vector3(0, 1, 0);
-
 type SignDescriptor = {
   heading: string;
   detail: string;
@@ -45,11 +42,6 @@ type SignDescriptor = {
 
 export class TrackEndSet {
   readonly root = new Group();
-
-  private readonly center = new Vector3();
-  private readonly tangent = new Vector3();
-  private readonly right = new Vector3();
-  private readonly lookTarget = new Vector3();
 
   private readonly disposableGeometries: BufferGeometry[] = [];
   private readonly disposableMaterials: Material[] = [];
@@ -126,8 +118,9 @@ export class TrackEndSet {
         background: descriptor.background,
       });
 
-      this.placeAlongTrack(
+      placeAlongTrack(
         sign,
+        this.spline,
         distance,
         this.config.signLateralOffset,
         0,
@@ -188,8 +181,9 @@ export class TrackEndSet {
       const platform = new Mesh(platformGeometry, platformMaterial);
       platform.castShadow = false;
       platform.receiveShadow = true;
-      this.placeAlongTrack(
+      placeAlongTrack(
         platform,
+        this.spline,
         distance,
         this.config.platformLateralOffset,
         this.config.platformHeight * 0.5,
@@ -200,8 +194,9 @@ export class TrackEndSet {
         const canopyPost = new Mesh(canopyPostGeometry, canopyPostMaterial);
         canopyPost.castShadow = false;
         canopyPost.receiveShadow = true;
-        this.placeAlongTrack(
+        placeAlongTrack(
           canopyPost,
+          this.spline,
           distance,
           this.config.platformLateralOffset + this.config.platformWidth * 0.25,
           1.35,
@@ -211,8 +206,9 @@ export class TrackEndSet {
         const canopyRoof = new Mesh(canopyRoofGeometry, canopyRoofMaterial);
         canopyRoof.castShadow = false;
         canopyRoof.receiveShadow = true;
-        this.placeAlongTrack(
+        placeAlongTrack(
           canopyRoof,
+          this.spline,
           distance,
           this.config.platformLateralOffset,
           2.75,
@@ -239,8 +235,9 @@ export class TrackEndSet {
     );
     building.castShadow = false;
     building.receiveShadow = true;
-    this.placeAlongTrack(
+    placeAlongTrack(
       building,
+      this.spline,
       stationDistance,
       this.config.platformLateralOffset + this.config.platformWidth * 0.62,
       1.7,
@@ -259,8 +256,9 @@ export class TrackEndSet {
     );
     roof.castShadow = false;
     roof.receiveShadow = true;
-    this.placeAlongTrack(
+    placeAlongTrack(
       roof,
+      this.spline,
       stationDistance,
       this.config.platformLateralOffset + this.config.platformWidth * 0.62,
       3.55,
@@ -273,8 +271,9 @@ export class TrackEndSet {
       panelHeight: 0.9,
       postHeight: 2.8,
     });
-    this.placeAlongTrack(
+    placeAlongTrack(
       stationSign,
+      this.spline,
       this.layout.stationStartDistance + 12,
       this.config.platformLateralOffset + this.config.platformWidth * 0.12,
       0,
@@ -335,7 +334,7 @@ export class TrackEndSet {
     plate.receiveShadow = true;
     bumperGroup.add(plate);
 
-    this.placeAlongTrack(bumperGroup, this.layout.bumperDistance, 0, 0);
+    placeAlongTrack(bumperGroup, this.spline, this.layout.bumperDistance, 0, 0);
     this.root.add(bumperGroup);
   }
 
@@ -455,33 +454,6 @@ export class TrackEndSet {
     texture.needsUpdate = true;
     this.disposableTextures.push(texture);
     return texture;
-  }
-
-  private placeAlongTrack(
-    object: Object3D,
-    distance: number,
-    lateralOffset: number,
-    heightOffset: number,
-    faceBackward = false,
-  ): void {
-    this.sampleFrame(distance);
-
-    object.position.copy(this.center).addScaledVector(this.right, lateralOffset);
-    object.position.y += heightOffset;
-
-    this.lookTarget.copy(this.tangent);
-    if (faceBackward) {
-      this.lookTarget.multiplyScalar(-1);
-    }
-    this.lookTarget.add(object.position);
-    object.up.copy(UP);
-    object.lookAt(this.lookTarget);
-  }
-
-  private sampleFrame(distance: number): void {
-    this.center.copy(this.spline.getPositionAtDistance(distance));
-    this.tangent.copy(this.spline.getTangentAtDistance(distance));
-    this.right.crossVectors(this.tangent, UP).normalize();
   }
 
   private createGeometry<T extends BufferGeometry>(geometry: T): T {

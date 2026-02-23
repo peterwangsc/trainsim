@@ -20,6 +20,8 @@ import { TrackGenerator } from "../world/Track/TrackGenerator";
 import { TrackMeshBuilder } from "../world/Track/TrackMeshBuilder";
 import { TrackSpline } from "../world/Track/TrackSpline";
 import { TrackEndSet, type TrackEndLayout } from "../world/Track/TrackEndSet";
+import { TrackFeatureManager } from "../world/Track/TrackFeatureManager";
+import { TunnelFeature } from "../world/Features/TunnelFeature";
 import { ForestLayer } from "../world/Foliage/ForestLayer";
 import { GrassLayer } from "../world/Foliage/GrassLayer";
 import { TerrainLayer } from "../world/Terrain/TerrainLayer";
@@ -80,12 +82,14 @@ export class Game {
   private readonly brakePressureAudio: TrainMovementAudio;
   private readonly randomAmbientAudio: RandomAmbientAudio;
   private readonly gameMusic: GameMusic;
+  private readonly featureManager: TrackFeatureManager;
   private readonly trainHeadlight: SpotLight;
   private readonly trainHeadlightTarget: Object3D;
   private readonly cameraForward = new Vector3();
   private readonly headlightAnchor = new Vector3();
   private readonly headlightTargetPosition = new Vector3();
   private toneMappingExposure = 1;
+  private featureExposureMultiplier = 1;
   private readonly onRestartRequested: () => void;
 
   private state = GameState.Ready;
@@ -138,6 +142,8 @@ export class Game {
     });
     this.trackEndLayout = this.trackEndSet.getLayout();
     this.scene.add(this.trackEndSet.root);
+    this.featureManager = new TrackFeatureManager(this.scene);
+    this.featureManager.add(new TunnelFeature(this.trackSpline, CONFIG.tunnel));
     this.terrainLayer = new TerrainLayer(
       this.scene,
       this.trackSpline,
@@ -291,6 +297,7 @@ export class Game {
     this.randomAmbientAudio.dispose();
     this.gameMusic.dispose();
     this.trackEndSet.dispose();
+    this.featureManager.disposeAll();
     this.scene.remove(this.trainHeadlight);
     this.scene.remove(this.trainHeadlightTarget);
     this.renderer.dispose();
@@ -413,7 +420,23 @@ export class Game {
       this.dayNightSky.getNightFactor(),
     );
     this.grassLayer.update(dt);
-    const targetExposure = this.dayNightSky.getRecommendedExposure();
+
+    // Environment effects from active track features
+    const activeZones = this.featureManager.getActiveZones(this.wrappedDistance);
+    let featureExposureMultiplier = 1.0;
+    for (const zone of activeZones) {
+      if (zone.endDistance === undefined) continue;
+      const t = (this.wrappedDistance - zone.startDistance)
+                / (zone.endDistance - zone.startDistance);
+      const fx = zone.getEnvironmentEffect(MathUtils.clamp(t, 0, 1));
+      if (fx?.ambientMultiplier !== undefined) {
+        featureExposureMultiplier *= fx.ambientMultiplier;
+      }
+    }
+    this.featureExposureMultiplier = featureExposureMultiplier;
+    this.featureManager.updateAll(this.wrappedDistance, dt);
+
+    const targetExposure = this.dayNightSky.getRecommendedExposure() * this.featureExposureMultiplier;
     this.toneMappingExposure = MathUtils.damp(
       this.toneMappingExposure,
       targetExposure,
