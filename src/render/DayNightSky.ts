@@ -33,15 +33,17 @@ import {
 import { Sky } from "three/examples/jsm/objects/Sky.js";
 
 const DEFAULT_DAY_CYCLE_DURATION_SECONDS = 300;
-const SUN_CYCLE_PHASE_OFFSET_RADIANS = Math.PI * 1.95;
+const SUN_CYCLE_PHASE_OFFSET_RADIANS = Math.PI * 0.95;
 
 const SKY_DOME_SCALE = 16000;
 const STAR_RADIUS = 820;
 const STAR_DEPTH = 560;
 const STAR_COUNT = 5000;
 const STAR_SATURATION = 0;
-const STAR_SIZE_FACTOR = 24;
+const STAR_SIZE_FACTOR = 32;
 const STAR_TWINKLE_SPEED = 1;
+const STAR_TWINKLE_RATE_MIN = 0.65;
+const STAR_TWINKLE_RATE_MAX = 1.45;
 const STAR_SOFT_FADE = true;
 
 const SUN_ORBIT_RADIUS = 700;
@@ -180,12 +182,17 @@ class StarfieldMaterial extends ShaderMaterial {
       vertexShader: /* glsl */ `
 uniform float time;
 attribute float size;
+attribute vec2 twinkle;
 varying vec3 vColor;
+varying float vTwinkle;
 
 void main() {
   vColor = color;
+  float twinkleWave = sin(time * twinkle.y + twinkle.x);
+  float twinkleSize = 3.0 + twinkleWave * 0.8;
+  vTwinkle = 0.78 + twinkleWave * 0.22;
   vec4 mvPosition = modelViewMatrix * vec4(position, 0.5);
-  gl_PointSize = size * (30.0 / -mvPosition.z) * (3.0 + sin(time + 100.0));
+  gl_PointSize = size * (30.0 / -mvPosition.z) * twinkleSize;
   gl_Position = projectionMatrix * mvPosition;
 }
 `,
@@ -193,6 +200,7 @@ void main() {
 uniform float fade;
 uniform float alpha;
 varying vec3 vColor;
+varying float vTwinkle;
 
 void main() {
   float opacity = 1.0;
@@ -201,7 +209,7 @@ void main() {
     opacity = 1.0 / (1.0 + exp(16.0 * (d - 0.25)));
   }
 
-  gl_FragColor = vec4(vColor, opacity * alpha);
+  gl_FragColor = vec4(vColor, opacity * alpha * vTwinkle);
 
   #include <tonemapping_fragment>
   #include <${colorSpaceInclude}>
@@ -1131,6 +1139,7 @@ gl_FragColor = vec4( outgoingLight, diffuseColor.a * vCloudOpacity );`,
     const positions = new Float32Array(STAR_COUNT * 3);
     const colors = new Float32Array(STAR_COUNT * 3);
     const sizes = new Float32Array(STAR_COUNT);
+    const twinkles = new Float32Array(STAR_COUNT * 2);
     const starColor = new Color();
     const starPosition = new Vector3();
     const spherical = new Spherical();
@@ -1155,12 +1164,19 @@ gl_FragColor = vec4( outgoingLight, diffuseColor.a * vCloudOpacity );`,
       colors[i * 3 + 2] = starColor.b;
 
       sizes[i] = (0.5 + 0.5 * Math.random()) * STAR_SIZE_FACTOR;
+      twinkles[i * 2] = Math.random() * Math.PI * 2;
+      twinkles[i * 2 + 1] = MathUtils.lerp(
+        STAR_TWINKLE_RATE_MIN,
+        STAR_TWINKLE_RATE_MAX,
+        Math.random(),
+      );
     }
 
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(positions, 3));
     geometry.setAttribute("color", new BufferAttribute(colors, 3));
     geometry.setAttribute("size", new BufferAttribute(sizes, 1));
+    geometry.setAttribute("twinkle", new BufferAttribute(twinkles, 2));
 
     const material = new StarfieldMaterial(STAR_SOFT_FADE);
     material.uniforms.alpha.value = 0;
