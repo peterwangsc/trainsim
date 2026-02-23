@@ -7,6 +7,7 @@ import {
   DirectionalLight,
   DynamicDrawUsage,
   Fog,
+  Frustum,
   HemisphereLight,
   InstancedBufferAttribute,
   InstancedMesh,
@@ -24,6 +25,7 @@ import {
   Scene,
   ShaderMaterial,
   Spherical,
+  Sphere,
   Texture,
   Vector3,
   Sprite,
@@ -80,24 +82,26 @@ const SKY_CLOUD_DENSITY_DAY = 0.28;
 const SKY_CLOUD_DENSITY_TWILIGHT = 0.62;
 const SKY_CLOUD_ELEVATION_DAY = 0.56;
 const SKY_CLOUD_ELEVATION_NIGHT = 0.44;
-const CLOUD_SPRITE_LIMIT = 90;
-const CLOUD_LAYER_RADIUS = 540;
-const CLOUD_WRAP_RADIUS = 620;
-const CLOUD_FADE_RADIUS = 760;
-const CLOUD_ALTITUDE_MIN = 180;
-const CLOUD_ALTITUDE_VARIATION = 220;
-const CLOUD_VOLUME_MIN = 74;
-const CLOUD_VOLUME_MAX = 180;
-const CLOUD_GROWTH_MIN = 18;
-const CLOUD_GROWTH_MAX = 54;
+const CLOUD_SPRITE_LIMIT = 240;
+const CLOUD_WORLD_HALF_EXTENT = 7600;
+const CLOUD_WORLD_WRAP_PADDING = 180;
+const CLOUD_FADE_RADIUS = 7600;
+const CLOUD_ALTITUDE_MIN = 460;
+const CLOUD_ALTITUDE_VARIATION = 280;
+const CLOUD_TERRAIN_CLEARANCE = 160;
+const CLOUD_CULL_RADIUS_FACTOR = 0.85;
+const CLOUD_VOLUME_MIN = 280;
+const CLOUD_VOLUME_MAX = 560;
+const CLOUD_GROWTH_MIN = 80;
+const CLOUD_GROWTH_MAX = 220;
 const CLOUD_DENSITY_MIN = 0.24;
 const CLOUD_DENSITY_MAX = 0.82;
 const CLOUD_DRIFT_SPEED_MIN = 1.4;
 const CLOUD_DRIFT_SPEED_MAX = 6.1;
 const CLOUD_ROTATION_FACTOR_MIN = -0.1;
 const CLOUD_ROTATION_FACTOR_MAX = 0.1;
-const CLOUD_OPACITY_MIN = 0.23;
-const CLOUD_OPACITY_MAX = 0.58;
+const CLOUD_OPACITY_MIN = 0.34;
+const CLOUD_OPACITY_MAX = 0.74;
 const CLOUD_BRIGHTNESS_MIN = 0.84;
 const CLOUD_BRIGHTNESS_MAX = 1.18;
 
@@ -121,6 +125,8 @@ type DayNightSkyOptions = {
   cloudTexture: Texture;
 };
 
+type TerrainHeightSampler = (worldX: number, worldZ: number) => number;
+
 type SkyUniforms = {
   turbidity: { value: number };
   rayleigh: { value: number };
@@ -137,6 +143,7 @@ type SkyUniforms = {
 type SpriteCloudInstance = {
   matrix: Matrix4;
   position: Vector3;
+  baseAltitude: number;
   driftDirection: Vector3;
   driftSpeed: number;
   rotation: number;
@@ -286,8 +293,13 @@ export class DayNightSky {
   private readonly cloudSpinQuaternion = new Quaternion();
   private readonly cloudScale = new Vector3();
   private readonly cloudForward = new Vector3(0, 0, 1);
+  private readonly cloudFrustum = new Frustum();
+  private readonly cloudFrustumMatrix = new Matrix4();
+  private readonly cloudCullSphere = new Sphere();
+  private readonly visibleClouds: SpriteCloudInstance[] = [];
   private sunShadowHalfExtent = SUN_SHADOW_FRUSTUM_HALF_EXTENT_MIN;
   private sunShadowFar = SUN_SHADOW_CAMERA_FAR_MIN;
+  private terrainHeightSampler: TerrainHeightSampler | null = null;
 
   private elapsedSeconds = 0;
   private nightFactor = 0;
@@ -660,6 +672,21 @@ export class DayNightSky {
     return this.recommendedExposure;
   }
 
+  setTerrainHeightSampler(sampler: TerrainHeightSampler | null): void {
+    this.terrainHeightSampler = sampler;
+    if (!sampler) {
+      return;
+    }
+
+    for (const cloud of this.spriteCloudLayer.instances) {
+      cloud.position.y = this.clampCloudAltitudeToTerrain(
+        cloud.position.x,
+        cloud.position.z,
+        cloud.baseAltitude,
+      );
+    }
+  }
+
   dispose(): void {
     this.scene.remove(
       this.sky,
@@ -959,20 +986,29 @@ gl_FragColor = vec4( outgoingLight, diffuseColor.a * vCloudOpacity );`,
 
     const instances: SpriteCloudInstance[] = [];
     const initialQuaternion = new Quaternion();
-    const initialScale = new Vector3(1, 1, 1);
+    const initialScale = new Vector3();
     const initialColor = new Color("#ffffff");
 
     for (let index = 0; index < CLOUD_SPRITE_LIMIT; index += 1) {
-      const ringAngle = Math.random() * Math.PI * 2;
-      const ringRadius = Math.sqrt(Math.random()) * CLOUD_LAYER_RADIUS;
       const driftAngle = Math.random() * Math.PI * 2;
+      const initialX = this.randomRange(
+        -CLOUD_WORLD_HALF_EXTENT,
+        CLOUD_WORLD_HALF_EXTENT,
+      );
+      const initialZ = this.randomRange(
+        -CLOUD_WORLD_HALF_EXTENT,
+        CLOUD_WORLD_HALF_EXTENT,
+      );
+      const baseAltitude =
+        CLOUD_ALTITUDE_MIN + Math.random() * CLOUD_ALTITUDE_VARIATION;
       const cloud = {
         matrix: new Matrix4(),
         position: new Vector3(
-          Math.cos(ringAngle) * ringRadius,
-          CLOUD_ALTITUDE_MIN + Math.random() * CLOUD_ALTITUDE_VARIATION,
-          Math.sin(ringAngle) * ringRadius,
+          initialX,
+          this.clampCloudAltitudeToTerrain(initialX, initialZ, baseAltitude),
+          initialZ,
         ),
+        baseAltitude,
         driftDirection: new Vector3(
           Math.cos(driftAngle),
           0,
@@ -998,6 +1034,7 @@ gl_FragColor = vec4( outgoingLight, diffuseColor.a * vCloudOpacity );`,
         dist: 0,
       } satisfies SpriteCloudInstance;
 
+      initialScale.setScalar(cloud.volume);
       cloud.matrix.compose(cloud.position, initialQuaternion, initialScale);
       instances.push(cloud);
       opacities[index] = cloud.opacity;
@@ -1030,9 +1067,8 @@ gl_FragColor = vec4( outgoingLight, diffuseColor.a * vCloudOpacity );`,
   ): void {
     const cloudLayer = this.spriteCloudLayer;
     const cloudMesh = cloudLayer.mesh;
-
-    cloudMesh.position.copy(this.lightAnchor);
-    cloudMesh.updateMatrixWorld();
+    const visibleClouds = this.visibleClouds;
+    visibleClouds.length = 0;
 
     this.cloudColor.lerpColors(
       this.cloudDayColor,
@@ -1041,30 +1077,29 @@ gl_FragColor = vec4( outgoingLight, diffuseColor.a * vCloudOpacity );`,
     );
     this.cloudColor.lerp(this.cloudTwilightColor, twilightFactor * 0.5);
 
+    camera.updateMatrixWorld();
+    this.cloudFrustumMatrix.multiplyMatrices(
+      camera.projectionMatrix,
+      camera.matrixWorldInverse,
+    );
+    this.cloudFrustum.setFromProjectionMatrix(this.cloudFrustumMatrix);
     this.cloudBillboardQuaternion.copy(camera.quaternion);
 
     for (let index = 0; index < cloudLayer.instances.length; index += 1) {
       const cloud = cloudLayer.instances[index];
       cloud.rotation += dt * cloud.rotationFactor;
-      cloud.position.addScaledVector(
-        cloud.driftDirection,
-        cloud.driftSpeed * dt,
-      );
 
-      const horizontalDistance = Math.hypot(cloud.position.x, cloud.position.z);
-      if (horizontalDistance > CLOUD_WRAP_RADIUS) {
-        const wrapAngle =
-          Math.atan2(cloud.position.z, cloud.position.x) + Math.PI;
-        const wrappedRadius = this.randomRange(
-          CLOUD_LAYER_RADIUS * 0.58,
-          CLOUD_LAYER_RADIUS * 0.95,
-        );
-        cloud.position.set(
-          Math.cos(wrapAngle) * wrappedRadius,
-          CLOUD_ALTITUDE_MIN + Math.random() * CLOUD_ALTITUDE_VARIATION,
-          Math.sin(wrapAngle) * wrappedRadius,
-        );
-      }
+      cloud.position.x = this.wrapCloudCoordinate(
+        cloud.position.x + cloud.driftDirection.x * cloud.driftSpeed * dt,
+      );
+      cloud.position.z = this.wrapCloudCoordinate(
+        cloud.position.z + cloud.driftDirection.z * cloud.driftSpeed * dt,
+      );
+      cloud.position.y = this.clampCloudAltitudeToTerrain(
+        cloud.position.x,
+        cloud.position.z,
+        cloud.baseAltitude,
+      );
 
       const cloudVolume =
         cloud.volume +
@@ -1080,22 +1115,24 @@ gl_FragColor = vec4( outgoingLight, diffuseColor.a * vCloudOpacity );`,
         this.cloudSpinQuaternion,
         this.cloudScale,
       );
-      cloud.dist = cloud.position.length();
+      cloud.dist = camera.position.distanceTo(cloud.position);
+      this.cloudCullSphere.center.copy(cloud.position);
+      this.cloudCullSphere.radius = cloudVolume * CLOUD_CULL_RADIUS_FACTOR;
+      if (!this.cloudFrustum.intersectsSphere(this.cloudCullSphere)) {
+        continue;
+      }
+
+      visibleClouds.push(cloud);
     }
 
-    cloudLayer.instances.sort((a, b) => b.dist - a.dist);
+    visibleClouds.sort((a, b) => b.dist - a.dist);
     const dayVisibility = MathUtils.lerp(0.48, 0.92, dayFactor);
     const nightVisibility = MathUtils.lerp(1, 0.62, nightFactor);
+    cloudMesh.count = visibleClouds.length;
 
-    for (let index = 0; index < cloudLayer.instances.length; index += 1) {
-      const cloud = cloudLayer.instances[index];
-      const edgeFade =
-        1 -
-        MathUtils.smoothstep(
-          CLOUD_FADE_RADIUS * 0.72,
-          CLOUD_FADE_RADIUS,
-          cloud.dist,
-        );
+    for (let index = 0; index < visibleClouds.length; index += 1) {
+      const cloud = visibleClouds[index];
+      const edgeFade = this.computeCloudEdgeFade(cloud.dist);
       cloudLayer.opacities[index] =
         cloud.opacity * edgeFade * dayVisibility * nightVisibility;
       cloudMesh.setMatrixAt(index, cloud.matrix);
@@ -1114,6 +1151,49 @@ gl_FragColor = vec4( outgoingLight, diffuseColor.a * vCloudOpacity );`,
 
   private randomRange(min: number, max: number): number {
     return min + (max - min) * Math.random();
+  }
+
+  private computeCloudEdgeFade(distance: number): number {
+    return (
+      1 -
+      MathUtils.smoothstep(
+        CLOUD_FADE_RADIUS * 0.72,
+        CLOUD_FADE_RADIUS,
+        distance,
+      )
+    );
+  }
+
+  private wrapCloudCoordinate(value: number): number {
+    if (value < -CLOUD_WORLD_HALF_EXTENT) {
+      return (
+        CLOUD_WORLD_HALF_EXTENT -
+        this.randomRange(0, CLOUD_WORLD_WRAP_PADDING)
+      );
+    }
+    if (value > CLOUD_WORLD_HALF_EXTENT) {
+      return (
+        -CLOUD_WORLD_HALF_EXTENT +
+        this.randomRange(0, CLOUD_WORLD_WRAP_PADDING)
+      );
+    }
+
+    return value;
+  }
+
+  private clampCloudAltitudeToTerrain(
+    worldX: number,
+    worldZ: number,
+    worldAltitude: number,
+  ): number {
+    if (!this.terrainHeightSampler) {
+      return worldAltitude;
+    }
+
+    const terrainHeight = this.terrainHeightSampler(worldX, worldZ);
+    const minWorldAltitude = terrainHeight + CLOUD_TERRAIN_CLEARANCE;
+
+    return Math.max(worldAltitude, minWorldAltitude);
   }
 
   private updateSunShadowFrustum(halfExtent: number, far: number): void {

@@ -145,6 +145,9 @@ export class Game {
       CONFIG.terrain,
       preloadedAssets.simplexNoiseTexture,
     );
+    this.dayNightSky.setTerrainHeightSampler(
+      this.terrainLayer.getHeightAt.bind(this.terrainLayer),
+    );
     this.forestLayer = new ForestLayer(
       this.scene,
       this.trackSpline,
