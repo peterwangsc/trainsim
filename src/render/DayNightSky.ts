@@ -12,8 +12,6 @@ import {
   InstancedMesh,
   MathUtils,
   Matrix4,
-  Mesh,
-  MeshBasicMaterial,
   MeshLambertMaterial,
   Object3D,
   OrthographicCamera,
@@ -25,10 +23,12 @@ import {
   SRGBColorSpace,
   Scene,
   ShaderMaterial,
-  SphereGeometry,
   Spherical,
   Texture,
   Vector3,
+  Sprite,
+  SpriteMaterial,
+  CanvasTexture,
 } from "three";
 import { Sky } from "three/examples/jsm/objects/Sky.js";
 
@@ -47,7 +47,7 @@ const STAR_SOFT_FADE = true;
 const SUN_ORBIT_RADIUS = 700;
 const SUN_ORBIT_Z_OFFSET = 180;
 const SUN_VISUAL_DISTANCE = 5600;
-const MOON_VISUAL_DISTANCE = 5400;
+const MOON_VISUAL_DISTANCE = 6200;
 const SUN_SHADOW_LIGHT_DISTANCE_MIN = 260;
 const SUN_SHADOW_LIGHT_DISTANCE_MAX = 900;
 const SUN_SHADOW_CAMERA_NEAR = 0.5;
@@ -62,14 +62,15 @@ const SUN_SHADOW_BIAS_LOW = -0.00022;
 const SUN_SHADOW_NORMAL_BIAS_DAY = 0.03;
 const SUN_SHADOW_NORMAL_BIAS_LOW = 0.09;
 const MOON_SHADOW_LIGHT_DISTANCE = 260;
+const MOON_DISC_SIZE = 192;
 
-const DAY_FOG_NEAR = 45;
-const DAY_FOG_FAR = 520;
-const NIGHT_FOG_NEAR = 32;
-const NIGHT_FOG_FAR = 200;
+const DAY_FOG_NEAR = 68;
+const DAY_FOG_FAR = 900;
+const NIGHT_FOG_NEAR = 38;
+const NIGHT_FOG_FAR = 290;
 
-const MOON_HALO_BASE_SCALE = 1.4;
-const MOON_HALO_PULSE_SCALE = 2.0;
+const MOON_HALO_BASE_SCALE = 6.2;
+const MOON_HALO_PULSE_SCALE = 9.6;
 const SKY_CLOUD_TIME_SCALE = 0.45;
 const SKY_CLOUD_COVERAGE_DAY = 0.24;
 const SKY_CLOUD_COVERAGE_TWILIGHT = 0.58;
@@ -238,8 +239,8 @@ export class DayNightSky {
   private readonly cloudDayColor = new Color("#f4f7ff");
   private readonly cloudTwilightColor = new Color("#ffe0c2");
   private readonly cloudNightColor = new Color("#8a9fca");
-  private readonly moonLowColor = new Color("#92aad8");
-  private readonly moonHighColor = new Color("#d4e1ff");
+  private readonly moonLowColor = new Color("#9fb6de");
+  private readonly moonHighColor = new Color("#e9f1ff");
 
   private readonly dayCycleDurationSeconds: number;
   private readonly sky: Sky;
@@ -250,12 +251,12 @@ export class DayNightSky {
   private readonly starsMaterial: StarfieldMaterial;
   private readonly spriteCloudLayer: SpriteCloudLayer;
 
-  private readonly sunMesh: Mesh;
-  private readonly sunMaterial: MeshBasicMaterial;
-  private readonly moonMesh: Mesh;
-  private readonly moonMaterial: MeshBasicMaterial;
-  private readonly moonHalo: Mesh;
-  private readonly moonHaloMaterial: MeshBasicMaterial;
+  private readonly moonSprite: Sprite;
+  private readonly moonMaterial: SpriteMaterial;
+  private readonly moonHalo: Sprite;
+  private readonly moonHaloMaterial: SpriteMaterial;
+  private readonly moonDiscTexture: CanvasTexture;
+  private readonly moonGlowTexture: CanvasTexture;
 
   private readonly sunTarget = new Object3D();
   private readonly moonTarget = new Object3D();
@@ -264,7 +265,6 @@ export class DayNightSky {
   private readonly sunOffset = new Vector3();
   private readonly sunDirection = new Vector3();
   private readonly moonDirection = new Vector3();
-  private readonly sunVisualPosition = new Vector3();
   private readonly moonVisualPosition = new Vector3();
   private readonly uniformSunPosition = new Vector3();
   private readonly sunLightColor = new Color();
@@ -318,42 +318,44 @@ export class DayNightSky {
     this.spriteCloudLayer = this.createSpriteCloudLayer(options.cloudTexture);
     this.scene.add(this.spriteCloudLayer.mesh);
 
-    this.sunMaterial = new MeshBasicMaterial({
-      color: "#ffe2a7",
-      transparent: true,
-      opacity: 1,
-      toneMapped: false,
-      fog: false,
-    });
-    this.sunMesh = new Mesh(new SphereGeometry(78, 28, 28), this.sunMaterial);
-    this.sunMesh.frustumCulled = false;
-    this.scene.add(this.sunMesh);
+    this.moonDiscTexture = this.createMoonDiscTexture();
+    this.moonGlowTexture = this.createMoonGlowTexture();
 
-    this.moonMaterial = new MeshBasicMaterial({
-      color: "#f2f7ff",
+    this.moonMaterial = new SpriteMaterial({
+      map: this.moonDiscTexture,
+      color: "#f6f9ff",
       transparent: true,
       opacity: 0,
+      depthWrite: false,
+      depthTest: true,
       toneMapped: false,
       fog: false,
     });
-    this.moonMesh = new Mesh(new SphereGeometry(58, 28, 28), this.moonMaterial);
-    this.moonMesh.frustumCulled = false;
-    this.scene.add(this.moonMesh);
+    this.moonSprite = new Sprite(this.moonMaterial);
+    this.moonSprite.scale.set(MOON_DISC_SIZE, MOON_DISC_SIZE, 1);
+    this.moonSprite.frustumCulled = false;
+    this.moonSprite.renderOrder = 11;
+    this.scene.add(this.moonSprite);
 
-    this.moonHaloMaterial = new MeshBasicMaterial({
-      color: "#a6c4ff",
+    this.moonHaloMaterial = new SpriteMaterial({
+      map: this.moonGlowTexture,
+      color: "#cde0ff",
       transparent: true,
       opacity: 0,
       blending: AdditiveBlending,
       depthWrite: false,
+      depthTest: true,
       toneMapped: false,
       fog: false,
     });
-    this.moonHalo = new Mesh(
-      new SphereGeometry(92, 24, 24),
-      this.moonHaloMaterial,
+    this.moonHalo = new Sprite(this.moonHaloMaterial);
+    this.moonHalo.scale.set(
+      MOON_DISC_SIZE * MOON_HALO_BASE_SCALE,
+      MOON_DISC_SIZE * MOON_HALO_BASE_SCALE,
+      1,
     );
     this.moonHalo.frustumCulled = false;
+    this.moonHalo.renderOrder = 10;
     this.scene.add(this.moonHalo);
 
     this.sunLight = new DirectionalLight("#fff4d6", SUN_LIGHT_DAY_INTENSITY);
@@ -570,26 +572,21 @@ export class DayNightSky {
     );
     this.moonLight.color.copy(this.moonLightColor);
 
-    this.sunVisualPosition
-      .copy(this.lightAnchor)
-      .addScaledVector(this.sunDirection, SUN_VISUAL_DISTANCE);
-    this.sunMesh.position.copy(this.sunVisualPosition);
-    this.sunMaterial.opacity = MathUtils.clamp((sunHeight + 0.18) / 0.58, 0, 1);
-
     this.moonVisualPosition
       .copy(this.lightAnchor)
       .addScaledVector(this.moonDirection, MOON_VISUAL_DISTANCE);
-    this.moonMesh.position.copy(this.moonVisualPosition);
-    this.moonMaterial.opacity = moonGlowFactor;
+    this.moonSprite.position.copy(this.moonVisualPosition);
+    this.moonMaterial.opacity = MathUtils.lerp(0.9, 0.96, nightFactor);
 
     this.moonHalo.position.copy(this.moonVisualPosition);
     const haloScale = MathUtils.lerp(
       MOON_HALO_BASE_SCALE,
       MOON_HALO_PULSE_SCALE,
-      moonGlowFactor,
+      Math.sqrt(moonGlowFactor),
     );
-    this.moonHalo.scale.setScalar(haloScale);
-    this.moonHaloMaterial.opacity = 0.52 * moonGlowFactor;
+    const haloSize = MOON_DISC_SIZE * haloScale;
+    this.moonHalo.scale.set(haloSize, haloSize, 1);
+    this.moonHaloMaterial.opacity = Math.pow(moonGlowFactor, 0.85) * 0.88;
 
     this.stars.visible = nightFactor > 0.01;
     this.starsMaterial.uniforms.alpha.value = nightFactor * 0.95;
@@ -660,8 +657,7 @@ export class DayNightSky {
       this.sky,
       this.stars,
       this.spriteCloudLayer.mesh,
-      this.sunMesh,
-      this.moonMesh,
+      this.moonSprite,
       this.moonHalo,
       this.sunLight,
       this.moonLight,
@@ -678,12 +674,10 @@ export class DayNightSky {
     this.spriteCloudLayer.mesh.geometry.dispose();
     this.spriteCloudLayer.material.dispose();
     this.spriteCloudLayer.texture.dispose();
-    this.sunMesh.geometry.dispose();
-    this.sunMaterial.dispose();
-    this.moonMesh.geometry.dispose();
     this.moonMaterial.dispose();
-    this.moonHalo.geometry.dispose();
     this.moonHaloMaterial.dispose();
+    this.moonDiscTexture.dispose();
+    this.moonGlowTexture.dispose();
   }
 
   private ensureSkyCloudUniforms(): void {
@@ -797,6 +791,101 @@ export class DayNightSky {
 
     this.skyMaterial.fragmentShader = fragmentShader;
     this.skyMaterial.needsUpdate = true;
+  }
+
+  private createMoonDiscTexture(): CanvasTexture {
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext("2d");
+
+    if (context) {
+      const center = size * 0.5;
+      const radius = size * 0.46;
+      const discGradient = context.createRadialGradient(
+        center - size * 0.08,
+        center - size * 0.1,
+        size * 0.03,
+        center,
+        center,
+        radius,
+      );
+      discGradient.addColorStop(0, "rgba(255,255,255,1)");
+      discGradient.addColorStop(0.55, "rgba(246,251,255,0.99)");
+      discGradient.addColorStop(1, "rgba(214,224,242,0.97)");
+      context.fillStyle = discGradient;
+      context.beginPath();
+      context.arc(center, center, radius, 0, Math.PI * 2);
+      context.fill();
+
+      context.globalCompositeOperation = "multiply";
+      const craterPattern: Array<[number, number, number, number]> = [
+        [-0.17, -0.09, 0.08, 0.15],
+        [0.11, -0.13, 0.07, 0.18],
+        [-0.06, 0.05, 0.1, 0.14],
+        [0.19, 0.08, 0.06, 0.12],
+        [-0.2, 0.16, 0.05, 0.11],
+        [0.01, 0.2, 0.07, 0.13],
+      ];
+      for (const [x, y, r, alpha] of craterPattern) {
+        const craterRadius = size * r;
+        const craterX = center + x * size;
+        const craterY = center + y * size;
+        const craterGradient = context.createRadialGradient(
+          craterX - craterRadius * 0.2,
+          craterY - craterRadius * 0.2,
+          craterRadius * 0.2,
+          craterX,
+          craterY,
+          craterRadius,
+        );
+        craterGradient.addColorStop(0, `rgba(110,118,132,${alpha})`);
+        craterGradient.addColorStop(1, "rgba(110,118,132,0)");
+        context.fillStyle = craterGradient;
+        context.beginPath();
+        context.arc(craterX, craterY, craterRadius, 0, Math.PI * 2);
+        context.fill();
+      }
+      context.globalCompositeOperation = "source-over";
+    }
+
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  private createMoonGlowTexture(): CanvasTexture {
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext("2d");
+
+    if (context) {
+      const center = size * 0.5;
+      const glow = context.createRadialGradient(
+        center,
+        center,
+        0,
+        center,
+        center,
+        size * 0.5,
+      );
+      glow.addColorStop(0, "rgba(214,230,255,0.48)");
+      glow.addColorStop(0.2, "rgba(201,220,255,0.32)");
+      glow.addColorStop(0.5, "rgba(173,199,244,0.14)");
+      glow.addColorStop(0.8, "rgba(144,171,221,0.04)");
+      glow.addColorStop(1, "rgba(144,171,221,0)");
+      context.fillStyle = glow;
+      context.fillRect(0, 0, size, size);
+    }
+
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    texture.needsUpdate = true;
+    return texture;
   }
 
   private createSpriteCloudLayer(preloadedTexture: Texture): SpriteCloudLayer {
