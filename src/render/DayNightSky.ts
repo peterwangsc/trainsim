@@ -249,7 +249,7 @@ export class DayNightSky {
   private readonly sunriseLightColor = new Color("#fff4d6");
   private readonly noonLightColor = new Color("#ffffff");
   private readonly dayHemisphereSkyColor = new Color("#dcefff");
-  private readonly twilightHemisphereSkyColor = new Color("#ffd0a0");
+  private readonly twilightHemisphereSkyColor = new Color("#ffa0fe");
   private readonly nightHemisphereSkyColor = new Color("#1a2a4c");
   private readonly dayHemisphereGroundColor = new Color("#7f9468");
   private readonly nightHemisphereGroundColor = new Color("#0f1624");
@@ -257,7 +257,7 @@ export class DayNightSky {
   private readonly twilightAmbientColor = new Color("#b49ab6");
   private readonly nightAmbientColor = new Color("#1d2f54");
   private readonly cloudDayColor = new Color("#f4f7ff");
-  private readonly cloudTwilightColor = new Color("#ffe0c2");
+  private readonly cloudTwilightColor = new Color("#ffc2ed");
   private readonly cloudNightColor = new Color("#8a9fca");
   private readonly moonLowColor = new Color("#9fb6de");
   private readonly moonHighColor = new Color("#e9f1ff");
@@ -939,7 +939,7 @@ uniform float directionalFogStrength;`,
 		float directionalFogBoost = mix( 1.0 - directionalFogStrength, 1.0 + directionalFogStrength, directionalFogTowardSun );
 		float directionalFogAdjusted = clamp( fogFactor * directionalFogBoost, 0.0, 1.0 );
 		float directionalFogExtra = max( 0.0, directionalFogAdjusted - fogFactor );
-		gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, directionalFogExtra );
+		gl_FragColor.rgb = mix( gl_FragColor.rgb, 0.1 * fogColor, 2.0 * directionalFogExtra );
 	}
 #endif`,
         );
