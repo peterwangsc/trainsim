@@ -36,7 +36,9 @@ import type { CriticalPreloadedAssets } from "../loading/CriticalAssetPreloader"
 type HudStatus = "running" | "won" | "failed";
 type FailureReason = "COMFORT" | "BUMPER";
 type GameOptions = {
+  level: number;
   onRestartRequested?: () => void;
+  onNextLevelRequested?: () => void;
   preloadedAssets: CriticalPreloadedAssets;
 };
 
@@ -87,6 +89,7 @@ export class Game {
   private readonly headlightTargetPosition = new Vector3();
   private toneMappingExposure = 1;
   private readonly onRestartRequested: () => void;
+  private readonly onNextLevelRequested?: () => void;
 
   private state = GameState.Ready;
   private failureReason: FailureReason | null = null;
@@ -113,11 +116,21 @@ export class Game {
   ) {
     this.onRestartRequested =
       options.onRestartRequested ?? (() => window.location.reload());
+    this.onNextLevelRequested = options.onNextLevelRequested;
     const preloadedAssets = options.preloadedAssets;
 
+    const level = options.level;
+    const trackConfig = {
+      ...CONFIG.track,
+      segmentCount: CONFIG.track.segmentCount + (level - 1) * 160,
+      baseCurvaturePerMeter: CONFIG.track.baseCurvaturePerMeter * (1 + (level - 1) * 0.25),
+      detailCurvaturePerMeter: CONFIG.track.detailCurvaturePerMeter * (1 + (level - 1) * 0.25),
+    };
+    const seed = CONFIG.seed + level - 1;
+
     const trackPoints = new TrackGenerator(
-      CONFIG.seed,
-      CONFIG.track,
+      seed,
+      trackConfig,
     ).generate();
 
     this.trackSpline = new TrackSpline(trackPoints, { closed: false });
@@ -129,7 +142,7 @@ export class Game {
 
     const trackMesh = new TrackMeshBuilder(
       this.trackSpline,
-      CONFIG.track,
+      trackConfig,
     ).build();
     this.scene.add(trackMesh);
     this.trackEndSet = new TrackEndSet(this.trackSpline, {
@@ -489,6 +502,7 @@ export class Game {
         title: "Station Stop Complete",
         message: "You stopped before the platform end.",
         onRestart: this.onRestartRequested,
+        onNextLevel: this.onNextLevelRequested,
       });
       return;
     }

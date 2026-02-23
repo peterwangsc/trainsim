@@ -32,12 +32,32 @@ const runBootSequence = async (): Promise<void> => {
       preloadedAssetsPromise,
       gameModulePromise,
     ]);
-    game = new gameModule.Game(app, {
-      onRestartRequested: () => {
-        game?.restart();
-      },
-      preloadedAssets,
-    });
+
+    const startGameAtLevel = (level: number) => {
+      if (game) {
+        game.stop();
+      }
+      game = new gameModule.Game(app, {
+        level,
+        onRestartRequested: () => {
+          game?.restart();
+        },
+        onNextLevelRequested: () => {
+          const nextLevel = level + 1;
+          localStorage.setItem("trainsim_level", nextLevel.toString());
+          startGameAtLevel(nextLevel);
+          game?.start();
+        },
+        preloadedAssets,
+      });
+    };
+
+    let savedLevel = parseInt(localStorage.getItem("trainsim_level") ?? "1", 10);
+    if (isNaN(savedLevel) || savedLevel < 1) {
+      savedLevel = 1;
+    }
+    startGameAtLevel(savedLevel);
+
     splash.setReady();
   } catch (error) {
     console.error(error);

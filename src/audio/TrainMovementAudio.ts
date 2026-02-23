@@ -281,7 +281,6 @@ export class TrainMovementAudio {
     for (const howl of this.howls) {
       howl.off();
       howl.stop();
-      howl.unload();
     }
   }
 }

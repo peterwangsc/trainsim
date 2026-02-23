@@ -7,6 +7,7 @@ export type RunEndOverlayOptions = {
   title: string;
   message: string;
   onRestart: () => void;
+  onNextLevel?: () => void;
 };
 
 export class RunEndOverlay {
@@ -15,6 +16,7 @@ export class RunEndOverlay {
   private readonly message: HTMLParagraphElement;
   private readonly restartButton: HTMLButtonElement;
   private restartHandler: (() => void) | null = null;
+  private nextLevelHandler: (() => void) | null = null;
   private revealFrameId: number | null = null;
 
   constructor(container: HTMLElement) {
@@ -49,10 +51,17 @@ export class RunEndOverlay {
 
   show(options: RunEndOverlayOptions): void {
     this.restartHandler = options.onRestart;
+    this.nextLevelHandler = options.onNextLevel ?? null;
     this.title.textContent = options.title;
     this.message.textContent = options.message;
     this.root.classList.toggle("is-won", options.tone === "won");
     this.root.classList.toggle("is-failed", options.tone === "failed");
+
+    if (options.tone === "won" && this.nextLevelHandler) {
+      this.restartButton.textContent = "Next Level";
+    } else {
+      this.restartButton.textContent = "Restart";
+    }
 
     if (this.revealFrameId !== null) {
       window.cancelAnimationFrame(this.revealFrameId);
@@ -75,6 +84,7 @@ export class RunEndOverlay {
 
     this.restartButton.removeEventListener("click", this.onRestartClick);
     this.restartHandler = null;
+    this.nextLevelHandler = null;
     this.root.remove();
   }
 
@@ -86,6 +96,10 @@ export class RunEndOverlay {
   }
 
   private onRestartClick = (): void => {
-    this.restartHandler?.();
+    if (this.restartButton.textContent === "Next Level" && this.nextLevelHandler) {
+      this.nextLevelHandler();
+    } else {
+      this.restartHandler?.();
+    }
   };
 }

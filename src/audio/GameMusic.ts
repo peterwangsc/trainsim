@@ -101,13 +101,16 @@ export class GameMusic {
 
   dispose(): void {
     this.stop();
-    for (const howl of this.howls) {
+    for (let i = 0; i < this.howls.length; i++) {
+      const howl = this.howls[i];
       if (!howl) {
         continue;
       }
       howl.off();
       howl.stop();
-      howl.unload();
+      if (i !== 0) {
+        howl.unload();
+      }
     }
     this.howls.fill(null);
     this.loadPromises.clear();

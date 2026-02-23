@@ -59,7 +59,6 @@ export class RandomAmbientAudio {
     for (const howl of this.preloadedHowls) {
       howl.off();
       howl.stop();
-      howl.unload();
     }
   }
 
