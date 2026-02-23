@@ -33,7 +33,7 @@ import {
 import { Sky } from "three/examples/jsm/objects/Sky.js";
 
 const DEFAULT_DAY_CYCLE_DURATION_SECONDS = 300;
-const SUN_CYCLE_PHASE_OFFSET_RADIANS = Math.PI * 0.95;
+const SUN_CYCLE_PHASE_OFFSET_RADIANS = Math.PI * 1.95;
 
 const SKY_DOME_SCALE = 16000;
 const STAR_RADIUS = 820;

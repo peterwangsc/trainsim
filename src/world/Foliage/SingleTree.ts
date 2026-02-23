@@ -7,8 +7,8 @@ import {
   Group,
   MathUtils,
   Mesh,
-  MeshStandardMaterial
-} from 'three';
+  MeshStandardMaterial,
+} from "three";
 
 type SingleTreeProps = {
   position: readonly [number, number, number];
@@ -17,7 +17,7 @@ type SingleTreeProps = {
   variationSeed?: number;
 };
 
-export type SingleTreeSpecies = 'pine' | 'redwood' | 'fir';
+export type SingleTreeSpecies = "pine" | "redwood" | "fir";
 
 export type SingleTreeTrunkCollider = {
   halfHeight: number;
@@ -71,11 +71,11 @@ type SingleTreeShape = {
 const SPECIES_SHAPE_PROFILES: Record<SingleTreeSpecies, SpeciesShapeProfile> = {
   pine: {
     canopyLayers: [
-      { y: 6.7, radius: 3.6, height: 4.8, color: '#3C7738' },
-      { y: 8.7, radius: 3.0, height: 4.0, color: '#376F35' },
-      { y: 10.6, radius: 2.3, height: 3.2, color: '#336832' },
-      { y: 12.1, radius: 1.65, height: 2.5, color: '#305F2E' },
-      { y: 13.3, radius: 1.05, height: 1.9, color: '#2B562A' }
+      { y: 6.7, radius: 3.6, height: 4.8, color: "#3C7738" },
+      { y: 8.7, radius: 3.0, height: 4.0, color: "#376F35" },
+      { y: 10.6, radius: 2.3, height: 3.2, color: "#336832" },
+      { y: 12.1, radius: 1.65, height: 2.5, color: "#305F2E" },
+      { y: 13.3, radius: 1.05, height: 1.9, color: "#2B562A" },
     ],
     canopyTwistRadians: Math.PI * 0.36,
     asymmetry: 0.11,
@@ -83,16 +83,16 @@ const SPECIES_SHAPE_PROFILES: Record<SingleTreeSpecies, SpeciesShapeProfile> = {
     trunkBottomRadius: 0.56,
     trunkTaperExponent: 2.45,
     trunkTopMargin: 0.45,
-    trunkCanopyPenetration: 0.35
+    trunkCanopyPenetration: 0.35,
   },
   redwood: {
     canopyLayers: [
-      { y: 12.9, radius: 2.0, height: 2.9, color: '#3E7738' },
-      { y: 14.5, radius: 2.15, height: 2.7, color: '#3C7536' },
-      { y: 16.2, radius: 1.9, height: 2.5, color: '#396F35' },
-      { y: 17.8, radius: 1.55, height: 2.3, color: '#346A32' },
-      { y: 19.1, radius: 1.2, height: 2.0, color: '#30612E' },
-      { y: 20.2, radius: 0.86, height: 1.6, color: '#2C582A' }
+      { y: 12.9, radius: 2.0, height: 2.9, color: "#3E7738" },
+      { y: 14.5, radius: 2.15, height: 2.7, color: "#3C7536" },
+      { y: 16.2, radius: 1.9, height: 2.5, color: "#396F35" },
+      { y: 17.8, radius: 1.55, height: 2.3, color: "#346A32" },
+      { y: 19.1, radius: 1.2, height: 2.0, color: "#30612E" },
+      { y: 20.2, radius: 0.86, height: 1.6, color: "#2C582A" },
     ],
     canopyTwistRadians: Math.PI * 0.22,
     asymmetry: 0.07,
@@ -100,16 +100,16 @@ const SPECIES_SHAPE_PROFILES: Record<SingleTreeSpecies, SpeciesShapeProfile> = {
     trunkBottomRadius: 0.72,
     trunkTaperExponent: 2.2,
     trunkTopMargin: 0.38,
-    trunkCanopyPenetration: 0.24
+    trunkCanopyPenetration: 0.24,
   },
   fir: {
     canopyLayers: [
-      { y: 6.4, radius: 3.0, height: 3.8, color: '#376F35' },
-      { y: 8.1, radius: 2.45, height: 3.4, color: '#346B33' },
-      { y: 9.9, radius: 2.0, height: 2.9, color: '#316632' },
-      { y: 11.5, radius: 1.56, height: 2.5, color: '#2E6030' },
-      { y: 12.9, radius: 1.14, height: 2.0, color: '#2B592C' },
-      { y: 14.0, radius: 0.82, height: 1.6, color: '#285228' }
+      { y: 6.4, radius: 3.0, height: 3.8, color: "#376F35" },
+      { y: 8.1, radius: 2.45, height: 3.4, color: "#346B33" },
+      { y: 9.9, radius: 2.0, height: 2.9, color: "#316632" },
+      { y: 11.5, radius: 1.56, height: 2.5, color: "#2E6030" },
+      { y: 12.9, radius: 1.14, height: 2.0, color: "#2B592C" },
+      { y: 14.0, radius: 0.82, height: 1.6, color: "#285228" },
     ],
     canopyTwistRadians: Math.PI * 0.3,
     asymmetry: 0.1,
@@ -117,8 +117,8 @@ const SPECIES_SHAPE_PROFILES: Record<SingleTreeSpecies, SpeciesShapeProfile> = {
     trunkBottomRadius: 0.49,
     trunkTaperExponent: 2.6,
     trunkTopMargin: 0.42,
-    trunkCanopyPenetration: 0.31
-  }
+    trunkCanopyPenetration: 0.31,
+  },
 };
 
 const TRUNK_COLLIDER_RADIUS_MULTIPLIER = 0.82;
@@ -139,11 +139,13 @@ const SEED_PRIME_C = 74.7;
 const CANOPY_WRAP_LIGHT_STRENGTH = 0.32;
 const CANOPY_BACKSCATTER_STRENGTH = 0.14;
 const CANOPY_BACKSCATTER_POWER = 2.6;
+const CANOPY_TAPER_NORMAL_COMPENSATION = 1;
 
 type FoliageShaderUniforms = {
   foliageWrap: { value: number };
   foliageBackscatter: { value: number };
   foliageBackscatterPower: { value: number };
+  foliageNormalCompensation: { value: number };
 };
 
 function hash(seed: number): number {
@@ -151,7 +153,9 @@ function hash(seed: number): number {
   return value - Math.floor(value);
 }
 
-function getFallbackVariationSeed(position: readonly [number, number, number]): number {
+function getFallbackVariationSeed(
+  position: readonly [number, number, number],
+): number {
   return (
     position[0] * SEED_PRIME_A +
     position[1] * SEED_PRIME_C +
@@ -163,7 +167,7 @@ function createMonumentTaperedTrunkGeometry(
   topRadius: number,
   bottomRadius: number,
   height: number,
-  taperExponent: number
+  taperExponent: number,
 ): CylinderGeometry {
   const geometry = new CylinderGeometry(
     topRadius,
@@ -171,9 +175,9 @@ function createMonumentTaperedTrunkGeometry(
     height,
     TRUNK_RADIAL_SEGMENTS,
     TRUNK_HEIGHT_SEGMENTS,
-    false
+    false,
   );
-  const positions = geometry.getAttribute('position') as BufferAttribute;
+  const positions = geometry.getAttribute("position") as BufferAttribute;
 
   for (let vertexIndex = 0; vertexIndex < positions.count; vertexIndex += 1) {
     const x = positions.getX(vertexIndex);
@@ -184,7 +188,11 @@ function createMonumentTaperedTrunkGeometry(
       continue;
     }
 
-    const t = MathUtils.clamp((y + height * 0.5) / Math.max(height, 1e-6), 0, 1);
+    const t = MathUtils.clamp(
+      (y + height * 0.5) / Math.max(height, 1e-6),
+      0,
+      1,
+    );
     const linearRadius = MathUtils.lerp(bottomRadius, topRadius, t);
     const curvedRadius =
       topRadius + (bottomRadius - topRadius) * (1 - Math.pow(t, taperExponent));
@@ -201,37 +209,63 @@ function createMonumentTaperedTrunkGeometry(
 
 function tuneCanopyMaterialShader(material: MeshStandardMaterial): void {
   material.onBeforeCompile = (shader): void => {
-    const uniforms = shader.uniforms as typeof shader.uniforms & FoliageShaderUniforms;
+    const uniforms = shader.uniforms as typeof shader.uniforms &
+      FoliageShaderUniforms;
 
     uniforms.foliageWrap = { value: CANOPY_WRAP_LIGHT_STRENGTH };
     uniforms.foliageBackscatter = { value: CANOPY_BACKSCATTER_STRENGTH };
     uniforms.foliageBackscatterPower = { value: CANOPY_BACKSCATTER_POWER };
+    uniforms.foliageNormalCompensation = {
+      value: CANOPY_TAPER_NORMAL_COMPENSATION,
+    };
+
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+uniform float foliageNormalCompensation;`,
+      )
+      .replace(
+        "#include <defaultnormal_vertex>",
+        `#include <defaultnormal_vertex>
+mat3 foliageModelViewNoScale = mat3(
+  normalize( modelViewMatrix[ 0 ].xyz ),
+  normalize( modelViewMatrix[ 1 ].xyz ),
+  normalize( modelViewMatrix[ 2 ].xyz )
+);
+vec3 foliageNoScaleNormal = normalize(
+  foliageModelViewNoScale * normalize( objectNormal )
+);
+transformedNormal = normalize(
+  mix( transformedNormal, foliageNoScaleNormal, foliageNormalCompensation )
+);`,
+      );
 
     shader.fragmentShader = shader.fragmentShader
       .replace(
-        '#include <common>',
+        "#include <common>",
         `#include <common>
 uniform float foliageWrap;
 uniform float foliageBackscatter;
-uniform float foliageBackscatterPower;`
+uniform float foliageBackscatterPower;`,
       )
       .replace(
-        '#include <lights_fragment_begin>',
+        "#include <lights_fragment_begin>",
         `#include <lights_fragment_begin>
 float foliageNoV = saturate( dot( geometryNormal, geometryViewDir ) );
 float foliageTranslucency = pow( 1.0 - foliageNoV, foliageBackscatterPower );
 reflectedLight.directDiffuse *= 1.0 + foliageWrap;
 reflectedLight.indirectDiffuse *= 1.0 + foliageWrap * 0.24;
-totalEmissiveRadiance += diffuseColor.rgb * foliageBackscatter * foliageTranslucency;`
+totalEmissiveRadiance += diffuseColor.rgb * foliageBackscatter * foliageTranslucency;`,
       );
   };
-  material.customProgramCacheKey = () => 'single-tree-canopy-foliage-v1';
+  material.customProgramCacheKey = () => "single-tree-canopy-foliage-v4";
 }
 
 function createSingleTreeShape(
   heightScale: number,
   species: SingleTreeSpecies,
-  variationSeed: number
+  variationSeed: number,
 ): SingleTreeShape {
   const profile = SPECIES_SHAPE_PROFILES[species];
   const normalizedHeightScale = MathUtils.clamp(heightScale, 0.7, 1.8);
@@ -239,12 +273,12 @@ function createSingleTreeShape(
   const tallTreeThicknessBlend = MathUtils.smoothstep(
     normalizedHeightScale,
     TALL_TREE_THICKNESS_REDUCTION_START,
-    TALL_TREE_THICKNESS_REDUCTION_END
+    TALL_TREE_THICKNESS_REDUCTION_END,
   );
   const tallTreeThicknessScale = MathUtils.lerp(
     1,
     TALL_TREE_THICKNESS_MIN_SCALE,
-    tallTreeThicknessBlend
+    tallTreeThicknessBlend,
   );
   const trunkRadiusScale =
     Math.pow(normalizedHeightScale, TRUNK_RADIUS_HEIGHT_EXPONENT) *
@@ -254,7 +288,8 @@ function createSingleTreeShape(
     const layerSeed = variationSeed + (layerIndex + 1) * 73.17;
     const radiusJitter = MathUtils.lerp(0.84, 1.16, hash(layerSeed + 1.2));
     const heightJitter = MathUtils.lerp(0.88, 1.14, hash(layerSeed + 2.8));
-    const normalizedLayer = layerIndex / Math.max(profile.canopyLayers.length - 1, 1);
+    const normalizedLayer =
+      layerIndex / Math.max(profile.canopyLayers.length - 1, 1);
     const asymmetryStrength =
       layer.radius *
       canopyRadiusScale *
@@ -272,7 +307,7 @@ function createSingleTreeShape(
       twist:
         normalizedLayer * profile.canopyTwistRadians +
         (hash(layerSeed + 8.7) - 0.5) * Math.PI * 0.18,
-      color: layer.color
+      color: layer.color,
     };
   });
 
@@ -283,13 +318,16 @@ function createSingleTreeShape(
       bounds.highestTop = Math.max(bounds.highestTop, layer.y + halfHeight);
       return bounds;
     },
-    { lowestBottom: Infinity, highestTop: -Infinity }
+    { lowestBottom: Infinity, highestTop: -Infinity },
   );
 
   const topMargin = profile.trunkTopMargin * normalizedHeightScale;
   const minimumReachIntoCanopy = 0.75 * normalizedHeightScale;
   const topY = canopyBounds.highestTop - topMargin;
-  const trunkHeight = Math.max(canopyBounds.lowestBottom + minimumReachIntoCanopy, topY);
+  const trunkHeight = Math.max(
+    canopyBounds.lowestBottom + minimumReachIntoCanopy,
+    topY,
+  );
   const trunkBottomRadius =
     profile.trunkBottomRadius *
     trunkRadiusScale *
@@ -304,9 +342,9 @@ function createSingleTreeShape(
       MathUtils.lerp(
         TRUNK_TOP_RATIO_MIN,
         TRUNK_TOP_RATIO_MAX,
-        hash(variationSeed + 25.3)
+        hash(variationSeed + 25.3),
       ),
-    TRUNK_MIN_TOP_RADIUS
+    TRUNK_MIN_TOP_RADIUS,
   );
 
   return {
@@ -315,42 +353,50 @@ function createSingleTreeShape(
     canopyBounds,
     trunkDimensions: {
       height: trunkHeight,
-      y: trunkHeight * 0.5
+      y: trunkHeight * 0.5,
     },
     trunkRadii: {
       top: trunkTopRadius,
-      bottom: trunkBottomRadius
-    }
+      bottom: trunkBottomRadius,
+    },
   };
 }
 
 export function getSingleTreeTrunkCollider(
   heightScale = 1,
-  species: SingleTreeSpecies = 'pine',
-  variationSeed = 0
+  species: SingleTreeSpecies = "pine",
+  variationSeed = 0,
 ): SingleTreeTrunkCollider {
   const { normalizedHeightScale, canopyBounds, trunkDimensions, trunkRadii } =
     createSingleTreeShape(heightScale, species, variationSeed);
   const profile = SPECIES_SHAPE_PROFILES[species];
   const colliderTopY = Math.min(
     trunkDimensions.height,
-    canopyBounds.lowestBottom + profile.trunkCanopyPenetration * normalizedHeightScale
+    canopyBounds.lowestBottom +
+      profile.trunkCanopyPenetration * normalizedHeightScale,
   );
   const colliderHeight = Math.max(colliderTopY, 0.1);
 
   return {
     halfHeight: colliderHeight * 0.5,
     centerY: colliderHeight * 0.5,
-    radius: Math.max(trunkRadii.bottom * TRUNK_COLLIDER_RADIUS_MULTIPLIER, 0.05)
+    radius: Math.max(
+      trunkRadii.bottom * TRUNK_COLLIDER_RADIUS_MULTIPLIER,
+      0.05,
+    ),
   };
 }
 
 export function getSingleTreeFootprintRadius(
   heightScale = 1,
-  species: SingleTreeSpecies = 'pine',
-  variationSeed = 0
+  species: SingleTreeSpecies = "pine",
+  variationSeed = 0,
 ): number {
-  const { canopyLayers, trunkRadii } = createSingleTreeShape(heightScale, species, variationSeed);
+  const { canopyLayers, trunkRadii } = createSingleTreeShape(
+    heightScale,
+    species,
+    variationSeed,
+  );
   const canopyFootprintRadius = canopyLayers.reduce((radius, layer) => {
     return Math.max(radius, Math.hypot(layer.x, layer.z) + layer.radius);
   }, 0);
@@ -370,28 +416,32 @@ export class SingleTreeFactory {
     1,
     CANOPY_RADIAL_SEGMENTS,
     CANOPY_HEIGHT_SEGMENTS,
-    true
+    true,
   );
-  private readonly trunkMaterials = new Map<SingleTreeSpecies, MeshStandardMaterial>();
+  private readonly trunkMaterials = new Map<
+    SingleTreeSpecies,
+    MeshStandardMaterial
+  >();
   private readonly canopyMaterials = new Map<string, MeshStandardMaterial>();
 
   createTree({
     position,
     heightScale = 1,
-    species = 'pine',
-    variationSeed
+    species = "pine",
+    variationSeed,
   }: SingleTreeProps): BuiltSingleTree {
     const resolvedSeed = variationSeed ?? getFallbackVariationSeed(position);
     const treeShape = createSingleTreeShape(heightScale, species, resolvedSeed);
     const { canopyLayers, trunkDimensions, trunkRadii } = treeShape;
-    const trunkTaperExponent = SPECIES_SHAPE_PROFILES[species].trunkTaperExponent;
+    const trunkTaperExponent =
+      SPECIES_SHAPE_PROFILES[species].trunkTaperExponent;
 
     const trunkMaterial = this.getTrunkMaterial(species);
     const trunkGeometry = createMonumentTaperedTrunkGeometry(
       trunkRadii.top,
       trunkRadii.bottom,
       trunkDimensions.height,
-      trunkTaperExponent
+      trunkTaperExponent,
     );
 
     const group = new Group();
@@ -417,7 +467,11 @@ export class SingleTreeFactory {
     return {
       group,
       trunkGeometry,
-      trunkCollider: getSingleTreeTrunkCollider(heightScale, species, resolvedSeed)
+      trunkCollider: getSingleTreeTrunkCollider(
+        heightScale,
+        species,
+        resolvedSeed,
+      ),
     };
   }
 
@@ -434,9 +488,9 @@ export class SingleTreeFactory {
     }
 
     const material = new MeshStandardMaterial({
-      color: species === 'redwood' ? '#684A34' : '#5A4431',
+      color: species === "redwood" ? "#684A34" : "#5A4431",
       roughness: 0.98,
-      metalness: 0.01
+      metalness: 0.01,
     });
     this.trunkMaterials.set(species, material);
     return material;
@@ -453,7 +507,7 @@ export class SingleTreeFactory {
       roughness: 0.74,
       metalness: 0.01,
       side: DoubleSide,
-      shadowSide: FrontSide
+      shadowSide: FrontSide,
     });
     tuneCanopyMaterialShader(material);
     this.canopyMaterials.set(color, material);
