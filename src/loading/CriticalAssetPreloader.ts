@@ -30,8 +30,7 @@ export async function preloadCriticalAssets(
     CONFIG.audio.movementTrackSrcs.length +
     CONFIG.audio.brakeTrackSrcs.length +
     CONFIG.audio.ambientTrackSrcs.length +
-    1 +
-    4;
+    5;
   let completedAssets = 0;
   onProgress?.(0);
 
