@@ -167,6 +167,7 @@ export class Game {
       preloadedAssets.grassLeafTexture,
       preloadedAssets.grassAccentTexture,
     );
+    this.dayNightSky.enableDirectionalFog();
     this.birdFlock = new BirdFlock(this.scene, CONFIG.birds);
 
     this.trainHeadlight = new SpotLight(
@@ -254,6 +255,8 @@ export class Game {
     this.loop = new GameLoop(CONFIG.simDt, this.simulate, this.render);
 
     window.addEventListener("resize", this.onResize);
+    window.addEventListener("keydown", this.onDebugLookKeyDown);
+    window.addEventListener("mousemove", this.onDebugLookMouseMove);
     window.visualViewport?.addEventListener("resize", this.onResize);
     window.visualViewport?.addEventListener("scroll", this.onResize);
     this.onResize();
@@ -292,6 +295,8 @@ export class Game {
     this.scene.remove(this.trainHeadlightTarget);
     this.renderer.dispose();
     window.removeEventListener("resize", this.onResize);
+    window.removeEventListener("keydown", this.onDebugLookKeyDown);
+    window.removeEventListener("mousemove", this.onDebugLookMouseMove);
     window.visualViewport?.removeEventListener("resize", this.onResize);
     window.visualViewport?.removeEventListener("scroll", this.onResize);
   }
@@ -423,6 +428,23 @@ export class Game {
     this.throttleOverlay.update(this.frameMetrics.throttle);
     this.renderer.render(this.scene, this.cameraRig.camera);
     this.hud.update(this.frameMetrics);
+  };
+
+  private onDebugLookKeyDown = (event: KeyboardEvent): void => {
+    if (event.code !== "KeyP" || !event.shiftKey || event.repeat) {
+      return;
+    }
+
+    event.preventDefault();
+    this.cameraRig.setDebugLookEnabled(!this.cameraRig.isDebugLookEnabled());
+  };
+
+  private onDebugLookMouseMove = (event: MouseEvent): void => {
+    if (!this.cameraRig.isDebugLookEnabled()) {
+      return;
+    }
+
+    this.cameraRig.addDebugLookDelta(event.movementX, event.movementY);
   };
 
   private onResize = (): void => {

@@ -12,6 +12,7 @@ import {
   InstancedBufferAttribute,
   InstancedMesh,
   MathUtils,
+  Material,
   Matrix4,
   MeshLambertMaterial,
   Object3D,
@@ -72,6 +73,8 @@ const DAY_FOG_NEAR = 68;
 const DAY_FOG_FAR = 900;
 const NIGHT_FOG_NEAR = 38;
 const NIGHT_FOG_FAR = 290;
+const DIRECTIONAL_FOG_STRENGTH_BASE = 0.2;
+const DIRECTIONAL_FOG_STRENGTH_LOW_SUN = 0.42;
 
 const MOON_HALO_BASE_SCALE = 6.2;
 const MOON_HALO_PULSE_SCALE = 9.6;
@@ -100,10 +103,12 @@ const CLOUD_DRIFT_SPEED_MIN = 1.4;
 const CLOUD_DRIFT_SPEED_MAX = 6.1;
 const CLOUD_ROTATION_FACTOR_MIN = -0.1;
 const CLOUD_ROTATION_FACTOR_MAX = 0.1;
-const CLOUD_OPACITY_MIN = 0.34;
-const CLOUD_OPACITY_MAX = 0.74;
-const CLOUD_BRIGHTNESS_MIN = 0.84;
-const CLOUD_BRIGHTNESS_MAX = 1.18;
+const CLOUD_OPACITY_MIN = 0.2;
+const CLOUD_OPACITY_MAX = 0.46;
+const CLOUD_BRIGHTNESS_MIN = 1.02;
+const CLOUD_BRIGHTNESS_MAX = 1.38;
+const CLOUD_EMISSIVE_INTENSITY_DAY = 0.12;
+const CLOUD_EMISSIVE_INTENSITY_NIGHT = 0.24;
 
 const SUN_LIGHT_DAY_INTENSITY = 5.55;
 const SUN_SHADOW_ENABLE_THRESHOLD = 0.1;
@@ -297,6 +302,14 @@ export class DayNightSky {
   private readonly cloudFrustumMatrix = new Matrix4();
   private readonly cloudCullSphere = new Sphere();
   private readonly visibleClouds: SpriteCloudInstance[] = [];
+  private readonly directionalFogSunViewDirectionUniform = {
+    value: new Vector3(0, 0, -1),
+  };
+  private readonly directionalFogStrengthUniform = {
+    value: DIRECTIONAL_FOG_STRENGTH_BASE,
+  };
+  private readonly directionalFogPatchedMaterials = new WeakSet<Material>();
+  private directionalFogEnabled = false;
   private sunShadowHalfExtent = SUN_SHADOW_FRUSTUM_HALF_EXTENT_MIN;
   private sunShadowFar = SUN_SHADOW_CAMERA_FAR_MIN;
   private terrainHeightSampler: TerrainHeightSampler | null = null;
@@ -457,6 +470,18 @@ export class DayNightSky {
 
     this.sunDirection.copy(this.sunOffset).normalize();
     this.moonDirection.copy(this.sunDirection).multiplyScalar(-1);
+    if (this.directionalFogEnabled) {
+      camera.updateMatrixWorld();
+      this.directionalFogSunViewDirectionUniform.value
+        .copy(this.sunDirection)
+        .transformDirection(camera.matrixWorldInverse);
+      this.directionalFogSunViewDirectionUniform.value.y = 0;
+      if (this.directionalFogSunViewDirectionUniform.value.lengthSq() <= 1e-6) {
+        this.directionalFogSunViewDirectionUniform.value.set(0, 0, -1);
+      } else {
+        this.directionalFogSunViewDirectionUniform.value.normalize();
+      }
+    }
     this.updateSpriteClouds(dt, camera, dayFactor, twilightFactor, nightFactor);
 
     this.uniformSunPosition
@@ -532,6 +557,13 @@ export class DayNightSky {
         SUN_SHADOW_LOW_ELEVATION_MIN,
         SUN_SHADOW_LOW_ELEVATION_MAX,
       );
+    if (this.directionalFogEnabled) {
+      this.directionalFogStrengthUniform.value = MathUtils.lerp(
+        DIRECTIONAL_FOG_STRENGTH_BASE,
+        DIRECTIONAL_FOG_STRENGTH_LOW_SUN,
+        lowSunShadowBoost,
+      );
+    }
     const sunShadowDistance = MathUtils.lerp(
       SUN_SHADOW_LIGHT_DISTANCE_MIN,
       SUN_SHADOW_LIGHT_DISTANCE_MAX,
@@ -670,6 +702,31 @@ export class DayNightSky {
 
   getRecommendedExposure(): number {
     return this.recommendedExposure;
+  }
+
+  enableDirectionalFog(): void {
+    if (this.directionalFogEnabled) {
+      return;
+    }
+
+    this.directionalFogEnabled = true;
+    this.scene.traverse((object) => {
+      const meshLike = object as Object3D & {
+        material?: Material | Material[];
+      };
+      if (!meshLike.material) {
+        return;
+      }
+
+      if (Array.isArray(meshLike.material)) {
+        for (const material of meshLike.material) {
+          this.patchDirectionalFogMaterial(material);
+        }
+        return;
+      }
+
+      this.patchDirectionalFogMaterial(meshLike.material);
+    });
   }
 
   setTerrainHeightSampler(sampler: TerrainHeightSampler | null): void {
@@ -828,6 +885,68 @@ export class DayNightSky {
     this.skyMaterial.needsUpdate = true;
   }
 
+  private patchDirectionalFogMaterial(material: Material): void {
+    if (this.directionalFogPatchedMaterials.has(material)) {
+      return;
+    }
+    if (!(material as { fog?: boolean }).fog) {
+      return;
+    }
+
+    this.directionalFogPatchedMaterials.add(material);
+    const previousOnBeforeCompile = material.onBeforeCompile;
+    material.onBeforeCompile = (shader, renderer) => {
+      previousOnBeforeCompile.call(material, shader, renderer);
+
+      const hasFogPars = shader.fragmentShader.includes(
+        "#include <fog_pars_fragment>",
+      );
+      const hasFogFragment = shader.fragmentShader.includes(
+        "#include <fog_fragment>",
+      );
+      if (!hasFogPars || !hasFogFragment) {
+        return;
+      }
+
+      shader.uniforms.directionalFogSunViewDirection =
+        this.directionalFogSunViewDirectionUniform;
+      shader.uniforms.directionalFogStrength =
+        this.directionalFogStrengthUniform;
+
+      if (shader.fragmentShader.includes("directionalFogSunViewDirection")) {
+        return;
+      }
+
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          "#include <fog_pars_fragment>",
+          `#include <fog_pars_fragment>
+uniform vec3 directionalFogSunViewDirection;
+uniform float directionalFogStrength;`,
+        )
+        .replace(
+          "#include <fog_fragment>",
+          `#include <fog_fragment>
+#ifdef USE_FOG
+	vec2 directionalFogView = vec2( -vViewPosition.x, -vViewPosition.z );
+	vec2 directionalFogSun = directionalFogSunViewDirection.xz;
+	float directionalFogViewLen = length( directionalFogView );
+	float directionalFogSunLen = length( directionalFogSun );
+	if ( directionalFogViewLen > 1e-4 && directionalFogSunLen > 1e-4 ) {
+		directionalFogView /= directionalFogViewLen;
+		directionalFogSun /= directionalFogSunLen;
+		float directionalFogTowardSun = dot( directionalFogView, directionalFogSun ) * 0.5 + 0.5;
+		float directionalFogBoost = mix( 1.0 - directionalFogStrength, 1.0 + directionalFogStrength, directionalFogTowardSun );
+		float directionalFogAdjusted = clamp( fogFactor * directionalFogBoost, 0.0, 1.0 );
+		float directionalFogExtra = max( 0.0, directionalFogAdjusted - fogFactor );
+		gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, directionalFogExtra );
+	}
+#endif`,
+        );
+    };
+    material.needsUpdate = true;
+  }
+
   private createMoonDiscTexture(): CanvasTexture {
     const size = 256;
     const canvas = document.createElement("canvas");
@@ -938,6 +1057,8 @@ export class DayNightSky {
     const material = new MeshLambertMaterial({
       map: texture,
       color: "#ffffff",
+      emissive: "#ffffff",
+      emissiveIntensity: CLOUD_EMISSIVE_INTENSITY_DAY,
       transparent: true,
       depthWrite: false,
       fog: false,
@@ -1076,6 +1197,12 @@ gl_FragColor = vec4( outgoingLight, diffuseColor.a * vCloudOpacity );`,
       nightFactor,
     );
     this.cloudColor.lerp(this.cloudTwilightColor, twilightFactor * 0.5);
+    cloudLayer.material.emissive.copy(this.cloudColor);
+    cloudLayer.material.emissiveIntensity = MathUtils.lerp(
+      CLOUD_EMISSIVE_INTENSITY_DAY,
+      CLOUD_EMISSIVE_INTENSITY_NIGHT,
+      nightFactor,
+    );
 
     camera.updateMatrixWorld();
     this.cloudFrustumMatrix.multiplyMatrices(
@@ -1167,14 +1294,12 @@ gl_FragColor = vec4( outgoingLight, diffuseColor.a * vCloudOpacity );`,
   private wrapCloudCoordinate(value: number): number {
     if (value < -CLOUD_WORLD_HALF_EXTENT) {
       return (
-        CLOUD_WORLD_HALF_EXTENT -
-        this.randomRange(0, CLOUD_WORLD_WRAP_PADDING)
+        CLOUD_WORLD_HALF_EXTENT - this.randomRange(0, CLOUD_WORLD_WRAP_PADDING)
       );
     }
     if (value > CLOUD_WORLD_HALF_EXTENT) {
       return (
-        -CLOUD_WORLD_HALF_EXTENT +
-        this.randomRange(0, CLOUD_WORLD_WRAP_PADDING)
+        -CLOUD_WORLD_HALF_EXTENT + this.randomRange(0, CLOUD_WORLD_WRAP_PADDING)
       );
     }
 
