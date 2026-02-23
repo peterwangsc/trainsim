@@ -1,7 +1,12 @@
+import { createClient } from "@supabase/supabase-js";
 import "./style.css";
 import type { Game } from "./game/Game";
 import type { CriticalPreloadedAssets } from "./loading/CriticalAssetPreloader";
 import { LoadingSplash } from "./ui/LoadingSplash";
+
+const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl as string, supabaseAnonKey as string);
 
 const app = document.getElementById("app");
 
@@ -33,7 +38,7 @@ const runBootSequence = async (): Promise<void> => {
       gameModulePromise,
     ]);
 
-    const startGameAtLevel = (level: number) => {
+    const startGameAtLevel = (level: number, userId: string) => {
       if (game) {
         game.stop();
       }
@@ -42,21 +47,57 @@ const runBootSequence = async (): Promise<void> => {
         onRestartRequested: () => {
           game?.restart();
         },
-        onNextLevelRequested: () => {
+        onNextLevelRequested: async () => {
           const nextLevel = level + 1;
-          localStorage.setItem("trainsim_level", nextLevel.toString());
-          startGameAtLevel(nextLevel);
+          try {
+            await supabase
+              .from("user_progress")
+              .upsert({ id: userId, level: nextLevel });
+          } catch (err) {
+            console.error("Failed to save progress", err);
+          }
+          startGameAtLevel(nextLevel, userId);
           game?.start();
         },
         preloadedAssets,
       });
     };
 
-    let savedLevel = parseInt(localStorage.getItem("trainsim_level") ?? "1", 10);
+    let userId = localStorage.getItem("trainsim_uuid");
+    if (!userId) {
+      userId = crypto.randomUUID();
+      localStorage.setItem("trainsim_uuid", userId);
+    }
+
+    let savedLevel = 1;
+    try {
+      const { data, error } = await supabase
+        .from("user_progress")
+        .select("level")
+        .eq("id", userId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Failed to fetch user progress", error);
+      } else if (data) {
+        savedLevel = data.level;
+      } else {
+        // No row found, upsert a new one for this user with default level 1
+        const { error: upsertError } = await supabase
+          .from("user_progress")
+          .upsert({ id: userId, level: 1 });
+        if (upsertError) {
+           console.error("Failed to init user progress", upsertError);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch user progress", err);
+    }
+
     if (isNaN(savedLevel) || savedLevel < 1) {
       savedLevel = 1;
     }
-    startGameAtLevel(savedLevel);
+    startGameAtLevel(savedLevel, userId);
 
     splash.setReady();
   } catch (error) {

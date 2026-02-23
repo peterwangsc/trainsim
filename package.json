@@ -9,12 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.97.0",
     "howler": "^2.2.4",
     "three": "^0.181.1"
   },
   "devDependencies": {
     "@types/howler": "^2.2.12",
     "@types/three": "^0.181.0",
+    "pg": "^8.18.0",
     "typescript": "^5.9.3",
     "vite": "^7.2.0"
   }

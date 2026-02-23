@@ -6,3 +6,4 @@ dist
 CLAUDE.md
 AGENTS.md
 GEMINI.md
+.env

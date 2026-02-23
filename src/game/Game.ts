@@ -90,6 +90,7 @@ export class Game {
   private toneMappingExposure = 1;
   private readonly onRestartRequested: () => void;
   private readonly onNextLevelRequested?: () => void;
+  private readonly level: number;
 
   private state = GameState.Ready;
   private failureReason: FailureReason | null = null;
@@ -117,6 +118,8 @@ export class Game {
     this.onRestartRequested =
       options.onRestartRequested ?? (() => window.location.reload());
     this.onNextLevelRequested = options.onNextLevelRequested;
+    this.level = options.level;
+    this.frameMetrics.statusMessage = `Drive to Level ${this.level} terminal and stop before the platform ends.`;
     const preloadedAssets = options.preloadedAssets;
 
     const level = options.level;
@@ -543,7 +546,7 @@ export class Game {
     const distanceToStationEnd =
       this.trackEndLayout.stationEndDistance - distance;
     if (distanceToStationEnd > 260) {
-      return `Terminal station in ${Math.ceil(distanceToStationEnd)} m`;
+      return `Level ${this.level} terminal in ${Math.ceil(distanceToStationEnd)} m`;
     }
     if (distanceToStationEnd > 80) {
       return `Station ahead. Begin braking (${Math.ceil(distanceToStationEnd)} m).`;
