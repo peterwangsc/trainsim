@@ -61,21 +61,27 @@ const runBootSequence = async (): Promise<void> => {
           }
           localStorage.setItem("trainsim_uuid", data.id);
           localStorage.setItem("trainsim_username", inputUsername);
-          return true;
+          return newLevel;
         } else {
-          await supabase
-            .from("user_progress")
-            .upsert({ id: userId, level: targetLevel, username: inputUsername });
+          await supabase.from("user_progress").upsert({
+            id: userId,
+            level: targetLevel,
+            username: inputUsername,
+          });
           localStorage.setItem("trainsim_username", inputUsername);
-          return true;
+          return targetLevel;
         }
       } catch (err) {
         console.error("Failed to login", err);
-        return false;
+        return 0;
       }
     };
 
-    const startGameAtLevel = (level: number, userId: string, username: string | null) => {
+    const startGameAtLevel = (
+      level: number,
+      userId: string,
+      username: string | null,
+    ) => {
       if (game) {
         game.stop();
       }
@@ -92,9 +98,7 @@ const runBootSequence = async (): Promise<void> => {
             if (username) {
               payload.username = username;
             }
-            await supabase
-              .from("user_progress")
-              .upsert(payload);
+            await supabase.from("user_progress").upsert(payload);
           } catch (err) {
             console.error("Failed to save progress", err);
           }
@@ -102,22 +106,17 @@ const runBootSequence = async (): Promise<void> => {
           game?.start();
         },
         onLogin: async (inputUsername: string, targetLevel: number) => {
-          const success = await performLogin(inputUsername, targetLevel);
-          if (success) {
-            const newUserId = localStorage.getItem("trainsim_uuid")!;
-            const newUsername = localStorage.getItem("trainsim_username");
-            let nextLevel = targetLevel;
-            try {
-              const { data } = await supabase
-                .from("user_progress")
-                .select("level")
-                .eq("id", newUserId)
-                .maybeSingle();
-              if (data) nextLevel = data.level;
-            } catch (err) {
-              console.error("Failed to fetch next level on login", err);
-            }
-            startGameAtLevel(nextLevel, newUserId, newUsername);
+          try {
+            const payload: any = { id: userId, level: targetLevel };
+            await supabase.from("user_progress").upsert(payload);
+          } catch (err) {
+            console.error("Failed to save progress", err);
+          }
+          const newLevel = await performLogin(inputUsername, targetLevel);
+          const newUserId = localStorage.getItem("trainsim_uuid")!;
+
+          if (newLevel) {
+            startGameAtLevel(newLevel, newUserId, inputUsername);
             game?.start();
           }
         },
@@ -136,11 +135,7 @@ const runBootSequence = async (): Promise<void> => {
                 .eq("id", oldUuid)
                 .maybeSingle();
               if (data) {
-                nextLevel = data.level + 1;
-                await supabase
-                  .from("user_progress")
-                  .update({ level: nextLevel })
-                  .eq("id", oldUuid);
+                nextLevel = data.level;
               } else {
                 await supabase
                   .from("user_progress")
@@ -175,7 +170,7 @@ const runBootSequence = async (): Promise<void> => {
         .select("level")
         .eq("id", userId)
         .maybeSingle();
-      
+
       if (error) {
         console.error("Failed to fetch user progress", error);
       } else if (data) {
@@ -184,13 +179,13 @@ const runBootSequence = async (): Promise<void> => {
         // No row found, upsert a new one for this user with default level 1
         const payload: any = { id: userId, level: 1 };
         if (currentUsername) {
-           payload.username = currentUsername;
+          payload.username = currentUsername;
         }
         const { error: upsertError } = await supabase
           .from("user_progress")
           .upsert(payload);
         if (upsertError) {
-           console.error("Failed to init user progress", upsertError);
+          console.error("Failed to init user progress", upsertError);
         }
       }
     } catch (err) {
@@ -202,18 +197,34 @@ const runBootSequence = async (): Promise<void> => {
     }
     startGameAtLevel(savedLevel, userId, currentUsername);
 
-    splash = new LoadingSplash(app, async (enteredUsername) => {
-      if (enteredUsername && !currentUsername) {
-        const success = await performLogin(enteredUsername, savedLevel);
-        if (success) {
-          window.location.reload();
-          return;
+    splash = new LoadingSplash(
+      app,
+      async (enteredUsername) => {
+        if (enteredUsername && !currentUsername) {
+          const success = await performLogin(enteredUsername, savedLevel);
+          if (success) {
+            const newUserId = localStorage.getItem("trainsim_uuid")!;
+            const newUsername = localStorage.getItem("trainsim_username");
+            let nextLevel = savedLevel;
+            try {
+              const { data } = await supabase
+                .from("user_progress")
+                .select("level")
+                .eq("id", newUserId)
+                .maybeSingle();
+              if (data) nextLevel = data.level;
+            } catch (err) {
+              console.error("Failed to fetch level after splash login", err);
+            }
+            startGameAtLevel(nextLevel, newUserId, newUsername);
+          }
         }
-      }
-      const { warmupAudioContext } = await loadingModulePromise;
-      await warmupAudioContext();
-      game?.start();
-    }, currentUsername);
+        const { warmupAudioContext } = await loadingModulePromise;
+        await warmupAudioContext();
+        game?.start();
+      },
+      currentUsername,
+    );
 
     splash.setReady();
   } catch (error) {

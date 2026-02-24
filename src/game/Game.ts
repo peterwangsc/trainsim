@@ -122,7 +122,7 @@ export class Game {
     options: GameOptions,
   ) {
     this.onRestartRequested =
-      options.onRestartRequested ?? (() => window.location.reload());
+      options.onRestartRequested ?? (() => this.restart());
     this.onNextLevelRequested = options.onNextLevelRequested;
     this.onLogin = options.onLogin;
     this.onLogout = options.onLogout;
