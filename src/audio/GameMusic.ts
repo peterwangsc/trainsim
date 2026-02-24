@@ -168,19 +168,20 @@ export class GameMusic {
     howl.off();
     howl.stop();
     howl.seek(0);
-    howl.volume(0);
 
     const soundId = howl.play();
     if (soundId === undefined) {
       return;
     }
-    howl.fade(0, this.volume, this.fadeInMs, soundId);
+    howl.volume(0.001, soundId);
+    howl.fade(0.001, this.volume, this.fadeInMs, soundId);
 
     await this.wait(this.fadeOutAtMs);
     if (!this.isRunActive(runToken) || this.currentHowl !== howl) {
       return;
     }
-    howl.fade(howl.volume(soundId) as number, 0, this.fadeOutMs, soundId);
+    const currentVol = howl.volume(soundId);
+    howl.fade(typeof currentVol === 'number' ? currentVol : this.volume, 0.001, this.fadeOutMs, soundId);
 
     await this.wait(this.fadeOutMs);
     if (!this.isRunActive(runToken) || this.currentHowl !== howl) {
@@ -225,7 +226,6 @@ export class GameMusic {
         src: [this.tracks[index]],
         preload: true,
         html5: false,
-        volume: 0,
       });
       this.howls[index] = howl;
     }
@@ -281,7 +281,6 @@ export class GameMusic {
   private releaseHowl(howl: Howl): void {
     howl.off();
     howl.stop();
-    howl.volume(0);
     howl.seek(0);
   }
 }

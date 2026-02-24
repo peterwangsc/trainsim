@@ -55,7 +55,6 @@ export class TrainMovementAudio {
       howl.stop();
       howl.off();
       howl.loop(expectedLooping);
-      howl.volume(0);
       this.howls.push(howl);
     }
   }
@@ -87,7 +86,7 @@ export class TrainMovementAudio {
 
     const soundId = howl.play();
     if (soundId === undefined) return;
-    howl.volume(0, soundId);
+    howl.volume(0.001, soundId);
 
     const layer: Layer = {
       trackIdx,
@@ -106,14 +105,13 @@ export class TrainMovementAudio {
       const l = this.layers.find((x) => x === layer);
       if (!l) return;
       l.loopsDone++;
-      if (l.loopsDone < l.targetLoops) {
-        const nextId = howl.play();
-        if (nextId !== undefined) {
-          l.soundId = nextId;
-          const vol = l.phase === "fade_in" ? 0 : this.getLayerVolume(l);
-          howl.volume(vol, nextId);
-          howl.once("end", onEnd);
-        }
+              if (l.loopsDone < l.targetLoops) {
+                const nextId = howl.play();
+                if (nextId !== undefined) {
+                  l.soundId = nextId;
+                  const vol = l.phase === "fade_in" ? 0.001 : this.getLayerVolume(l);
+                  howl.volume(vol, nextId);
+                  howl.once("end", onEnd);        }
       } else {
         l.phase = "fade_out";
         l.phaseProgress = 0;

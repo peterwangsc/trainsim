@@ -80,6 +80,7 @@ async function runBootSequence(): Promise<void> {
     splash = new LoadingSplash(
       app!,
       async (enteredUsername) => {
+        await warmupAudioContext();
         const { preloadedAssets, gameModule } = await bootResults;
         const finalUserId = localStorage.getItem("trainsim_uuid")!;
         const finalUsername = localStorage.getItem("trainsim_username") || currentUsername;
@@ -131,7 +132,6 @@ async function runBootSequence(): Promise<void> {
             });
           }
         }
-        await warmupAudioContext();
         game?.start();
       },
       currentUsername,

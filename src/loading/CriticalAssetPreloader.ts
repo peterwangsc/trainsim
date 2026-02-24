@@ -149,7 +149,6 @@ export async function warmupAudioContext(): Promise<void> {
   const source = audioContext.createBufferSource();
   source.buffer = silentBuffer;
   source.connect(audioContext.destination);
-  await delay(50);
   source.start(0);
 }
 
@@ -159,10 +158,9 @@ export async function primeHowlForInstantPlayback(howl: Howl): Promise<void> {
   if (soundId === undefined) {
     return;
   }
-  howl.volume(0, soundId);
-  howl.pause(soundId);
-  howl.seek(0, soundId);
-  await delay(100);
+  howl.volume(0.001, soundId);
+  await delay(50);
+  howl.stop(soundId);
 }
 
 function loadTexture(src: string): Promise<Texture> {
@@ -181,7 +179,6 @@ function loadHowl(src: string): Promise<Howl> {
     src: [src],
     preload: true,
     html5: false,
-    volume: 0,
   });
 
   return ensureHowlLoaded(howl).then(() => howl);
