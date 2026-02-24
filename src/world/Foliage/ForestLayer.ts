@@ -76,7 +76,9 @@ export class ForestLayer {
 
   dispose(): void {
     this.scene.remove(this.root);
-    this.trunkGeometries.forEach((geometry) => geometry.dispose());
+    for (const geometry of this.trunkGeometries) {
+      geometry.dispose();
+    }
     this.treeFactory.dispose();
     this.treeFootprints.length = 0;
     this.colliders.length = 0;

@@ -26,64 +26,57 @@ export async function preloadCriticalAssets(
     throw new Error("Missing first music track source for critical preload.");
   }
 
+  const textureSrcs = [
+    "/simplex-noise.png",
+    "/cloud.png",
+    "/grassleaf.png",
+    "/accentleaf.png",
+  ];
+
   const totalAssets =
     CONFIG.audio.movementTrackSrcs.length +
     CONFIG.audio.brakeTrackSrcs.length +
     CONFIG.audio.ambientTrackSrcs.length +
-    5;
+    1 + // first music track
+    textureSrcs.length;
+
   let completedAssets = 0;
   onProgress?.(0);
 
-  const step = (): void => {
-    completedAssets += 1;
-    onProgress?.(Math.min(1, completedAssets / totalAssets));
-  };
-
-  const track = <T>(promise: Promise<T>): Promise<T> =>
-    promise.then(
+  function track<T>(promise: Promise<T>): Promise<T> {
+    return promise.then(
       (value) => {
-        step();
+        completedAssets += 1;
+        onProgress?.(Math.min(1, completedAssets / totalAssets));
         return value;
       },
       (error) => {
-        step();
+        completedAssets += 1;
+        onProgress?.(Math.min(1, completedAssets / totalAssets));
         throw error;
       },
     );
+  }
 
-  const movementHowlsPromise = Promise.all(
+  const movementHowls = await Promise.all(
     CONFIG.audio.movementTrackSrcs.map((src) => track(loadHowl(src))),
   );
-  const brakeHowlsPromise = Promise.all(
+  const brakeHowls = await Promise.all(
     CONFIG.audio.brakeTrackSrcs.map((src) => track(loadHowl(src))),
   );
-  const ambientHowlsPromise = Promise.all(
+  const ambientHowls = await Promise.all(
     CONFIG.audio.ambientTrackSrcs.map((src) => track(loadHowl(src))),
   );
-  const musicTrack1HowlPromise = track(loadHowl(firstMusicTrackSrc));
-  const simplexNoiseTexturePromise = track(loadTexture("/simplex-noise.png"));
-  const cloudTexturePromise = track(loadTexture("/cloud.png"));
-  const grassLeafTexturePromise = track(loadTexture("/grassleaf.png"));
-  const grassAccentTexturePromise = track(loadTexture("/accentleaf.png"));
 
   const [
-    movementHowls,
-    brakeHowls,
-    ambientHowls,
     musicTrack1Howl,
     simplexNoiseTexture,
     cloudTexture,
     grassLeafTexture,
     grassAccentTexture,
   ] = await Promise.all([
-    movementHowlsPromise,
-    brakeHowlsPromise,
-    ambientHowlsPromise,
-    musicTrack1HowlPromise,
-    simplexNoiseTexturePromise,
-    cloudTexturePromise,
-    grassLeafTexturePromise,
-    grassAccentTexturePromise,
+    track(loadHowl(firstMusicTrackSrc)),
+    ...textureSrcs.map((src) => track(loadTexture(src))),
   ]);
 
   simplexNoiseTexture.wrapS = RepeatWrapping;

@@ -23,15 +23,15 @@ export class IntroSplash {
     container.appendChild(this.root);
   }
 
-  start(): void {
+  public start(): void {
     this.root.classList.add("intro-splash--fading");
     this.dismissTimeoutId = window.setTimeout(
-      this.dismiss,
+      () => this.dismiss(),
       SPLASH_FADE_DURATION_MS,
     );
   }
 
-  dispose(): void {
+  public dispose(): void {
     if (this.dismissTimeoutId !== null) {
       window.clearTimeout(this.dismissTimeoutId);
       this.dismissTimeoutId = null;
@@ -40,7 +40,7 @@ export class IntroSplash {
     this.dismiss();
   }
 
-  private dismiss = (): void => {
+  private dismiss(): void {
     if (this.dismissed) {
       return;
     }
@@ -48,5 +48,5 @@ export class IntroSplash {
     this.dismissed = true;
     this.root.classList.add("intro-splash--hidden");
     this.root.remove();
-  };
+  }
 }

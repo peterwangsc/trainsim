@@ -49,7 +49,7 @@ export class RunEndOverlay {
     this.restartButton.type = "button";
     this.restartButton.className = "run-end-overlay__restart";
     this.restartButton.textContent = "Restart";
-    this.restartButton.addEventListener("click", this.onRestartClick);
+    this.restartButton.addEventListener("click", () => this.handleRestartClick());
 
     this.authSection = document.createElement("div");
     this.authSection.className = "run-end-overlay__auth";
@@ -72,7 +72,7 @@ export class RunEndOverlay {
     this.loginButton.style.padding = "8px";
     this.loginButton.style.borderRadius = "4px";
     this.loginButton.style.cursor = "pointer";
-    this.loginButton.addEventListener("click", this.onLoginClick);
+    this.loginButton.addEventListener("click", () => this.handleLoginClick());
 
     this.authSection.append(this.loginInput, this.loginButton);
 
@@ -87,7 +87,7 @@ export class RunEndOverlay {
     container.appendChild(this.root);
   }
 
-  show(options: RunEndOverlayOptions): void {
+  public show(options: RunEndOverlayOptions): void {
     this.restartHandler = options.onRestart;
     this.nextLevelHandler = options.onNextLevel ?? null;
     this.loginHandler = options.onLogin ?? null;
@@ -97,11 +97,8 @@ export class RunEndOverlay {
     this.root.classList.toggle("is-won", options.tone === "won");
     this.root.classList.toggle("is-failed", options.tone === "failed");
 
-    if (options.tone === "won" && this.nextLevelHandler) {
-      this.restartButton.textContent = "Next Level";
-    } else {
-      this.restartButton.textContent = "Restart";
-    }
+    this.restartButton.textContent =
+      options.tone === "won" && this.nextLevelHandler ? "Next Level" : "Restart";
 
     if (!options.username) {
       this.loginInput.style.display = "block";
@@ -112,39 +109,36 @@ export class RunEndOverlay {
 
     if (this.revealFrameId !== null) {
       window.cancelAnimationFrame(this.revealFrameId);
-      this.revealFrameId = null;
     }
 
-    this.root.classList.remove("run-end-overlay--visible");
-    this.root.classList.remove("run-end-overlay--hidden");
+    this.root.classList.remove("run-end-overlay--visible", "run-end-overlay--hidden");
+
     this.revealFrameId = window.requestAnimationFrame(() => {
       this.revealFrameId = null;
       this.root.classList.add("run-end-overlay--visible");
     });
   }
 
-  dispose(): void {
+  public dispose(): void {
     if (this.revealFrameId !== null) {
       window.cancelAnimationFrame(this.revealFrameId);
       this.revealFrameId = null;
     }
 
-    this.restartButton.removeEventListener("click", this.onRestartClick);
-    this.loginButton.removeEventListener("click", this.onLoginClick);
     this.restartHandler = null;
     this.nextLevelHandler = null;
     this.loginHandler = null;
     this.root.remove();
   }
 
-  reset(): void {
+  public reset(): void {
     this.root.classList.remove("run-end-overlay--visible");
     this.root.classList.add("run-end-overlay--hidden");
     this.title.textContent = "";
     this.message.textContent = "";
   }
 
-  private onRestartClick = (): void => {
+  private handleRestartClick(): void {
     if (
       this.restartButton.textContent === "Next Level" &&
       this.nextLevelHandler
@@ -153,14 +147,14 @@ export class RunEndOverlay {
     } else {
       this.restartHandler?.();
     }
-  };
+  }
 
-  private onLoginClick = (): void => {
+  private handleLoginClick(): void {
     const username = this.loginInput.value.trim();
     if (username && this.loginHandler) {
       this.loginButton.textContent = "Logging in...";
       this.loginButton.disabled = true;
       this.loginHandler(username);
     }
-  };
+  }
 }

@@ -521,7 +521,7 @@ export class SingleTreeFactory {
     trunkMesh.receiveShadow = true;
     group.add(trunkMesh);
 
-    canopyLayers.forEach((layer) => {
+    for (const layer of canopyLayers) {
       const canopyMaterial = this.getCanopyMaterial(layer.color);
       const canopyMesh = new Mesh(this.canopyGeometry, canopyMaterial);
       canopyMesh.position.set(layer.x, layer.y, layer.z);
@@ -530,7 +530,7 @@ export class SingleTreeFactory {
       canopyMesh.castShadow = true;
       canopyMesh.receiveShadow = true;
       group.add(canopyMesh);
-    });
+    }
 
     return {
       group,
@@ -545,8 +545,12 @@ export class SingleTreeFactory {
 
   dispose(): void {
     this.canopyGeometry.dispose();
-    this.trunkMaterials.forEach((material) => material.dispose());
-    this.canopyMaterials.forEach((material) => material.dispose());
+    for (const material of this.trunkMaterials.values()) {
+      material.dispose();
+    }
+    for (const material of this.canopyMaterials.values()) {
+      material.dispose();
+    }
   }
 
   private getTrunkMaterial(species: SingleTreeSpecies): MeshStandardMaterial {

@@ -2,6 +2,7 @@ const DYNAMIC_HEIGHT_CSS_VAR = "--app-dynamic-height";
 
 export class CabinChrome {
   private readonly root: HTMLDivElement;
+  private readonly syncViewportMetricsBound: () => void;
 
   constructor(container: HTMLElement) {
     this.root = document.createElement("div");
@@ -25,24 +26,27 @@ export class CabinChrome {
 
     this.root.append(roof, leftPillar, rightPillar, sill, glassSheen);
     container.appendChild(this.root);
+
+    this.syncViewportMetricsBound = this.syncViewportMetrics.bind(this);
+    
     this.syncViewportMetrics();
-    window.addEventListener("resize", this.syncViewportMetrics);
-    window.visualViewport?.addEventListener("resize", this.syncViewportMetrics);
-    window.visualViewport?.addEventListener("scroll", this.syncViewportMetrics);
+    window.addEventListener("resize", this.syncViewportMetricsBound);
+    window.visualViewport?.addEventListener("resize", this.syncViewportMetricsBound);
+    window.visualViewport?.addEventListener("scroll", this.syncViewportMetricsBound);
   }
 
-  dispose(): void {
-    window.removeEventListener("resize", this.syncViewportMetrics);
-    window.visualViewport?.removeEventListener("resize", this.syncViewportMetrics);
-    window.visualViewport?.removeEventListener("scroll", this.syncViewportMetrics);
+  public dispose(): void {
+    window.removeEventListener("resize", this.syncViewportMetricsBound);
+    window.visualViewport?.removeEventListener("resize", this.syncViewportMetricsBound);
+    window.visualViewport?.removeEventListener("scroll", this.syncViewportMetricsBound);
     this.root.remove();
   }
 
-  private syncViewportMetrics = (): void => {
+  private syncViewportMetrics(): void {
     const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
     document.documentElement.style.setProperty(
       DYNAMIC_HEIGHT_CSS_VAR,
       `${Math.round(viewportHeight)}px`,
     );
-  };
+  }
 }

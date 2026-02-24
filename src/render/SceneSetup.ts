@@ -10,7 +10,7 @@ export type SceneSetupOptions = {
   cloudTexture: Texture;
 };
 
-export const createScene = (options: SceneSetupOptions): SceneSetup => {
+export function createScene(options: SceneSetupOptions): SceneSetup {
   const scene = new Scene();
   const dayNightSky = new DayNightSky(scene, {
     cloudTexture: options.cloudTexture,
@@ -18,6 +18,6 @@ export const createScene = (options: SceneSetupOptions): SceneSetup => {
 
   return {
     scene,
-    dayNightSky
+    dayNightSky,
   };
-};
+}

@@ -111,10 +111,10 @@ export class TrackEndSet {
       (a, b) => b - a,
     );
 
-    signDistances.forEach((distanceFromBumper, index) => {
+    for (const [index, distanceFromBumper] of signDistances.entries()) {
       const distance = this.layout.bumperDistance - distanceFromBumper;
       if (distance <= 3 || distance >= this.layout.bumperDistance - 2) {
-        return;
+        continue;
       }
 
       const descriptor = this.resolveSignDescriptor(
@@ -134,7 +134,7 @@ export class TrackEndSet {
         true,
       );
       this.root.add(sign);
-    });
+    }
   }
 
   private addStationPlatform(): void {

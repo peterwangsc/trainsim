@@ -17,12 +17,56 @@ if (!app) {
 let game: Game | null = null;
 let preloadedAssetsPromise: Promise<CriticalPreloadedAssets>;
 
-const runBootSequence = async (): Promise<void> => {
+async function performLogin(
+  supabase: any,
+  inputUsername: string,
+  targetLevel: number,
+  userId: string,
+  currentUsername: string | null,
+): Promise<number> {
+  try {
+    const { data, error } = await supabase
+      .from("user_progress")
+      .select("id, level")
+      .eq("username", inputUsername)
+      .maybeSingle();
+
+    if (data && !error) {
+      if (!currentUsername) {
+        localStorage.setItem("trainsim_userless_uuid", userId);
+      }
+      const newLevel = Math.max(targetLevel, data.level);
+      if (newLevel > data.level) {
+        await supabase
+          .from("user_progress")
+          .update({ level: newLevel })
+          .eq("id", data.id);
+      }
+      localStorage.setItem("trainsim_uuid", data.id);
+      localStorage.setItem("trainsim_username", inputUsername);
+      return newLevel;
+    }
+
+    await supabase.from("user_progress").upsert({
+      id: userId,
+      level: targetLevel,
+      username: inputUsername,
+    });
+    localStorage.setItem("trainsim_username", inputUsername);
+    return targetLevel;
+  } catch (err) {
+    console.error("Failed to login", err);
+    return 0;
+  }
+}
+
+async function runBootSequence(): Promise<void> {
   const loadingModulePromise = import("./loading/CriticalAssetPreloader");
   const gameModulePromise = import("./game/Game");
   let splash: LoadingSplash | null = null;
 
-  const { preloadCriticalAssets } = await loadingModulePromise;
+  const { preloadCriticalAssets, warmupAudioContext } =
+    await loadingModulePromise;
   preloadedAssetsPromise = preloadCriticalAssets((progress) => {
     splash?.setProgress(progress);
   });
@@ -40,79 +84,49 @@ const runBootSequence = async (): Promise<void> => {
     }
     const currentUsername = localStorage.getItem("trainsim_username") || null;
 
-    const performLogin = async (inputUsername: string, targetLevel: number) => {
-      try {
-        const { data, error } = await supabase
-          .from("user_progress")
-          .select("id, level")
-          .eq("username", inputUsername)
-          .maybeSingle();
-
-        if (data && !error) {
-          if (!currentUsername) {
-            localStorage.setItem("trainsim_userless_uuid", userId);
-          }
-          const newLevel = Math.max(targetLevel, data.level);
-          if (newLevel > data.level) {
-            await supabase
-              .from("user_progress")
-              .update({ level: newLevel })
-              .eq("id", data.id);
-          }
-          localStorage.setItem("trainsim_uuid", data.id);
-          localStorage.setItem("trainsim_username", inputUsername);
-          return newLevel;
-        } else {
-          await supabase.from("user_progress").upsert({
-            id: userId,
-            level: targetLevel,
-            username: inputUsername,
-          });
-          localStorage.setItem("trainsim_username", inputUsername);
-          return targetLevel;
-        }
-      } catch (err) {
-        console.error("Failed to login", err);
-        return 0;
-      }
-    };
-
-    const startGameAtLevel = (
+    function startGameAtLevel(
       level: number,
-      userId: string,
-      username: string | null,
-    ) => {
+      activeUserId: string,
+      activeUsername: string | null,
+    ): void {
       if (game) {
         game.stop();
       }
-      game = new gameModule.Game(app, {
+
+      game = new gameModule.Game(app!, {
         level,
-        username,
-        onRestartRequested: () => {
-          game?.restart();
-        },
+        username: activeUsername,
+        preloadedAssets,
+        onRestartRequested: () => game?.restart(),
         onNextLevelRequested: async () => {
           const nextLevel = level + 1;
           try {
-            const payload: any = { id: userId, level: nextLevel };
-            if (username) {
-              payload.username = username;
+            const payload: any = { id: activeUserId, level: nextLevel };
+            if (activeUsername) {
+              payload.username = activeUsername;
             }
             await supabase.from("user_progress").upsert(payload);
           } catch (err) {
             console.error("Failed to save progress", err);
           }
-          startGameAtLevel(nextLevel, userId, username);
+          startGameAtLevel(nextLevel, activeUserId, activeUsername);
           game?.start();
         },
         onLogin: async (inputUsername: string, targetLevel: number) => {
           try {
-            const payload: any = { id: userId, level: targetLevel };
+            const payload: any = { id: activeUserId, level: targetLevel };
             await supabase.from("user_progress").upsert(payload);
           } catch (err) {
             console.error("Failed to save progress", err);
           }
-          const newLevel = await performLogin(inputUsername, targetLevel);
+
+          const newLevel = await performLogin(
+            supabase,
+            inputUsername,
+            targetLevel,
+            activeUserId,
+            activeUsername,
+          );
           const newUserId = localStorage.getItem("trainsim_uuid")!;
 
           if (newLevel) {
@@ -122,12 +136,13 @@ const runBootSequence = async (): Promise<void> => {
         },
         onLogout: async () => {
           const oldUuid = localStorage.getItem("trainsim_userless_uuid");
-          let newUserId = "";
+          let nextUserId = "";
           let nextLevel = 1;
+
           if (oldUuid) {
             localStorage.setItem("trainsim_uuid", oldUuid);
             localStorage.removeItem("trainsim_userless_uuid");
-            newUserId = oldUuid;
+            nextUserId = oldUuid;
             try {
               const { data } = await supabase
                 .from("user_progress")
@@ -145,23 +160,23 @@ const runBootSequence = async (): Promise<void> => {
               console.error("Failed to update userless progress", err);
             }
           } else {
-            newUserId = crypto.randomUUID();
-            localStorage.setItem("trainsim_uuid", newUserId);
+            nextUserId = crypto.randomUUID();
+            localStorage.setItem("trainsim_uuid", nextUserId);
             try {
               await supabase
                 .from("user_progress")
-                .upsert({ id: newUserId, level: 1 });
+                .upsert({ id: nextUserId, level: 1 });
             } catch (err) {
               console.error("Failed to init new userless progress", err);
             }
           }
+
           localStorage.removeItem("trainsim_username");
-          startGameAtLevel(nextLevel, newUserId, null);
+          startGameAtLevel(nextLevel, nextUserId, null);
           game?.start();
         },
-        preloadedAssets,
       });
-    };
+    }
 
     let savedLevel = 1;
     try {
@@ -176,17 +191,11 @@ const runBootSequence = async (): Promise<void> => {
       } else if (data) {
         savedLevel = data.level;
       } else {
-        // No row found, upsert a new one for this user with default level 1
         const payload: any = { id: userId, level: 1 };
         if (currentUsername) {
           payload.username = currentUsername;
         }
-        const { error: upsertError } = await supabase
-          .from("user_progress")
-          .upsert(payload);
-        if (upsertError) {
-          console.error("Failed to init user progress", upsertError);
-        }
+        await supabase.from("user_progress").upsert(payload);
       }
     } catch (err) {
       console.error("Failed to fetch user progress", err);
@@ -195,13 +204,20 @@ const runBootSequence = async (): Promise<void> => {
     if (isNaN(savedLevel) || savedLevel < 1) {
       savedLevel = 1;
     }
+
     startGameAtLevel(savedLevel, userId, currentUsername);
 
     splash = new LoadingSplash(
-      app,
+      app!,
       async (enteredUsername) => {
         if (enteredUsername && !currentUsername) {
-          const success = await performLogin(enteredUsername, savedLevel);
+          const success = await performLogin(
+            supabase,
+            enteredUsername,
+            savedLevel,
+            userId,
+            currentUsername,
+          );
           if (success) {
             const newUserId = localStorage.getItem("trainsim_uuid")!;
             const newUsername = localStorage.getItem("trainsim_username");
@@ -212,14 +228,15 @@ const runBootSequence = async (): Promise<void> => {
                 .select("level")
                 .eq("id", newUserId)
                 .maybeSingle();
-              if (data) nextLevel = data.level;
+              if (data) {
+                nextLevel = data.level;
+              }
             } catch (err) {
               console.error("Failed to fetch level after splash login", err);
             }
             startGameAtLevel(nextLevel, newUserId, newUsername);
           }
         }
-        const { warmupAudioContext } = await loadingModulePromise;
         await warmupAudioContext();
         game?.start();
       },
@@ -228,8 +245,8 @@ const runBootSequence = async (): Promise<void> => {
 
     splash.setReady();
   } catch (error) {
-    console.error(error);
+    console.error("Boot sequence failed:", error);
   }
-};
+}
 
 void runBootSequence();

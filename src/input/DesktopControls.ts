@@ -19,19 +19,27 @@ export class DesktopControls {
   private brakePulseTime = 0;
   private wasBrakeDown = false;
 
+  private readonly handleKeyDownBound: (event: KeyboardEvent) => void;
+  private readonly handleKeyUpBound: (event: KeyboardEvent) => void;
+  private readonly handleBlurBound: () => void;
+
   constructor(private readonly config: DesktopControlsConfig) {
-    window.addEventListener("keydown", this.onKeyDown);
-    window.addEventListener("keyup", this.onKeyUp);
-    window.addEventListener("blur", this.onBlur);
+    this.handleKeyDownBound = this.handleKeyDown.bind(this);
+    this.handleKeyUpBound = this.handleKeyUp.bind(this);
+    this.handleBlurBound = this.handleBlur.bind(this);
+
+    window.addEventListener("keydown", this.handleKeyDownBound);
+    window.addEventListener("keyup", this.handleKeyUpBound);
+    window.addEventListener("blur", this.handleBlurBound);
   }
 
-  dispose(): void {
-    window.removeEventListener("keydown", this.onKeyDown);
-    window.removeEventListener("keyup", this.onKeyUp);
-    window.removeEventListener("blur", this.onBlur);
+  public dispose(): void {
+    window.removeEventListener("keydown", this.handleKeyDownBound);
+    window.removeEventListener("keyup", this.handleKeyUpBound);
+    window.removeEventListener("blur", this.handleBlurBound);
   }
 
-  update(dt: number): InputState {
+  public update(dt: number): InputState {
     const throttleUp = this.isDown("KeyW") || this.isDown("ArrowUp");
     const throttleDown = this.isDown("KeyS") || this.isDown("ArrowDown");
 
@@ -78,7 +86,7 @@ export class DesktopControls {
     };
   }
 
-  reset(): void {
+  public reset(): void {
     this.throttle = 0;
     this.brake = 0;
     this.brakeHoldTime = 0;
@@ -88,11 +96,11 @@ export class DesktopControls {
     this.pressedKeys.clear();
   }
 
-  setThrottle(value: number): void {
+  public setThrottle(value: number): void {
     this.throttle = clamp(value, 0, 1);
   }
 
-  setBrakeButtonDown(isDown: boolean): void {
+  public setBrakeButtonDown(isDown: boolean): void {
     this.brakeButtonDown = isDown;
   }
 
@@ -100,18 +108,18 @@ export class DesktopControls {
     return this.pressedKeys.has(code);
   }
 
-  private onKeyDown = (event: KeyboardEvent): void => {
+  private handleKeyDown(event: KeyboardEvent): void {
     this.pressedKeys.add(event.code);
-  };
+  }
 
-  private onKeyUp = (event: KeyboardEvent): void => {
+  private handleKeyUp(event: KeyboardEvent): void {
     this.pressedKeys.delete(event.code);
-  };
+  }
 
-  private onBlur = (): void => {
+  private handleBlur(): void {
     this.pressedKeys.clear();
     this.brakeButtonDown = false;
     this.brake = 0;
     this.brakeHoldTime = 0;
-  };
+  }
 }

@@ -36,6 +36,13 @@ export class HudController {
   private brakeButtonDown = false;
   private brakeTouchId: number | null = null;
 
+  private readonly handleBrakePointerDownBound: (event: PointerEvent) => void;
+  private readonly handleBrakeTouchStartBound: (event: TouchEvent) => void;
+  private readonly handleBrakePointerUpBound: () => void;
+  private readonly handleBrakeTouchEndBound: (event: TouchEvent) => void;
+  private readonly handleWindowBlurBound: () => void;
+  private readonly handleUsernameClickBound: () => void;
+
   constructor(
     container: HTMLElement,
     onBrakeButtonChange: (isDown: boolean) => void = () => {},
@@ -44,6 +51,12 @@ export class HudController {
   ) {
     this.onBrakeButtonChange = onBrakeButtonChange;
     this.lockMobileViewportScale();
+
+    this.handleBrakePointerDownBound = this.handleBrakePointerDown.bind(this);
+    this.handleBrakeTouchStartBound = this.handleBrakeTouchStart.bind(this);
+    this.handleBrakePointerUpBound = this.handleBrakePointerUp.bind(this);
+    this.handleBrakeTouchEndBound = this.handleBrakeTouchEnd.bind(this);
+    this.handleWindowBlurBound = this.handleWindowBlur.bind(this);
 
     this.root = document.createElement("div");
     this.root.className = "hud";
@@ -122,23 +135,24 @@ export class HudController {
     this.brakeButton.type = "button";
     this.brakeButton.className = "brake-button";
     this.brakeButton.textContent = "STOP";
-    this.brakeButton.addEventListener("pointerdown", this.onBrakePointerDown);
-    this.brakeButton.addEventListener("touchstart", this.onBrakeTouchStart, {
+    this.brakeButton.addEventListener("pointerdown", this.handleBrakePointerDownBound);
+    this.brakeButton.addEventListener("touchstart", this.handleBrakeTouchStartBound, {
       passive: false,
     });
-    window.addEventListener("pointerup", this.onBrakePointerUp);
-    window.addEventListener("pointercancel", this.onBrakePointerUp);
-    window.addEventListener("touchend", this.onBrakeTouchEnd);
-    window.addEventListener("touchcancel", this.onBrakeTouchEnd);
-    window.addEventListener("blur", this.onWindowBlur);
+    window.addEventListener("pointerup", this.handleBrakePointerUpBound);
+    window.addEventListener("pointercancel", this.handleBrakePointerUpBound);
+    window.addEventListener("touchend", this.handleBrakeTouchEndBound);
+    window.addEventListener("touchcancel", this.handleBrakeTouchEndBound);
+    window.addEventListener("blur", this.handleWindowBlurBound);
 
     this.username = username;
     this.onUsernameClick = onUsernameClick;
+    this.handleUsernameClickBound = this.onUsernameClick.bind(this);
 
     this.usernameDisplay = document.createElement("div");
     this.usernameDisplay.className = "username-display";
     this.usernameDisplay.textContent = this.username || "Login";
-    this.usernameDisplay.addEventListener("click", this.onUsernameClick);
+    this.usernameDisplay.addEventListener("click", this.handleUsernameClickBound);
 
     this.root.append(
       this.statusBanner,
@@ -151,17 +165,21 @@ export class HudController {
     container.appendChild(this.root);
   }
 
-  dispose(): void {
-    window.removeEventListener("pointerup", this.onBrakePointerUp);
-    window.removeEventListener("pointercancel", this.onBrakePointerUp);
-    window.removeEventListener("touchend", this.onBrakeTouchEnd);
-    window.removeEventListener("touchcancel", this.onBrakeTouchEnd);
-    window.removeEventListener("blur", this.onWindowBlur);
+  public dispose(): void {
+    this.brakeButton.removeEventListener("pointerdown", this.handleBrakePointerDownBound);
+    this.brakeButton.removeEventListener("touchstart", this.handleBrakeTouchStartBound);
+    window.removeEventListener("pointerup", this.handleBrakePointerUpBound);
+    window.removeEventListener("pointercancel", this.handleBrakePointerUpBound);
+    window.removeEventListener("touchend", this.handleBrakeTouchEndBound);
+    window.removeEventListener("touchcancel", this.handleBrakeTouchEndBound);
+    window.removeEventListener("blur", this.handleWindowBlurBound);
+    this.usernameDisplay.removeEventListener("click", this.handleUsernameClickBound);
+    
     this.setBrakeButtonDown(false);
     this.root.remove();
   }
 
-  update(metrics: HudMetrics): void {
+  public update(metrics: HudMetrics): void {
     this.speedValue.textContent = Math.round(metrics.speed * 3.6).toString();
     this.speedLimitValue.textContent = Math.round(
       metrics.safeSpeed * 3.6,
@@ -202,20 +220,20 @@ export class HudController {
     this.brakeButton.classList.toggle("is-braking", value > 0.01);
   }
 
-  private onBrakePointerDown = (event: PointerEvent): void => {
+  private handleBrakePointerDown(event: PointerEvent): void {
     if (event.pointerType === "touch") {
       return;
     }
 
     this.setBrakeButtonDown(true);
     event.preventDefault();
-  };
+  }
 
-  private onBrakePointerUp = (): void => {
+  private handleBrakePointerUp(): void {
     this.setBrakeButtonDown(false);
-  };
+  }
 
-  private onBrakeTouchStart = (event: TouchEvent): void => {
+  private handleBrakeTouchStart(event: TouchEvent): void {
     if (this.brakeTouchId !== null) {
       return;
     }
@@ -229,9 +247,9 @@ export class HudController {
     this.brakeTouchId = touch.identifier;
     this.setBrakeButtonDown(true);
     event.preventDefault();
-  };
+  }
 
-  private onBrakeTouchEnd = (event: TouchEvent): void => {
+  private handleBrakeTouchEnd(event: TouchEvent): void {
     if (this.brakeTouchId === null) {
       return;
     }
@@ -245,9 +263,9 @@ export class HudController {
     this.brakeTouchId = null;
     this.setBrakeButtonDown(false);
     event.preventDefault();
-  };
+  }
 
-  private onWindowBlur = (): void => {
+  private handleWindowBlur(): void {
     this.brakeTouchId = null;
     this.setBrakeButtonDown(false);
   };

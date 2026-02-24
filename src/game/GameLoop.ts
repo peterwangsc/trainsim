@@ -9,24 +9,24 @@ export class GameLoop {
     private readonly render: (alpha: number) => void,
   ) {}
 
-  start(): void {
+  public start(): void {
     if (this.frameId !== 0) {
       return;
     }
 
     this.accumulator = 0;
     this.lastTime = performance.now();
-    this.frameId = requestAnimationFrame(this.tick);
+    this.frameId = requestAnimationFrame((now) => this.tick(now));
   }
 
-  stop(): void {
+  public stop(): void {
     if (this.frameId !== 0) {
       cancelAnimationFrame(this.frameId);
       this.frameId = 0;
     }
   }
 
-  private tick = (now: number): void => {
+  private tick(now: number): void {
     const deltaSeconds = Math.min((now - this.lastTime) / 1000, 0.25);
     this.lastTime = now;
     this.accumulator += deltaSeconds;
@@ -37,6 +37,6 @@ export class GameLoop {
     }
 
     this.render(this.accumulator / this.fixedDt);
-    this.frameId = requestAnimationFrame(this.tick);
-  };
+    this.frameId = requestAnimationFrame((now) => this.tick(now));
+  }
 }

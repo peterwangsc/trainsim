@@ -3,7 +3,7 @@ import { TrackSpline } from './TrackSpline';
 
 const CURVATURE_SAMPLE_SPAN = 4;
 
-export const curvatureAtDistance = (spline: TrackSpline, distance: number): number => {
+export function curvatureAtDistance(spline: TrackSpline, distance: number): number {
   const prev = spline.getPositionAtDistance(distance - CURVATURE_SAMPLE_SPAN);
   const curr = spline.getPositionAtDistance(distance);
   const next = spline.getPositionAtDistance(distance + CURVATURE_SAMPLE_SPAN);
@@ -31,4 +31,4 @@ export const curvatureAtDistance = (spline: TrackSpline, distance: number): numb
   const sign = Math.sign(cross.y || 1);
 
   return sign * (angle / arcLength);
-};
+}

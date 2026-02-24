@@ -119,10 +119,18 @@ export class Game {
       "Drive to the terminal station and stop before the platform ends.",
   };
 
+  private readonly handleResizeBound: () => void;
+  private readonly handleDebugLookKeyDownBound: (event: KeyboardEvent) => void;
+  private readonly handleDebugLookMouseMoveBound: (event: MouseEvent) => void;
+
   constructor(
     private readonly container: HTMLElement,
     options: GameOptions,
   ) {
+    this.handleResizeBound = this.handleResize.bind(this);
+    this.handleDebugLookKeyDownBound = this.handleDebugLookKeyDown.bind(this);
+    this.handleDebugLookMouseMoveBound = this.handleDebugLookMouseMove.bind(this);
+
     this.onRestartRequested =
       options.onRestartRequested ?? (() => this.restart());
     this.onNextLevelRequested = options.onNextLevelRequested;
@@ -296,19 +304,23 @@ export class Game {
       },
     );
 
-    this.loop = new GameLoop(CONFIG.simDt, this.simulate, this.render);
+    this.loop = new GameLoop(
+      CONFIG.simDt,
+      (dt) => this.simulate(dt),
+      () => this.render(),
+    );
 
-    window.addEventListener("resize", this.onResize);
-    window.addEventListener("keydown", this.onDebugLookKeyDown);
-    window.addEventListener("mousemove", this.onDebugLookMouseMove);
-    window.visualViewport?.addEventListener("resize", this.onResize);
-    window.visualViewport?.addEventListener("scroll", this.onResize);
-    this.onResize();
+    window.addEventListener("resize", this.handleResizeBound);
+    window.addEventListener("keydown", this.handleDebugLookKeyDownBound);
+    window.addEventListener("mousemove", this.handleDebugLookMouseMoveBound);
+    window.visualViewport?.addEventListener("resize", this.handleResizeBound);
+    window.visualViewport?.addEventListener("scroll", this.handleResizeBound);
+    this.handleResize();
     this.renderer.compile(this.scene, this.cameraRig.camera);
     this.simulate(0);
   }
 
-  start(): void {
+  public start(): void {
     this.state = GameState.Running;
     this.failureReason = null;
     this.introSplash.start();
@@ -317,7 +329,7 @@ export class Game {
     this.loop.start();
   }
 
-  stop(): void {
+  public stop(): void {
     this.loop.stop();
     this.cabinChrome.dispose();
     this.introSplash.dispose();
@@ -338,14 +350,15 @@ export class Game {
     this.scene.remove(this.trainHeadlight);
     this.scene.remove(this.trainHeadlightTarget);
     this.renderer.dispose();
-    window.removeEventListener("resize", this.onResize);
-    window.removeEventListener("keydown", this.onDebugLookKeyDown);
-    window.removeEventListener("mousemove", this.onDebugLookMouseMove);
-    window.visualViewport?.removeEventListener("resize", this.onResize);
-    window.visualViewport?.removeEventListener("scroll", this.onResize);
+
+    window.removeEventListener("resize", this.handleResizeBound);
+    window.removeEventListener("keydown", this.handleDebugLookKeyDownBound);
+    window.removeEventListener("mousemove", this.handleDebugLookMouseMoveBound);
+    window.visualViewport?.removeEventListener("resize", this.handleResizeBound);
+    window.visualViewport?.removeEventListener("scroll", this.handleResizeBound);
   }
 
-  restart(): void {
+  public restart(): void {
     this.loop.stop();
 
     this.failureReason = null;
@@ -360,7 +373,7 @@ export class Game {
     this.loop.start();
   }
 
-  private simulate = (dt: number): void => {
+  private simulate(dt: number): void {
     const previousState = this.state;
     const input = this.inputManager.update(dt);
 
@@ -438,6 +451,7 @@ export class Game {
       status: this.getHudStatus(),
       statusMessage: this.getStatusMessage(train.distance),
     };
+
     const trainSpeedRatio = MathUtils.clamp(
       train.speed / CONFIG.train.maxSpeed,
       0,
@@ -457,6 +471,7 @@ export class Game {
       this.dayNightSky.getNightFactor(),
     );
     this.grassLayer.update(dt);
+
     const targetExposure = this.dayNightSky.getRecommendedExposure();
     this.toneMappingExposure = MathUtils.damp(
       this.toneMappingExposure,
@@ -466,32 +481,32 @@ export class Game {
     );
     this.renderer.setToneMappingExposure(this.toneMappingExposure);
     this.updateTrainHeadlight();
-  };
+  }
 
-  private render = (): void => {
+  private render(): void {
     this.throttleOverlay.update(this.frameMetrics.throttle);
     this.renderer.render(this.scene, this.cameraRig.camera);
     this.hud.update(this.frameMetrics);
-  };
+  }
 
-  private onDebugLookKeyDown = (event: KeyboardEvent): void => {
+  private handleDebugLookKeyDown(event: KeyboardEvent): void {
     if (event.code !== "KeyP" || !event.shiftKey || event.repeat) {
       return;
     }
 
     event.preventDefault();
     this.cameraRig.setDebugLookEnabled(!this.cameraRig.isDebugLookEnabled());
-  };
+  }
 
-  private onDebugLookMouseMove = (event: MouseEvent): void => {
+  private handleDebugLookMouseMove(event: MouseEvent): void {
     if (!this.cameraRig.isDebugLookEnabled()) {
       return;
     }
 
     this.cameraRig.addDebugLookDelta(event.movementX, event.movementY);
-  };
+  }
 
-  private onResize = (): void => {
+  private handleResize(): void {
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
 
@@ -502,7 +517,7 @@ export class Game {
     this.renderer.resize(width, height);
     this.cameraRig.onResize(width, height);
     this.throttleOverlay.onResize(width, height);
-  };
+  }
 
   private computeTerminalGuidanceSafeSpeed(distance: number): number {
     const distanceToStationEnd = Math.max(

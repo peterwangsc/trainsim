@@ -62,10 +62,22 @@ export class ThrottleOverlayCanvas {
   private throttle = 0;
   private isPointerHoveringHandle = false;
 
+  private readonly handlePointerDownBound: (event: PointerEvent) => void;
+  private readonly handlePointerMoveBound: (event: PointerEvent) => void;
+  private readonly handlePointerUpBound: (event: PointerEvent) => void;
+  private readonly handlePointerLeaveBound: () => void;
+  private readonly handleWindowBlurBound: () => void;
+
   constructor(
     private readonly container: HTMLElement,
     private readonly onThrottleChange: (value: number) => void,
   ) {
+    this.handlePointerDownBound = this.handlePointerDown.bind(this);
+    this.handlePointerMoveBound = this.handlePointerMove.bind(this);
+    this.handlePointerUpBound = this.handlePointerUp.bind(this);
+    this.handlePointerLeaveBound = this.handlePointerLeave.bind(this);
+    this.handleWindowBlurBound = this.handleWindowBlur.bind(this);
+
     this.renderer = new WebGLRenderer({ alpha: true, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.setClearColor(0x000000, 0);
@@ -84,43 +96,46 @@ export class ThrottleOverlayCanvas {
     this.container.appendChild(this.renderer.domElement);
     this.renderer.domElement.addEventListener(
       "pointerdown",
-      this.onPointerDown,
+      this.handlePointerDownBound,
     );
     this.renderer.domElement.addEventListener(
       "pointermove",
-      this.onPointerMove,
+      this.handlePointerMoveBound,
     );
     this.renderer.domElement.addEventListener(
       "pointerleave",
-      this.onPointerLeave,
+      this.handlePointerLeaveBound,
     );
-    this.renderer.domElement.addEventListener("pointerup", this.onPointerUp);
+    this.renderer.domElement.addEventListener("pointerup", this.handlePointerUpBound);
     this.renderer.domElement.addEventListener(
       "pointercancel",
-      this.onPointerUp,
+      this.handlePointerUpBound,
     );
-    window.addEventListener("blur", this.onWindowBlur);
+    window.addEventListener("blur", this.handleWindowBlurBound);
   }
 
-  dispose(): void {
+  public dispose(): void {
     this.renderer.domElement.removeEventListener(
       "pointerdown",
-      this.onPointerDown,
+      this.handlePointerDownBound,
     );
     this.renderer.domElement.removeEventListener(
       "pointermove",
-      this.onPointerMove,
+      this.handlePointerMoveBound,
     );
     this.renderer.domElement.removeEventListener(
       "pointerleave",
-      this.onPointerLeave,
+      this.handlePointerLeaveBound,
     );
-    this.renderer.domElement.removeEventListener("pointerup", this.onPointerUp);
+    this.renderer.domElement.removeEventListener(
+      "pointerup",
+      this.handlePointerUpBound,
+    );
     this.renderer.domElement.removeEventListener(
       "pointercancel",
-      this.onPointerUp,
+      this.handlePointerUpBound,
     );
-    window.removeEventListener("blur", this.onWindowBlur);
+    window.removeEventListener("blur", this.handleWindowBlurBound);
     this.releasePointer();
 
     for (const mesh of this.ownedMeshes) {
@@ -132,7 +147,7 @@ export class ThrottleOverlayCanvas {
     this.renderer.domElement.remove();
   }
 
-  onResize(viewportWidth: number, viewportHeight: number): void {
+  public onResize(viewportWidth: number, viewportHeight: number): void {
     const isCompactUi = viewportWidth <= COMPACT_UI_BREAKPOINT;
     const widthRatio = isCompactUi
       ? OVERLAY_WIDTH_RATIO_COMPACT
@@ -175,14 +190,14 @@ export class ThrottleOverlayCanvas {
     this.camera.updateProjectionMatrix();
   }
 
-  update(throttle: number): void {
+  public update(throttle: number): void {
     this.throttle = clamp(throttle, 0, 1);
     const angle = lerp(LEVER_IDLE_ANGLE, LEVER_MAX_ANGLE, this.throttle);
     this.harness.rotation.x = toRadians(60 + angle);
     this.render();
   }
 
-  reset(): void {
+  public reset(): void {
     this.throttle = 0;
     this.update(0);
   }
@@ -308,7 +323,7 @@ export class ThrottleOverlayCanvas {
     material.dispose();
   }
 
-  private onPointerDown = (event: PointerEvent): void => {
+  private handlePointerDown(event: PointerEvent): void {
     if (event.pointerType === "mouse" && event.button !== 0) {
       return;
     }
@@ -324,9 +339,9 @@ export class ThrottleOverlayCanvas {
     this.isPointerHoveringHandle = true;
     this.setCursor("grabbing");
     event.preventDefault();
-  };
+  }
 
-  private onPointerMove = (event: PointerEvent): void => {
+  private handlePointerMove(event: PointerEvent): void {
     if (this.activePointerId === null) {
       if (event.pointerType === "mouse" || event.pointerType === "pen") {
         this.updateHoverCursor(event.clientX, event.clientY);
@@ -347,9 +362,9 @@ export class ThrottleOverlayCanvas {
     this.update(nextThrottle);
     this.setCursor("grabbing");
     event.preventDefault();
-  };
+  }
 
-  private onPointerUp = (event: PointerEvent): void => {
+  private handlePointerUp(event: PointerEvent): void {
     if (event.pointerId !== this.activePointerId) {
       return;
     }
@@ -357,18 +372,18 @@ export class ThrottleOverlayCanvas {
     this.releasePointer();
     this.updateHoverCursor(event.clientX, event.clientY);
     event.preventDefault();
-  };
+  }
 
-  private onPointerLeave = (): void => {
+  private handlePointerLeave(): void {
     if (this.activePointerId !== null) {
       return;
     }
 
     this.isPointerHoveringHandle = false;
     this.setCursor("default");
-  };
+  }
 
-  private onWindowBlur = (): void => {
+  private handleWindowBlur(): void {
     this.releasePointer();
     this.isPointerHoveringHandle = false;
     this.setCursor("default");

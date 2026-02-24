@@ -1,5 +1,3 @@
-import { ASSETS_CDN_BASE } from "../game/Config";
-
 export class LoginScreen {
   private readonly root: HTMLDivElement;
   private readonly usernameInput: HTMLInputElement | null = null;
@@ -45,37 +43,17 @@ export class LoginScreen {
       loginButton.classList.add("login-screen__login-button--disabled");
     }
     loginButton.textContent = "Login";
-    loginButton.addEventListener("click", () => {
-      if (
-        this.usernameInput?.value &&
-        this.usernameInput.value.trim() !== this.currentUsername
-      ) {
-        this.onLogin?.(this.usernameInput.value.trim(), this.targetLevel);
-        this.hide();
-      }
-    });
+    loginButton.addEventListener("click", () => this.handleLogin(loginButton));
 
-    this.usernameInput.addEventListener("input", () => {
-      if (
-        this.usernameInput?.value &&
-        this.usernameInput.value.trim() !== this.currentUsername
-      ) {
-        loginButton.classList.remove("login-screen__login-button--disabled");
-      } else {
-        loginButton.classList.add("login-screen__login-button--disabled");
-      }
-    });
+    this.usernameInput.addEventListener("input", () =>
+      this.updateLoginButtonState(loginButton),
+    );
 
     const logoutButton = document.createElement("button");
     logoutButton.type = "button";
     logoutButton.className = "login-screen__logout-button";
     logoutButton.textContent = this.currentUsername ? "Logout" : "Cancel";
-    logoutButton.addEventListener("click", () => {
-      this.onLogout?.();
-      this.currentUsername = null;
-      this.targetLevel = undefined;
-      this.hide();
-    });
+    logoutButton.addEventListener("click", () => this.handleLogout());
 
     const loginField = document.createElement("div");
     loginField.className = "login-screen__login-field";
@@ -87,13 +65,34 @@ export class LoginScreen {
     container.appendChild(this.root);
   }
 
-  show(): void {
+  public show(): void {
     this.root.classList.remove("login-screen--hidden");
     this.root.classList.add("login-screen--visible");
   }
 
-  hide(): void {
+  public hide(): void {
     this.root.classList.remove("login-screen--visible");
     this.root.classList.add("login-screen--hidden");
+  }
+
+  private handleLogin(button: HTMLButtonElement): void {
+    const username = this.usernameInput?.value?.trim();
+    if (username && username !== this.currentUsername) {
+      this.onLogin?.(username, this.targetLevel);
+      this.hide();
+    }
+  }
+
+  private handleLogout(): void {
+    this.onLogout?.();
+    this.currentUsername = null;
+    this.targetLevel = undefined;
+    this.hide();
+  }
+
+  private updateLoginButtonState(button: HTMLButtonElement): void {
+    const username = this.usernameInput?.value?.trim();
+    const canLogin = username && username !== this.currentUsername;
+    button.classList.toggle("login-screen__login-button--disabled", !canLogin);
   }
 }

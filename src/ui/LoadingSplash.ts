@@ -53,7 +53,7 @@ export class LoadingSplash {
     this.cta.className = "loading-splash__cta loading-splash__cta--hidden";
     this.cta.type = "button";
     this.cta.textContent = `Push to Start`;
-    this.cta.addEventListener("click", this.onTap);
+    this.cta.addEventListener("click", () => this.onTap());
 
     this.progressContainer = document.createElement("div");
     this.progressContainer.className = "loading-splash__progress-container";
@@ -85,7 +85,7 @@ export class LoadingSplash {
     this.root.remove();
   }
 
-  setProgress(progress: number): void {
+  public setProgress(progress: number): void {
     const clamped = Math.max(0, Math.min(1, progress));
     const pct = Math.round(clamped * 100);
     this.progressFill.style.width = `${pct}%`;
@@ -94,7 +94,7 @@ export class LoadingSplash {
     }
   }
 
-  async setReady(): Promise<void> {
+  public async setReady(): Promise<void> {
     this.isReady = true;
     this.setProgress(1);
     this.progressLabel.style.display = "none";
@@ -105,7 +105,7 @@ export class LoadingSplash {
     this.cta.className = "loading-splash__cta";
   }
 
-  setError(message: string): void {
+  public setError(message: string): void {
     this.isReady = false;
     this.isStarting = false;
     this.progressLabel.textContent = message;
@@ -116,7 +116,7 @@ export class LoadingSplash {
     }
   }
 
-  private onTap = async (): Promise<void> => {
+  private async onTap(): Promise<void> {
     if (!this.isReady || this.isStarting) {
       return;
     }
@@ -145,20 +145,16 @@ export class LoadingSplash {
         }
       }
     }
-  };
+  }
 
   private dismiss(): void {
-    if (this.dismissed) return;
+    if (this.dismissed) {
+      return;
+    }
+
     this.dismissed = true;
     const remove = (): void => this.root.remove();
-    const tid = window.setTimeout(remove, 4000);
-    this.root.addEventListener(
-      "transitionend",
-      () => {
-        clearTimeout(tid);
-        remove();
-      },
-      { once: true },
-    );
+    this.root.addEventListener("transitionend", remove, { once: true });
+    window.setTimeout(remove, 4000); // Fallback
   }
 }

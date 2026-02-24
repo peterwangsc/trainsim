@@ -166,7 +166,7 @@ export class TrackGenerator {
     let bestClearanceSq = -1;
     let bestDeltaPenalty = Number.POSITIVE_INFINITY;
 
-    const tryDelta = (candidateHeadingDelta: number): boolean => {
+    const tryDelta = function (this: TrackGenerator, candidateHeadingDelta: number): boolean {
       const clampedDelta = clamp(candidateHeadingDelta, -maxHeadingDelta, maxHeadingDelta);
       const deltaKey = Math.round(clampedDelta * 1_000_000);
 
@@ -198,7 +198,7 @@ export class TrackGenerator {
       }
 
       return clearanceSq >= minClearanceSq;
-    };
+    }.bind(this);
 
     if (tryDelta(baseHeadingDelta)) {
       return bestHeading;
