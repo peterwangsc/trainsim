@@ -64,6 +64,10 @@ export class TrackEndSet {
     private readonly dirtPathTexture: Texture,
     private readonly darkBrushedMetalTexture: Texture,
     private readonly knurledMetalTexture: Texture,
+    private readonly concretePlatformTexture: Texture,
+    private readonly corrugatedMetalRoofTexture: Texture,
+    private readonly redPaintedMetalTexture: Texture,
+    private readonly brickStationWallTexture: Texture,
   ) {
     const trackLength = this.spline.getLength();
     const bumperOffset = Math.max(1, this.config.bumperOffsetFromTrackEnd);
@@ -158,7 +162,7 @@ export class TrackEndSet {
         color: "#d0d0c8",
         roughness: 0.9,
         metalness: 0.05,
-        map: this.dirtPathTexture,
+        map: this.concretePlatformTexture,
       }),
     );
 
@@ -182,7 +186,7 @@ export class TrackEndSet {
         color: "#5f6c7a",
         roughness: 0.5,
         metalness: 0.8,
-        map: this.knurledMetalTexture,
+        map: this.corrugatedMetalRoofTexture,
       }),
     );
 
@@ -241,7 +245,7 @@ export class TrackEndSet {
           color: "#e8e8e0",
           roughness: 0.85,
           metalness: 0.0,
-          map: this.dirtPathTexture,
+          map: this.brickStationWallTexture,
         }),
       ),
     );
@@ -262,7 +266,7 @@ export class TrackEndSet {
           color: "#4a5460",
           roughness: 0.7,
           metalness: 0.6,
-          map: this.knurledMetalTexture,
+          map: this.corrugatedMetalRoofTexture,
         }),
       ),
     );
@@ -307,7 +311,7 @@ export class TrackEndSet {
         color: "#c02020",
         roughness: 0.6,
         metalness: 0.8,
-        map: this.darkBrushedMetalTexture,
+        map: this.redPaintedMetalTexture,
       }),
     );
     const beamMaterial = this.createMaterial(
@@ -315,7 +319,7 @@ export class TrackEndSet {
         color: "#d41a1a",
         roughness: 0.5,
         metalness: 0.8,
-        map: this.knurledMetalTexture,
+        map: this.redPaintedMetalTexture,
       }),
     );
     const plateMaterial = this.createMaterial(
@@ -323,7 +327,7 @@ export class TrackEndSet {
         color: "#ffd44a",
         roughness: 0.5,
         metalness: 0.8,
-        map: this.darkBrushedMetalTexture,
+        map: this.knurledMetalTexture,
       }),
     );
 

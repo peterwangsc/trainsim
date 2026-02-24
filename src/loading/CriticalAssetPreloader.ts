@@ -21,6 +21,10 @@ export type CriticalPreloadedAssets = {
   railTexture: Texture;
   darkBrushedMetalTexture: Texture;
   knurledMetalTexture: Texture;
+  concretePlatformTexture: Texture;
+  corrugatedMetalRoofTexture: Texture;
+  redPaintedMetalTexture: Texture;
+  brickStationWallTexture: Texture;
 };
 
 type ProgressCallback = (progress: number) => void;
@@ -49,6 +53,10 @@ export async function preloadCriticalAssets(
     "/brushed_steel_rail.png",
     "/dark_brushed_metal.png",
     "/knurled_metal.png",
+    "/concrete_platform.png",
+    "/corrugated_metal_roof.png",
+    "/red_painted_metal.png",
+    "/brick_station_wall.png",
   ];
 
   const totalAssets =
@@ -101,6 +109,10 @@ export async function preloadCriticalAssets(
     railTexture,
     darkBrushedMetalTexture,
     knurledMetalTexture,
+    concretePlatformTexture,
+    corrugatedMetalRoofTexture,
+    redPaintedMetalTexture,
+    brickStationWallTexture,
   ] = await Promise.all([
     track(loadHowl(firstMusicTrackSrc)),
     ...textureSrcs.map((src) => track(loadTexture(src))),
@@ -138,6 +150,18 @@ export async function preloadCriticalAssets(
   knurledMetalTexture.colorSpace = SRGBColorSpace;
   knurledMetalTexture.wrapS = RepeatWrapping;
   knurledMetalTexture.wrapT = RepeatWrapping;
+  concretePlatformTexture.colorSpace = SRGBColorSpace;
+  concretePlatformTexture.wrapS = RepeatWrapping;
+  concretePlatformTexture.wrapT = RepeatWrapping;
+  corrugatedMetalRoofTexture.colorSpace = SRGBColorSpace;
+  corrugatedMetalRoofTexture.wrapS = RepeatWrapping;
+  corrugatedMetalRoofTexture.wrapT = RepeatWrapping;
+  redPaintedMetalTexture.colorSpace = SRGBColorSpace;
+  redPaintedMetalTexture.wrapS = RepeatWrapping;
+  redPaintedMetalTexture.wrapT = RepeatWrapping;
+  brickStationWallTexture.colorSpace = SRGBColorSpace;
+  brickStationWallTexture.wrapS = RepeatWrapping;
+  brickStationWallTexture.wrapT = RepeatWrapping;
 
   return {
     movementHowls,
@@ -157,6 +181,10 @@ export async function preloadCriticalAssets(
     railTexture,
     darkBrushedMetalTexture,
     knurledMetalTexture,
+    concretePlatformTexture,
+    corrugatedMetalRoofTexture,
+    redPaintedMetalTexture,
+    brickStationWallTexture,
   };
 }
 

@@ -184,6 +184,10 @@ export class Game {
       preloadedAssets.dirtPathTexture,
       preloadedAssets.darkBrushedMetalTexture,
       preloadedAssets.knurledMetalTexture,
+      preloadedAssets.concretePlatformTexture,
+      preloadedAssets.corrugatedMetalRoofTexture,
+      preloadedAssets.redPaintedMetalTexture,
+      preloadedAssets.brickStationWallTexture,
     );
     this.trackEndLayout = this.trackEndSet.getLayout();
     this.scene.add(this.trackEndSet.root);
