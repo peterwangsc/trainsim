@@ -176,6 +176,7 @@ export class Game {
       this.trackSpline,
       trackConfig,
       preloadedAssets.dirtPathTexture,
+      preloadedAssets.woodenPlankTexture,
     ).build();
     this.scene.add(trackMesh);
     this.trackEndSet = new TrackEndSet(this.trackSpline, {
@@ -190,6 +191,8 @@ export class Game {
       CONFIG.seed,
       CONFIG.terrain,
       preloadedAssets.simplexNoiseTexture,
+      preloadedAssets.hillyGrassTexture,
+      preloadedAssets.rockyMountainTexture,
     );
     this.dayNightSky.setTerrainHeightSampler(
       this.terrainLayer.getHeightAt.bind(this.terrainLayer),
@@ -201,6 +204,8 @@ export class Game {
       CONFIG.forest,
       this.terrainLayer.getHeightAt.bind(this.terrainLayer),
       this.terrainLayer.getDistanceToTrack.bind(this.terrainLayer),
+      preloadedAssets.treeBarkTexture,
+      preloadedAssets.pineFoliageTexture,
     );
     this.grassLayer = new GrassLayer(
       this.scene,

@@ -765,7 +765,7 @@ canvas {
   font-size: clamp(0.72rem, 1.4vw, 0.88rem);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-bright);
   margin-bottom: 3px;
 }
 

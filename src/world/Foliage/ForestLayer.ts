@@ -1,12 +1,19 @@
-import { CylinderGeometry, Group, MathUtils, Scene, Vector3 } from 'three';
-import { SeededRandom } from '../../util/SeededRandom';
-import { TrackSpline } from '../Track/TrackSpline';
+import {
+  CylinderGeometry,
+  Group,
+  MathUtils,
+  Scene,
+  Texture,
+  Vector3,
+} from "three";
+import { SeededRandom } from "../../util/SeededRandom";
+import { TrackSpline } from "../Track/TrackSpline";
 import {
   getSingleTreeFootprintRadius,
   SingleTreeFactory,
   SingleTreeSpecies,
-  SingleTreeTrunkCollider
-} from './SingleTree';
+  SingleTreeTrunkCollider,
+} from "./SingleTree";
 
 export type ForestConfig = {
   treeSpacing: number;
@@ -36,12 +43,12 @@ type TreeFootprint = {
 };
 
 const SPECIES_BUCKET: SingleTreeSpecies[] = [
-  'pine',
-  'pine',
-  'pine',
-  'fir',
-  'fir',
-  'redwood'
+  "pine",
+  "pine",
+  "pine",
+  "fir",
+  "fir",
+  "redwood",
 ];
 
 const UP = new Vector3(0, 1, 0);
@@ -52,7 +59,7 @@ export class ForestLayer {
   readonly colliders: TreeTrunkColliderInstance[] = [];
 
   private readonly root = new Group();
-  private readonly treeFactory = new SingleTreeFactory();
+  private readonly treeFactory: SingleTreeFactory;
   private readonly trunkGeometries: CylinderGeometry[] = [];
   private readonly treeFootprints: TreeFootprint[] = [];
   private readonly center = new Vector3();
@@ -66,11 +73,17 @@ export class ForestLayer {
     private readonly seed: number,
     private readonly config: ForestConfig,
     private readonly sampleTerrainHeight?: TerrainHeightSampler,
-    private readonly sampleTrackDistance?: TrackDistanceSampler
+    private readonly sampleTrackDistance?: TrackDistanceSampler,
+    private readonly treeBarkTexture?: Texture,
+    private readonly pineFoliageTexture?: Texture,
   ) {
-    this.root.name = 'forest-layer';
+    this.root.name = "forest-layer";
     this.root.frustumCulled = false;
     this.scene.add(this.root);
+    this.treeFactory = new SingleTreeFactory(
+      this.treeBarkTexture,
+      this.pineFoliageTexture,
+    );
     this.generate();
   }
 
@@ -88,8 +101,14 @@ export class ForestLayer {
     const rng = new SeededRandom(this.seed ^ 0x5f3759df);
     const trackLength = this.spline.getLength();
 
-    for (let distance = 0; distance < trackLength; distance += this.config.treeSpacing) {
-      const trackDistance = distance + rng.range(-this.config.forwardJitter, this.config.forwardJitter);
+    for (
+      let distance = 0;
+      distance < trackLength;
+      distance += this.config.treeSpacing
+    ) {
+      const trackDistance =
+        distance +
+        rng.range(-this.config.forwardJitter, this.config.forwardJitter);
       this.center.copy(this.spline.getPositionAtDistance(trackDistance));
       this.tangent.copy(this.spline.getTangentAtDistance(trackDistance));
       this.right.crossVectors(this.tangent, UP).normalize();
@@ -99,7 +118,11 @@ export class ForestLayer {
     }
   }
 
-  private trySpawnSide(rng: SeededRandom, trackDistance: number, side: -1 | 1): void {
+  private trySpawnSide(
+    rng: SeededRandom,
+    trackDistance: number,
+    side: -1 | 1,
+  ): void {
     if (rng.next() > this.config.spawnChancePerSide) {
       return;
     }
@@ -117,7 +140,7 @@ export class ForestLayer {
     const trackBlend = MathUtils.smoothstep(
       distanceToTrack,
       this.config.trackTreeClearDistance,
-      this.config.trackTreeFadeDistance
+      this.config.trackTreeFadeDistance,
     );
     if (trackBlend <= 0.001) {
       return;
@@ -129,22 +152,31 @@ export class ForestLayer {
     this.position.y -= TREE_ROOT_BURY_OFFSET;
 
     const species = this.pickSpecies(rng);
-    let heightScale = rng.range(this.config.minHeightScale, this.config.maxHeightScale) * trackBlend;
+    let heightScale =
+      rng.range(this.config.minHeightScale, this.config.maxHeightScale) *
+      trackBlend;
 
-    if (species === 'redwood') {
+    if (species === "redwood") {
       heightScale *= rng.range(1.05, 1.25);
-    } else if (species === 'fir') {
+    } else if (species === "fir") {
       heightScale *= rng.range(0.92, 1.08);
     }
 
     const variationSeed =
-      this.seed +
-      trackDistance * 31.7 +
-      side * 97.3 +
-      rng.range(-2000, 2000);
-    const footprintRadius = getSingleTreeFootprintRadius(heightScale, species, variationSeed);
+      this.seed + trackDistance * 31.7 + side * 97.3 + rng.range(-2000, 2000);
+    const footprintRadius = getSingleTreeFootprintRadius(
+      heightScale,
+      species,
+      variationSeed,
+    );
 
-    if (this.overlapsExistingTree(this.position.x, this.position.z, footprintRadius)) {
+    if (
+      this.overlapsExistingTree(
+        this.position.x,
+        this.position.z,
+        footprintRadius,
+      )
+    ) {
       return;
     }
 
@@ -152,7 +184,7 @@ export class ForestLayer {
       position: [this.position.x, this.position.y, this.position.z],
       species,
       heightScale,
-      variationSeed
+      variationSeed,
     });
 
     this.root.add(tree.group);
@@ -160,12 +192,12 @@ export class ForestLayer {
     this.colliders.push({
       ...tree.trunkCollider,
       x: this.position.x,
-      z: this.position.z
+      z: this.position.z,
     });
     this.treeFootprints.push({
       x: this.position.x,
       z: this.position.z,
-      radius: footprintRadius
+      radius: footprintRadius,
     });
   }
 
@@ -174,11 +206,16 @@ export class ForestLayer {
     return SPECIES_BUCKET[Math.min(index, SPECIES_BUCKET.length - 1)];
   }
 
-  private overlapsExistingTree(x: number, z: number, candidateRadius: number): boolean {
+  private overlapsExistingTree(
+    x: number,
+    z: number,
+    candidateRadius: number,
+  ): boolean {
     for (const tree of this.treeFootprints) {
       const dx = x - tree.x;
       const dz = z - tree.z;
-      const minDistance = candidateRadius + tree.radius + TREE_FOOTPRINT_CLEARANCE;
+      const minDistance =
+        candidateRadius + tree.radius + TREE_FOOTPRINT_CLEARANCE;
 
       if (dx * dx + dz * dz < minDistance * minDistance) {
         return true;

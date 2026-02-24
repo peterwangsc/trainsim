@@ -44,6 +44,7 @@ export class TrackMeshBuilder {
     private readonly spline: TrackSpline,
     private readonly config: TrackMeshConfig,
     private readonly dirtPathTexture: Texture,
+    private readonly woodenPlankTexture: Texture,
   ) {}
 
   build(): Group {
@@ -192,6 +193,7 @@ export class TrackMeshBuilder {
       color: 0x6d4f35,
       roughness: 0.9,
       metalness: 0.08,
+      map: this.woodenPlankTexture,
     });
     const sleepers = new InstancedMesh(geometry, material, count);
     sleepers.castShadow = true;

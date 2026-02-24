@@ -944,6 +944,13 @@ uniform float directionalFogStrength;`,
 #endif`,
         );
     };
+
+    const previousCacheKey = (material as any).customProgramCacheKey;
+    (material as any).customProgramCacheKey = function () {
+      const base = previousCacheKey ? previousCacheKey.call(this) : "";
+      return base + "-directional-fog";
+    };
+
     material.needsUpdate = true;
   }
 

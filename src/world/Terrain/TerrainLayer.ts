@@ -77,6 +77,8 @@ export class TerrainLayer {
     private readonly seed: number,
     private readonly config: TerrainConfig,
     sharedSimplexTexture: Texture,
+    hillyGrassTexture: Texture,
+    rockyMountainTexture: Texture,
   ) {
     this.worldHalfSize = this.config.worldSize * 0.5;
     this.noiseZ = this.seed * 0.0127 + 17.3;
@@ -106,9 +108,175 @@ export class TerrainLayer {
 
     this.material = new MeshStandardMaterial({
       map: this.texture,
-      roughness: 0.94,
-      metalness: 0.02
+      roughness: 1.0,
+      metalness: 0.0
     });
+
+    this.material.onBeforeCompile = (shader) => {
+      shader.uniforms.tGrass = { value: hillyGrassTexture };
+      shader.uniforms.tRock = { value: rockyMountainTexture };
+      // Register uniforms for directional fog (will be updated by DayNightSky if enabled)
+      shader.uniforms.directionalFogSunViewDirection = { value: new Vector3(0, 0, -1) };
+      shader.uniforms.directionalFogStrength = { value: 0.2 };
+
+      shader.vertexShader = `
+        varying vec3 vWorldPosition;
+        varying vec3 vWorldNormal;
+        ${shader.vertexShader}
+      `.replace(
+        '#include <worldpos_vertex>',
+        `
+        #include <worldpos_vertex>
+        vWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
+        vWorldNormal = normalize(mat3(modelMatrix) * normal);
+        `
+      );
+
+      shader.fragmentShader = `
+        uniform sampler2D tGrass;
+        uniform sampler2D tRock;
+        uniform vec3 directionalFogSunViewDirection;
+        uniform float directionalFogStrength;
+        varying vec3 vWorldPosition;
+        varying vec3 vWorldNormal;
+
+        // Fast hash-based noise
+        vec2 hash2( vec2 p ) {
+            p = vec2( dot(p,vec2(127.1,311.7)), dot(p,vec2(269.5,183.3)) );
+            return -1.0 + 2.0*fract(sin(p)*43758.5453123);
+        }
+        
+        // Simplex Noise
+        float snoise( in vec2 p ) {
+            const float K1 = 0.366025404; // (sqrt(3)-1)/2;
+            const float K2 = 0.211324865; // (3-sqrt(3))/6;
+            vec2 i = floor( p + (p.x+p.y)*K1 );
+            vec2 a = p - i + (i.x+i.y)*K2;
+            vec2 o = (a.x>a.y) ? vec2(1.0,0.0) : vec2(0.0,1.0);
+            vec2 b = a - o + K2;
+            vec2 c = a - 1.0 + 2.0*K2;
+            vec3 h = max( 0.5-vec3(dot(a,a), dot(b,b), dot(c,c) ), 0.0 );
+            vec3 n = h*h*h*h*vec3( dot(a,hash2(i+0.0)), dot(b,hash2(i+o)), dot(c,hash2(i+1.0)));
+            return dot( n, vec3(70.0) );
+        }
+
+        // Classic Perlin Noise (Gradient Noise)
+        float pnoise(vec2 p) {
+            vec2 i = floor(p);
+            vec2 f = fract(p);
+            vec2 u = f*f*(3.0-2.0*f);
+            return mix( mix( dot( hash2( i + vec2(0.0,0.0) ), f - vec2(0.0,0.0) ), 
+                             dot( hash2( i + vec2(1.0,0.0) ), f - vec2(1.0,0.0) ), u.x),
+                        mix( dot( hash2( i + vec2(0.0,1.0) ), f - vec2(0.0,1.0) ), 
+                             dot( hash2( i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y) * 2.0;
+        }
+
+        // Voronoi / Cellular Noise for Tessellation
+        vec2 voronoi( in vec2 x ) {
+            vec2 n = floor(x);
+            vec2 f = fract(x);
+            float f1 = 8.0;
+            float f2 = 8.0;
+            for( int j=-1; j<=1; j++ ) {
+                for( int i=-1; i<=1; i++ ) {
+                    vec2 g = vec2( float(i), float(j) );
+                    vec2 o = hash2( n + g );
+                    vec2 r = g + o - f;
+                    float d = dot(r,r);
+                    if( d < f1 ) {
+                        f2 = f1;
+                        f1 = d;
+                    } else if( d < f2 ) {
+                        f2 = d;
+                    }
+                }
+            }
+            return vec2(sqrt(f1), sqrt(f2));
+        }
+
+        ${shader.fragmentShader}
+      `.replace(
+        '#include <map_fragment>',
+        `
+        #ifdef USE_MAP
+          vec4 sampledDiffuseColor = texture2D( map, vMapUv );
+          
+          vec2 vNoise = voronoi(vWorldPosition.xz * 0.015);
+          float cellularPattern = vNoise.y - vNoise.x; // F2 - F1 gives tessellated boundaries
+          
+          // Domain distortion (Musgrave) to break up tiling
+          // Using Simplex noise + Voronoi for distortion as it avoids axis-aligned artifacts better
+          vec2 distort = vec2(snoise(vWorldPosition.xz * 0.008), snoise(vWorldPosition.xz * 0.008 + vec2(10.5, 10.5)));
+          distort += cellularPattern * 0.35;
+          
+          vec2 uvGrass = vWorldPosition.xz * 0.04 + distort * 0.3;
+          vec4 grassColor = texture2D(tGrass, uvGrass);
+          
+          vec3 blending = abs(vWorldNormal);
+          blending = normalize(max(blending, 0.00001));
+          float b = (blending.x + blending.y + blending.z);
+          blending /= vec3(b, b, b);
+          
+          // Triplanar rock mapping with domain distortion
+          vec4 xaxis = texture2D( tRock, vWorldPosition.yz * 0.04 + distort * 0.3 );
+          vec4 yaxis = texture2D( tRock, vWorldPosition.xz * 0.04 + distort * 0.3 );
+          vec4 zaxis = texture2D( tRock, vWorldPosition.xy * 0.04 + distort * 0.3 );
+          vec4 rockColor = xaxis * blending.x + yaxis * blending.y + zaxis * blending.z;
+
+          float slope = 1.0 - max(0.0, vWorldNormal.y);
+          
+          // Modern splat blending using multiple frequencies and noise types
+          // 1. Broad strokes from Perlin noise to create large patches
+          float nBroad = pnoise(vWorldPosition.xz * 0.012) * 0.5 + 0.5;
+          // 2. High frequency detail from Simplex noise for broken, organic edges
+          float nDetail = snoise(vWorldPosition.xz * 0.06) * 0.5 + 0.5;
+          // 3. Voronoi cellular tessellations
+          float nCells = smoothstep(0.0, 0.5, cellularPattern);
+          
+          // Combine noises: broad strokes broken up by high frequency details and tessellations
+          float blendMask = mix(mix(nBroad, nDetail, 0.3), nCells, 0.25);
+          
+          // The blending is driven by slope, but heavily modulated by our noise mask.
+          // By subtracting the blendMask from slope, we allow grass on shallow slopes to be broken up
+          // by rock patches, and vice versa.
+          float rockBlend = smoothstep(0.1, 0.5, slope + (blendMask - 0.5) * 0.6);
+          
+          vec4 detailTex = mix(grassColor, rockColor, rockBlend);
+          
+          // Extract high-frequency detail as luminance from the splat textures
+          float detailLum = dot(detailTex.rgb, vec3(0.299, 0.587, 0.114));
+          // Apply a subtle contrast curve to the detail map
+          detailLum = mix(0.4, detailLum, 1.4);
+          
+          // Use the beautiful procedural canvas map (sampledDiffuseColor) as the base hue,
+          // overlaid with the high-frequency detail luminance.
+          sampledDiffuseColor = vec4(sampledDiffuseColor.rgb * detailLum * 1.5, sampledDiffuseColor.a);
+
+          diffuseColor *= sampledDiffuseColor;
+        #endif
+        `
+      ).replace(
+        '#include <fog_fragment>',
+        `#include <fog_fragment>
+        #ifdef USE_FOG
+          vec2 directionalFogView = vec2( -vViewPosition.x, -vViewPosition.z );
+          vec2 directionalFogSun = directionalFogSunViewDirection.xz;
+          float directionalFogViewLen = length( directionalFogView );
+          float directionalFogSunLen = length( directionalFogSun );
+          if ( directionalFogViewLen > 1e-4 && directionalFogSunLen > 1e-4 ) {
+            directionalFogView /= directionalFogViewLen;
+            directionalFogSun /= directionalFogSunLen;
+            float directionalFogTowardSun = dot( directionalFogView, directionalFogSun ) * 0.5 + 0.5;
+            float directionalFogBoost = mix( 1.0 - directionalFogStrength, 1.0 + directionalFogStrength, directionalFogTowardSun );
+            float directionalFogAdjusted = clamp( fogFactor * directionalFogBoost, 0.0, 1.0 );
+            float directionalFogExtra = max( 0.0, directionalFogAdjusted - fogFactor );
+            gl_FragColor.rgb = mix( gl_FragColor.rgb, 0.1 * fogColor, 2.0 * directionalFogExtra );
+          }
+        #endif`
+      );
+    };
+
+    this.material.customProgramCacheKey = () => 'terrain-layer-splat-v2';
 
     this.mesh = new Mesh(this.geometry, this.material);
     this.mesh.receiveShadow = true;

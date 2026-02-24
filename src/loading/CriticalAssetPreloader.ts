@@ -13,6 +13,11 @@ export type CriticalPreloadedAssets = {
   grassLeafTexture: Texture;
   grassAccentTexture: Texture;
   dirtPathTexture: Texture;
+  treeBarkTexture: Texture;
+  pineFoliageTexture: Texture;
+  hillyGrassTexture: Texture;
+  rockyMountainTexture: Texture;
+  woodenPlankTexture: Texture;
 };
 
 type ProgressCallback = (progress: number) => void;
@@ -33,6 +38,11 @@ export async function preloadCriticalAssets(
     "/grassleaf.png",
     "/accentleaf.png",
     "/dirt_path.png",
+    "/tree_bark.png",
+    "/pine_tree_canopy_foliage.png",
+    "/hilly_grass.png",
+    "/rocky_mountain.png",
+    "/wooden_plank.png",
   ];
 
   const totalAssets =
@@ -77,6 +87,11 @@ export async function preloadCriticalAssets(
     grassLeafTexture,
     grassAccentTexture,
     dirtPathTexture,
+    treeBarkTexture,
+    pineFoliageTexture,
+    hillyGrassTexture,
+    rockyMountainTexture,
+    woodenPlankTexture,
   ] = await Promise.all([
     track(loadHowl(firstMusicTrackSrc)),
     ...textureSrcs.map((src) => track(loadTexture(src))),
@@ -90,6 +105,21 @@ export async function preloadCriticalAssets(
   dirtPathTexture.colorSpace = SRGBColorSpace;
   dirtPathTexture.wrapS = RepeatWrapping;
   dirtPathTexture.wrapT = RepeatWrapping;
+  treeBarkTexture.colorSpace = SRGBColorSpace;
+  treeBarkTexture.wrapS = RepeatWrapping;
+  treeBarkTexture.wrapT = RepeatWrapping;
+  pineFoliageTexture.colorSpace = SRGBColorSpace;
+  pineFoliageTexture.wrapS = RepeatWrapping;
+  pineFoliageTexture.wrapT = RepeatWrapping;
+  hillyGrassTexture.colorSpace = SRGBColorSpace;
+  hillyGrassTexture.wrapS = RepeatWrapping;
+  hillyGrassTexture.wrapT = RepeatWrapping;
+  rockyMountainTexture.colorSpace = SRGBColorSpace;
+  rockyMountainTexture.wrapS = RepeatWrapping;
+  rockyMountainTexture.wrapT = RepeatWrapping;
+  woodenPlankTexture.colorSpace = SRGBColorSpace;
+  woodenPlankTexture.wrapS = RepeatWrapping;
+  woodenPlankTexture.wrapT = RepeatWrapping;
 
   return {
     movementHowls,
@@ -101,6 +131,11 @@ export async function preloadCriticalAssets(
     grassLeafTexture,
     grassAccentTexture,
     dirtPathTexture,
+    treeBarkTexture,
+    pineFoliageTexture,
+    hillyGrassTexture,
+    rockyMountainTexture,
+    woodenPlankTexture,
   };
 }
 

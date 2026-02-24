@@ -1,13 +1,15 @@
 import {
   BufferAttribute,
+  Color,
   ConeGeometry,
   CylinderGeometry,
   DoubleSide,
-  FrontSide,
   Group,
   MathUtils,
   Mesh,
   MeshStandardMaterial,
+  Texture,
+  Vector2,
 } from "three";
 
 type SingleTreeProps = {
@@ -165,6 +167,41 @@ function getFallbackVariationSeed(
   );
 }
 
+function createTopDownConeGeometry(): ConeGeometry {
+  const geometry = new ConeGeometry(
+    1,
+    1,
+    CANOPY_RADIAL_SEGMENTS,
+    CANOPY_HEIGHT_SEGMENTS,
+    true,
+  );
+  const positions = geometry.getAttribute("position") as BufferAttribute;
+  const uvs = geometry.getAttribute("uv") as BufferAttribute;
+
+  const uvScale = 0.333;
+  const randomOffset = Math.round(Math.random() * 3);
+  const pairs = [
+    [0.55, 0.25],
+    [0.28, 0.5],
+    [0.75, 0.5],
+    [0.5, 0.7],
+  ];
+  const [uCenter, vCenter] = pairs[randomOffset];
+
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i);
+    const z = positions.getZ(i);
+
+    const u = (x / 2) * uvScale + uCenter;
+    const v = (z / 2) * uvScale + vCenter;
+
+    uvs.setXY(i, u, v);
+  }
+
+  uvs.needsUpdate = true;
+  return geometry;
+}
+
 function createMonumentTaperedTrunkGeometry(
   topRadius: number,
   bottomRadius: number,
@@ -207,127 +244,6 @@ function createMonumentTaperedTrunkGeometry(
   positions.needsUpdate = true;
   geometry.computeVertexNormals();
   return geometry;
-}
-
-function tuneCanopyMaterialShader(material: MeshStandardMaterial): void {
-  material.onBeforeCompile = (shader): void => {
-    const uniforms = shader.uniforms as typeof shader.uniforms &
-      FoliageShaderUniforms;
-
-    uniforms.foliageWrap = { value: CANOPY_WRAP_LIGHT_STRENGTH };
-    uniforms.foliageBackscatter = { value: CANOPY_BACKSCATTER_STRENGTH };
-    uniforms.foliageBackscatterPower = { value: CANOPY_BACKSCATTER_POWER };
-    uniforms.foliageNormalCompensation = {
-      value: CANOPY_TAPER_NORMAL_COMPENSATION,
-    };
-    uniforms.foliageShadowReceiverBias = {
-      value: CANOPY_SHADOW_RECEIVER_NORMAL_BIAS,
-    };
-
-    shader.vertexShader = shader.vertexShader
-      .replace(
-        "#include <common>",
-        `#include <common>
-uniform float foliageNormalCompensation;
-uniform float foliageShadowReceiverBias;`,
-      )
-      .replace(
-        "#include <defaultnormal_vertex>",
-        `#include <defaultnormal_vertex>
-mat3 foliageModelViewNoScale = mat3(
-  normalize( modelViewMatrix[ 0 ].xyz ),
-  normalize( modelViewMatrix[ 1 ].xyz ),
-  normalize( modelViewMatrix[ 2 ].xyz )
-);
-vec3 foliageNoScaleNormal = normalize(
-  foliageModelViewNoScale * normalize( objectNormal )
-);
-transformedNormal = normalize(
-  mix( transformedNormal, foliageNoScaleNormal, foliageNormalCompensation )
-);`,
-      )
-      .replace(
-        "#include <shadowmap_vertex>",
-        `
-#if ( defined( USE_SHADOWMAP ) && ( NUM_DIR_LIGHT_SHADOWS > 0 || NUM_POINT_LIGHT_SHADOWS > 0 ) ) || ( NUM_SPOT_LIGHT_COORDS > 0 )
-
-  // Extra receiver offset softens close canopy self-shadowing while preserving terrain shadows.
-  vec3 shadowWorldNormal = inverseTransformDirection( transformedNormal, viewMatrix );
-  vec4 shadowWorldPosition;
-
-#endif
-
-#if defined( USE_SHADOWMAP )
-
-  #if NUM_DIR_LIGHT_SHADOWS > 0
-
-    #pragma unroll_loop_start
-    for ( int i = 0; i < NUM_DIR_LIGHT_SHADOWS; i ++ ) {
-
-      float foliageDirectionalBias = directionalLightShadows[ i ].shadowNormalBias + foliageShadowReceiverBias;
-      shadowWorldPosition = worldPosition + vec4( shadowWorldNormal * foliageDirectionalBias, 0 );
-      vDirectionalShadowCoord[ i ] = directionalShadowMatrix[ i ] * shadowWorldPosition;
-
-    }
-    #pragma unroll_loop_end
-
-  #endif
-
-  #if NUM_POINT_LIGHT_SHADOWS > 0
-
-    #pragma unroll_loop_start
-    for ( int i = 0; i < NUM_POINT_LIGHT_SHADOWS; i ++ ) {
-
-      float foliagePointBias = pointLightShadows[ i ].shadowNormalBias + foliageShadowReceiverBias;
-      shadowWorldPosition = worldPosition + vec4( shadowWorldNormal * foliagePointBias, 0 );
-      vPointShadowCoord[ i ] = pointShadowMatrix[ i ] * shadowWorldPosition;
-
-    }
-    #pragma unroll_loop_end
-
-  #endif
-
-#endif
-
-// spot lights can be evaluated without active shadow mapping (when SpotLight.map is used)
-
-#if NUM_SPOT_LIGHT_COORDS > 0
-
-  #pragma unroll_loop_start
-  for ( int i = 0; i < NUM_SPOT_LIGHT_COORDS; i ++ ) {
-
-    shadowWorldPosition = worldPosition;
-    #if ( defined( USE_SHADOWMAP ) && UNROLLED_LOOP_INDEX < NUM_SPOT_LIGHT_SHADOWS )
-      shadowWorldPosition.xyz += shadowWorldNormal * ( spotLightShadows[ i ].shadowNormalBias + foliageShadowReceiverBias );
-    #endif
-    vSpotLightCoord[ i ] = spotLightMatrix[ i ] * shadowWorldPosition;
-
-  }
-  #pragma unroll_loop_end
-
-#endif
-`,
-      );
-
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        "#include <common>",
-        `#include <common>
-uniform float foliageWrap;
-uniform float foliageBackscatter;
-uniform float foliageBackscatterPower;`,
-      )
-      .replace(
-        "#include <lights_fragment_begin>",
-        `#include <lights_fragment_begin>
-float foliageNoV = saturate( dot( geometryNormal, geometryViewDir ) );
-float foliageTranslucency = pow( 1.0 - foliageNoV, foliageBackscatterPower );
-reflectedLight.directDiffuse *= 1.0 + foliageWrap;
-reflectedLight.indirectDiffuse *= 1.0 + foliageWrap * 0.24;
-totalEmissiveRadiance += diffuseColor.rgb * foliageBackscatter * foliageTranslucency;`,
-      );
-  };
-  material.customProgramCacheKey = () => "single-tree-canopy-foliage-v5";
 }
 
 function createSingleTreeShape(
@@ -374,7 +290,7 @@ function createSingleTreeShape(
       radius: layer.radius * canopyRadiusScale * radiusJitter,
       twist:
         normalizedLayer * profile.canopyTwistRadians +
-        (hash(layerSeed + 8.7) - 0.5) * Math.PI * 0.18,
+        (hash(layerSeed + 8.7) - 0.5) * Math.PI * 0.38,
       color: layer.color,
     };
   });
@@ -479,18 +395,17 @@ export type BuiltSingleTree = {
 };
 
 export class SingleTreeFactory {
-  private readonly canopyGeometry = new ConeGeometry(
-    1,
-    1,
-    CANOPY_RADIAL_SEGMENTS,
-    CANOPY_HEIGHT_SEGMENTS,
-    true,
-  );
+  private readonly canopyGeometry = createTopDownConeGeometry();
   private readonly trunkMaterials = new Map<
     SingleTreeSpecies,
     MeshStandardMaterial
   >();
   private readonly canopyMaterials = new Map<string, MeshStandardMaterial>();
+
+  constructor(
+    private readonly treeBarkTexture?: Texture,
+    private readonly pineFoliageTexture?: Texture,
+  ) {}
 
   createTree({
     position,
@@ -523,7 +438,8 @@ export class SingleTreeFactory {
 
     for (const layer of canopyLayers) {
       const canopyMaterial = this.getCanopyMaterial(layer.color);
-      const canopyMesh = new Mesh(this.canopyGeometry, canopyMaterial);
+      const canopyGeometry = createTopDownConeGeometry();
+      const canopyMesh = new Mesh(canopyGeometry, canopyMaterial);
       canopyMesh.position.set(layer.x, layer.y, layer.z);
       canopyMesh.rotation.set(0, layer.twist, 0);
       canopyMesh.scale.set(layer.radius, layer.height, layer.radius);
@@ -559,11 +475,34 @@ export class SingleTreeFactory {
       return existing;
     }
 
+    let baseColor = "#A48A73"; // fir
+    if (species === "redwood") baseColor = "#B08A6E";
+    if (species === "pine") baseColor = "#B49E88";
+
     const material = new MeshStandardMaterial({
-      color: species === "redwood" ? "#684A34" : "#5A4431",
-      roughness: 0.98,
-      metalness: 0.01,
+      color: baseColor,
+      roughness: 0.75,
+      metalness: 0.02,
+      map: this.treeBarkTexture || null,
     });
+
+    material.onBeforeCompile = (shader) => {
+      shader.uniforms.trunkWrap = { value: 0.25 };
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          "#include <common>",
+          `#include <common>
+uniform float trunkWrap;`,
+        )
+        .replace(
+          "#include <lights_fragment_begin>",
+          `#include <lights_fragment_begin>
+reflectedLight.directDiffuse *= 1.0 + trunkWrap;
+reflectedLight.indirectDiffuse *= 1.0 + trunkWrap * 0.5;`,
+        );
+    };
+    material.customProgramCacheKey = () => "single-tree-trunk-v2";
+
     this.trunkMaterials.set(species, material);
     return material;
   }
@@ -576,12 +515,153 @@ export class SingleTreeFactory {
 
     const material = new MeshStandardMaterial({
       color,
-      roughness: 0.74,
-      metalness: 0.01,
+      roughness: 0.9,
+      metalness: 0.0,
       side: DoubleSide,
-      shadowSide: FrontSide,
+      shadowSide: DoubleSide,
+      map: this.pineFoliageTexture || null,
+      alphaTest: this.pineFoliageTexture ? 0.5 : 0,
+      transparent: true,
     });
-    tuneCanopyMaterialShader(material);
+
+    if (this.pineFoliageTexture) {
+      material.onBeforeCompile = (shader) => {
+        const uniforms = shader.uniforms as typeof shader.uniforms &
+          FoliageShaderUniforms;
+
+        uniforms.foliageWrap = { value: CANOPY_WRAP_LIGHT_STRENGTH };
+        uniforms.foliageBackscatter = { value: CANOPY_BACKSCATTER_STRENGTH };
+        uniforms.foliageBackscatterPower = { value: CANOPY_BACKSCATTER_POWER };
+        uniforms.foliageNormalCompensation = {
+          value: CANOPY_TAPER_NORMAL_COMPENSATION,
+        };
+        uniforms.foliageShadowReceiverBias = {
+          value: CANOPY_SHADOW_RECEIVER_NORMAL_BIAS,
+        };
+
+        shader.vertexShader = shader.vertexShader
+          .replace(
+            "#include <common>",
+            `#include <common>
+uniform float foliageNormalCompensation;
+uniform float foliageShadowReceiverBias;`,
+          )
+          .replace(
+            "#include <defaultnormal_vertex>",
+            `#include <defaultnormal_vertex>
+mat3 foliageModelViewNoScale = mat3(
+  normalize( modelViewMatrix[ 0 ].xyz ),
+  normalize( modelViewMatrix[ 1 ].xyz ),
+  normalize( modelViewMatrix[ 2 ].xyz )
+);
+vec3 foliageNoScaleNormal = normalize(
+  foliageModelViewNoScale * normalize( objectNormal )
+);
+transformedNormal = normalize(
+  mix( transformedNormal, foliageNoScaleNormal, foliageNormalCompensation )
+);`,
+          )
+          .replace(
+            "#include <shadowmap_vertex>",
+            `
+#if ( defined( USE_SHADOWMAP ) && ( NUM_DIR_LIGHT_SHADOWS > 0 || NUM_POINT_LIGHT_SHADOWS > 0 ) ) || ( NUM_SPOT_LIGHT_COORDS > 0 )
+
+  // Extra receiver offset softens close canopy self-shadowing while preserving terrain shadows.
+  vec3 shadowWorldNormal = inverseTransformDirection( transformedNormal, viewMatrix );
+  vec4 shadowWorldPosition;
+
+#endif
+
+#if defined( USE_SHADOWMAP )
+
+  #if NUM_DIR_LIGHT_SHADOWS > 0
+
+    #pragma unroll_loop_start
+    for ( int i = 0; i < NUM_DIR_LIGHT_SHADOWS; i ++ ) {
+
+      float foliageDirectionalBias = directionalLightShadows[ i ].shadowNormalBias + foliageShadowReceiverBias;
+      shadowWorldPosition = worldPosition + vec4( shadowWorldNormal * foliageDirectionalBias, 0 );
+      vDirectionalShadowCoord[ i ] = directionalShadowMatrix[ i ] * shadowWorldPosition;
+
+    }
+    #pragma unroll_loop_end
+
+  #endif
+
+  #if NUM_POINT_LIGHT_SHADOWS > 0
+
+    #pragma unroll_loop_start
+    for ( int i = 0; i < NUM_POINT_LIGHT_SHADOWS; i ++ ) {
+
+      float foliagePointBias = pointLightShadows[ i ].shadowNormalBias + foliageShadowReceiverBias;
+      shadowWorldPosition = worldPosition + vec4( shadowWorldNormal * foliagePointBias, 0 );
+      vPointShadowCoord[ i ] = pointShadowMatrix[ i ] * shadowWorldPosition;
+
+    }
+    #pragma unroll_loop_end
+
+  #endif
+
+#endif
+
+// spot lights can be evaluated without active shadow mapping (when SpotLight.map is used)
+
+#if NUM_SPOT_LIGHT_COORDS > 0
+
+  #pragma unroll_loop_start
+  for ( int i = 0; i < NUM_SPOT_LIGHT_COORDS; i ++ ) {
+
+    shadowWorldPosition = worldPosition;
+    #if ( defined( USE_SHADOWMAP ) && UNROLLED_LOOP_INDEX < NUM_SPOT_LIGHT_SHADOWS )
+      shadowWorldPosition.xyz += shadowWorldNormal * ( spotLightShadows[ i ].shadowNormalBias + foliageShadowReceiverBias );
+    #endif
+    vSpotLightCoord[ i ] = spotLightMatrix[ i ] * shadowWorldPosition;
+
+  }
+  #pragma unroll_loop_end
+
+#endif
+`,
+          );
+
+        shader.fragmentShader = shader.fragmentShader
+          .replace(
+            "#include <common>",
+            `#include <common>
+uniform float foliageWrap;
+uniform float foliageBackscatter;
+uniform float foliageBackscatterPower;`,
+          )
+          .replace(
+            "#include <map_fragment>",
+            `
+#ifdef USE_MAP
+  vec4 tex = texture2D( map, vMapUv );
+  
+  // Force bright/white background to be transparent so alphaTest can clip it.
+  // We use the minimum color channel; if even the darkest channel is bright, it's white/gray background.
+  float minCol = min(tex.r, min(tex.g, tex.b));
+  float isBackground = smoothstep(0.0, 0.15, minCol);
+  
+  // Blend the texture color with the material's solid base color
+  diffuseColor.rgb = tex.rgb * 1.5; 
+  diffuseColor.a = tex.a * (1.0 - isBackground);
+#endif
+            `,
+          )
+          .replace(
+            "#include <lights_fragment_begin>",
+            `#include <lights_fragment_begin>
+float foliageNoV = saturate( dot( geometryNormal, geometryViewDir ) );
+float foliageTranslucency = pow( 1.0 - foliageNoV, foliageBackscatterPower );
+reflectedLight.directDiffuse *= 1.0 + foliageWrap;
+reflectedLight.indirectDiffuse *= 1.0 + foliageWrap * 0.24;
+totalEmissiveRadiance += diffuseColor.rgb * foliageBackscatter * foliageTranslucency;`,
+          );
+      };
+      material.customProgramCacheKey = () => "single-tree-canopy-foliage-v8";
+    }
+
     this.canopyMaterials.set(color, material);
     return material;
   }
