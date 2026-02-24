@@ -173,15 +173,12 @@ export class GameMusic {
     if (soundId === undefined) {
       return;
     }
-    howl.volume(0.001, soundId);
-    howl.fade(0.001, this.volume, this.fadeInMs, soundId);
+    howl.volume(this.volume, soundId);
 
     await this.wait(this.fadeOutAtMs);
     if (!this.isRunActive(runToken) || this.currentHowl !== howl) {
       return;
     }
-    const currentVol = howl.volume(soundId);
-    howl.fade(typeof currentVol === 'number' ? currentVol : this.volume, 0.001, this.fadeOutMs, soundId);
 
     await this.wait(this.fadeOutMs);
     if (!this.isRunActive(runToken) || this.currentHowl !== howl) {

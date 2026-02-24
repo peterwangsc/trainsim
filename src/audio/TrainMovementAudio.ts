@@ -86,7 +86,7 @@ export class TrainMovementAudio {
 
     const soundId = howl.play();
     if (soundId === undefined) return;
-    howl.volume(0.001, soundId);
+    howl.volume(this.baseVolume > 0 ? this.baseVolume / (this.getActiveCount() + 1) : 0, soundId);
 
     const layer: Layer = {
       trackIdx,
@@ -109,7 +109,7 @@ export class TrainMovementAudio {
                 const nextId = howl.play();
                 if (nextId !== undefined) {
                   l.soundId = nextId;
-                  const vol = l.phase === "fade_in" ? 0.001 : this.getLayerVolume(l);
+                  const vol = this.getLayerVolume(l);
                   howl.volume(vol, nextId);
                   howl.once("end", onEnd);        }
       } else {
