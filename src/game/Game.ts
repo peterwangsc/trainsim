@@ -175,6 +175,7 @@ export class Game {
     const trackMesh = new TrackMeshBuilder(
       this.trackSpline,
       trackConfig,
+      preloadedAssets.dirtPathTexture,
     ).build();
     this.scene.add(trackMesh);
     this.trackEndSet = new TrackEndSet(this.trackSpline, {

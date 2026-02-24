@@ -10,6 +10,7 @@ import {
   Vector3,
   Vector2,
   Color,
+  Texture,
 } from "three";
 import { TrackSpline } from "./TrackSpline";
 
@@ -42,6 +43,7 @@ export class TrackMeshBuilder {
   constructor(
     private readonly spline: TrackSpline,
     private readonly config: TrackMeshConfig,
+    private readonly dirtPathTexture: Texture,
   ) {}
 
   build(): Group {
@@ -60,10 +62,16 @@ export class TrackMeshBuilder {
     const sampleCount = Math.max(12, this.config.sampleCountForMesh);
     const ringCount = sampleCount + 1;
     const vertices = new Float32Array(ringCount * 4 * 3);
+    const uvs = new Float32Array(ringCount * 4 * 2);
     const indices: number[] = [];
     const halfWidth = this.config.ballastWidth * 0.5;
     const thickness = this.config.ballastHeight;
     const sideTaper = Math.max(0, this.config.ballastSideTaper);
+
+    const sideWidth = Math.hypot(sideTaper, thickness);
+    const totalWidth = sideWidth * 2 + this.config.ballastWidth;
+    const uTopLeft = sideWidth / totalWidth;
+    const uTopRight = (sideWidth + this.config.ballastWidth) / totalWidth;
 
     for (let i = 0; i < ringCount; i += 1) {
       const distance = (i / sampleCount) * this.spline.getLength();
@@ -88,6 +96,13 @@ export class TrackMeshBuilder {
       this.writeVertex(vertices, vertexOffset + 6, bottomLeft);
       this.writeVertex(vertices, vertexOffset + 9, bottomRight);
 
+      const uvOffset = i * 8;
+      const uvV = distance / totalWidth;
+      uvs[uvOffset] = uTopLeft; uvs[uvOffset + 1] = uvV;
+      uvs[uvOffset + 2] = uTopRight; uvs[uvOffset + 3] = uvV;
+      uvs[uvOffset + 4] = 0; uvs[uvOffset + 5] = uvV;
+      uvs[uvOffset + 6] = 1; uvs[uvOffset + 7] = uvV;
+
       if (i < sampleCount) {
         const a = i * 4;
         const b = (i + 1) * 4;
@@ -99,6 +114,7 @@ export class TrackMeshBuilder {
 
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
 
@@ -106,7 +122,8 @@ export class TrackMeshBuilder {
       roughness: 0.85,
       metalness: 0.0,
       normalScale: new Vector2(0.28, 0.28),
-      color: new Color("#9b7a57"),
+      map: this.dirtPathTexture,
+      color: new Color("#ffffff"),
     });
 
     const mesh = new Mesh(geometry, material);

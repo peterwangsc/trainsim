@@ -12,6 +12,7 @@ export type CriticalPreloadedAssets = {
   cloudTexture: Texture;
   grassLeafTexture: Texture;
   grassAccentTexture: Texture;
+  dirtPathTexture: Texture;
 };
 
 type ProgressCallback = (progress: number) => void;
@@ -31,6 +32,7 @@ export async function preloadCriticalAssets(
     "/cloud.png",
     "/grassleaf.png",
     "/accentleaf.png",
+    "/dirt_path.png",
   ];
 
   const totalAssets =
@@ -74,6 +76,7 @@ export async function preloadCriticalAssets(
     cloudTexture,
     grassLeafTexture,
     grassAccentTexture,
+    dirtPathTexture,
   ] = await Promise.all([
     track(loadHowl(firstMusicTrackSrc)),
     ...textureSrcs.map((src) => track(loadTexture(src))),
@@ -84,6 +87,9 @@ export async function preloadCriticalAssets(
   cloudTexture.colorSpace = SRGBColorSpace;
   grassLeafTexture.colorSpace = SRGBColorSpace;
   grassAccentTexture.colorSpace = SRGBColorSpace;
+  dirtPathTexture.colorSpace = SRGBColorSpace;
+  dirtPathTexture.wrapS = RepeatWrapping;
+  dirtPathTexture.wrapT = RepeatWrapping;
 
   return {
     movementHowls,
@@ -94,6 +100,7 @@ export async function preloadCriticalAssets(
     cloudTexture,
     grassLeafTexture,
     grassAccentTexture,
+    dirtPathTexture,
   };
 }
 
