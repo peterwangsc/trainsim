@@ -11,7 +11,7 @@ export type RandomAmbientAudioConfig = {
 };
 
 // Fade duration at the start and end of each play, in milliseconds.
-const FADE_MS = 2000;
+const FADE_MS = 500;
 
 export class RandomAmbientAudio {
   private currentHowl: Howl | null = null;
@@ -96,32 +96,35 @@ export class RandomAmbientAudio {
     howl.stop();
     howl.seek(0);
 
-    howl.once("play", (soundId) => {
+    howl.once("play", (soundId: number) => {
       if (!this.isActive || this.currentHowl !== howl) {
         return;
       }
-      howl.volume(this.volume, soundId);
-      this.scheduleFadeOut(howl);
+      howl.volume(0, soundId);
+      howl.fade(0, this.volume, FADE_MS, soundId);
+      this.scheduleFadeOut(howl, soundId);
     });
 
     howl.play();
   }
 
-  private scheduleFadeOut(howl: Howl): void {
+  private scheduleFadeOut(howl: Howl, soundId: number): void {
     const durationSec = howl.duration();
     const elapsedMs = (howl.seek() as number) * 1000;
     const delay = durationSec * 1000 - elapsedMs - FADE_MS;
     if (delay <= 0) {
-      this.beginFadeOut(howl);
+      this.beginFadeOut(howl, soundId);
       return;
     }
 
     this.fadeOutTimer = setTimeout(() => {
-      if (this.isActive && this.currentHowl === howl) this.beginFadeOut(howl);
+      if (this.isActive && this.currentHowl === howl)
+        this.beginFadeOut(howl, soundId);
     }, delay);
   }
 
-  private beginFadeOut(howl: Howl): void {
+  private beginFadeOut(howl: Howl, soundId: number): void {
+    howl.fade(this.volume, 0, FADE_MS, soundId);
     setTimeout(() => {
       this.resetHowl(howl);
       if (this.currentHowl === howl) this.currentHowl = null;

@@ -173,7 +173,8 @@ export class GameMusic {
     if (soundId === undefined) {
       return;
     }
-    howl.volume(this.volume, soundId);
+    howl.volume(0, soundId);
+    howl.fade(0, this.volume, this.fadeInMs, soundId);
 
     await this.wait(this.fadeOutAtMs);
     if (!this.isRunActive(runToken) || this.currentHowl !== howl) {

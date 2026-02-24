@@ -56,16 +56,16 @@ export const CONFIG = {
       `${ASSETS_CDN_BASE}/ambient3.mp3`,
       `${ASSETS_CDN_BASE}/ambient4.mp3`,
     ],
-    ambientVolume: 0.2,
-    ambientMinGapMs: 20_000,
-    ambientMaxGapMs: 60_000,
+    ambientVolume: 0.05,
+    ambientMinGapMs: 10_000,
+    ambientMaxGapMs: 20_000,
     musicTrackSrcs: [
       `${ASSETS_CDN_BASE}/track1.mp3`,
       `${ASSETS_CDN_BASE}/track2.mp3`,
       `${ASSETS_CDN_BASE}/track3.mp3`,
       `${ASSETS_CDN_BASE}/track4.mp3`,
     ],
-    musicVolume: 0.5,
+    musicVolume: 0.3,
     musicFadeInMs: 4_000,
     // Tracks are 60 s long with a hard cut. Fade out starts at 50 s, giving
     // 10 s of headroom so the abrupt ending is never heard.
