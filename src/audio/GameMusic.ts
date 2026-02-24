@@ -180,6 +180,8 @@ export class GameMusic {
       return;
     }
 
+    howl.fade(this.volume, 0, this.fadeOutMs, soundId);
+
     await this.wait(this.fadeOutMs);
     if (!this.isRunActive(runToken) || this.currentHowl !== howl) {
       return;
