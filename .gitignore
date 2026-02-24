@@ -9,3 +9,4 @@ GEMINI.md
 .env
 mcp-*/
 .gemini/
+shader.*
