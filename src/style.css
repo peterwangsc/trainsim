@@ -851,6 +851,7 @@ canvas {
 
 .login-screen--hidden {
   opacity: 0;
+  pointer-events: none;
 }
 
 .login-screen--visible {
