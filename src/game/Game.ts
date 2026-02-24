@@ -15,6 +15,7 @@ import { CabinChrome } from "../ui/CabinChrome";
 import { HudController } from "../ui/HudController";
 import { IntroSplash } from "../ui/IntroSplash";
 import { RunEndOverlay } from "../ui/RunEndOverlay";
+import { LoginScreen } from "../ui/LoginScreen";
 import { ThrottleOverlayCanvas } from "../ui/ThrottleOverlayCanvas";
 import { TrackGenerator } from "../world/Track/TrackGenerator";
 import { TrackMeshBuilder } from "../world/Track/TrackMeshBuilder";
@@ -97,6 +98,7 @@ export class Game {
   private readonly onLogout?: () => void;
   private readonly username: string | null;
   private readonly level: number;
+  private readonly loginScreen: LoginScreen;
 
   private state = GameState.Ready;
   private failureReason: FailureReason | null = null;
@@ -132,18 +134,28 @@ export class Game {
     const preloadedAssets = options.preloadedAssets;
 
     const level = options.level;
+    this.loginScreen = new LoginScreen(
+      container,
+      this.onLogin
+        ? (username: string, targetLevel?: number | undefined) =>
+            this.onLogin!(username, targetLevel ?? this.level)
+        : undefined,
+      this.username ? this.onLogout : undefined,
+      this.username,
+      level,
+    );
+
     const trackConfig = {
       ...CONFIG.track,
       segmentCount: CONFIG.track.segmentCount + (level - 1) * 160,
-      baseCurvaturePerMeter: CONFIG.track.baseCurvaturePerMeter * (1 + (level - 1) * 0.25),
-      detailCurvaturePerMeter: CONFIG.track.detailCurvaturePerMeter * (1 + (level - 1) * 0.25),
+      baseCurvaturePerMeter:
+        CONFIG.track.baseCurvaturePerMeter * (1 + (level - 1) * 0.25),
+      detailCurvaturePerMeter:
+        CONFIG.track.detailCurvaturePerMeter * (1 + (level - 1) * 0.25),
     };
     const seed = CONFIG.seed + level - 1;
 
-    const trackPoints = new TrackGenerator(
-      seed,
-      trackConfig,
-    ).generate();
+    const trackPoints = new TrackGenerator(seed, trackConfig).generate();
 
     this.trackSpline = new TrackSpline(trackPoints, { closed: false });
     const sceneSetup = createScene({
@@ -273,9 +285,16 @@ export class Game {
     });
     this.comfortModel = new ComfortModel(CONFIG.comfort);
     this.trackSampler = new TrackSampler(this.trackSpline, CONFIG.minimap);
-    this.hud = new HudController(container, (isDown) => {
-      desktopControls.setBrakeButtonDown(isDown);
-    });
+    this.hud = new HudController(
+      container,
+      (isDown) => {
+        desktopControls.setBrakeButtonDown(isDown);
+      },
+      this.username,
+      () => {
+        this.loginScreen.show();
+      },
+    );
 
     this.loop = new GameLoop(CONFIG.simDt, this.simulate, this.render);
 
@@ -515,8 +534,9 @@ export class Game {
         message: "You stopped before the platform end.",
         onRestart: this.onRestartRequested,
         onNextLevel: this.onNextLevelRequested,
-        onLogin: this.onLogin ? (username) => this.onLogin!(username, this.level + 1) : undefined,
-        onLogout: this.onLogout ? () => this.onLogout!() : undefined,
+        onLogin: this.onLogin
+          ? (username) => this.onLogin!(username, this.level + 1)
+          : undefined,
         username: this.username,
       });
       return;
@@ -530,8 +550,9 @@ export class Game {
         ? "You hit the terminal bumper."
         : "Passengers could not tolerate the ride.",
       onRestart: this.onRestartRequested,
-      onLogin: this.onLogin ? (username) => this.onLogin!(username, this.level) : undefined,
-      onLogout: this.onLogout ? () => this.onLogout!() : undefined,
+      onLogin: this.onLogin
+        ? (username) => this.onLogin!(username, this.level)
+        : undefined,
       username: this.username,
     });
   }

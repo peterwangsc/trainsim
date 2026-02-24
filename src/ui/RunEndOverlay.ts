@@ -9,7 +9,6 @@ export type RunEndOverlayOptions = {
   onRestart: () => void;
   onNextLevel?: () => void;
   onLogin?: (username: string) => void;
-  onLogout?: () => void;
   username?: string | null;
 };
 
@@ -21,12 +20,10 @@ export class RunEndOverlay {
   private readonly authSection: HTMLDivElement;
   private readonly loginInput: HTMLInputElement;
   private readonly loginButton: HTMLButtonElement;
-  private readonly logoutButton: HTMLButtonElement;
 
   private restartHandler: (() => void) | null = null;
   private nextLevelHandler: (() => void) | null = null;
   private loginHandler: ((username: string) => void) | null = null;
-  private logoutHandler: (() => void) | null = null;
   private revealFrameId: number | null = null;
 
   constructor(container: HTMLElement) {
@@ -57,7 +54,7 @@ export class RunEndOverlay {
     this.authSection = document.createElement("div");
     this.authSection.className = "run-end-overlay__auth";
     this.authSection.style.marginTop = "20px";
-    this.authSection.style.display = "flex";
+    this.authSection.style.display = "none";
     this.authSection.style.flexDirection = "column";
     this.authSection.style.gap = "8px";
 
@@ -77,18 +74,15 @@ export class RunEndOverlay {
     this.loginButton.style.cursor = "pointer";
     this.loginButton.addEventListener("click", this.onLoginClick);
 
-    this.logoutButton = document.createElement("button");
-    this.logoutButton.type = "button";
-    this.logoutButton.textContent = "Log Out";
-    this.logoutButton.style.padding = "8px";
-    this.logoutButton.style.borderRadius = "4px";
-    this.logoutButton.style.cursor = "pointer";
-    this.logoutButton.style.display = "none";
-    this.logoutButton.addEventListener("click", this.onLogoutClick);
+    this.authSection.append(this.loginInput, this.loginButton);
 
-    this.authSection.append(this.loginInput, this.loginButton, this.logoutButton);
-
-    card.append(logo, this.title, this.message, this.restartButton, this.authSection);
+    card.append(
+      logo,
+      this.title,
+      this.message,
+      this.restartButton,
+      this.authSection,
+    );
     this.root.appendChild(card);
     container.appendChild(this.root);
   }
@@ -97,7 +91,6 @@ export class RunEndOverlay {
     this.restartHandler = options.onRestart;
     this.nextLevelHandler = options.onNextLevel ?? null;
     this.loginHandler = options.onLogin ?? null;
-    this.logoutHandler = options.onLogout ?? null;
 
     this.title.textContent = options.title;
     this.message.textContent = options.message;
@@ -110,22 +103,11 @@ export class RunEndOverlay {
       this.restartButton.textContent = "Restart";
     }
 
-    if (options.username) {
-      this.loginInput.style.display = "none";
-      this.loginButton.style.display = "none";
-      this.logoutButton.style.display = "block";
-      this.logoutButton.textContent = `Log Out (${options.username})`;
-    } else {
+    if (!options.username) {
       this.loginInput.style.display = "block";
       this.loginButton.style.display = "block";
-      this.logoutButton.style.display = "none";
       this.loginInput.value = "";
-    }
-
-    if (!this.loginHandler && !this.logoutHandler) {
-       this.authSection.style.display = "none";
-    } else {
-       this.authSection.style.display = "flex";
+      this.authSection.style.display = "flex";
     }
 
     if (this.revealFrameId !== null) {
@@ -149,11 +131,9 @@ export class RunEndOverlay {
 
     this.restartButton.removeEventListener("click", this.onRestartClick);
     this.loginButton.removeEventListener("click", this.onLoginClick);
-    this.logoutButton.removeEventListener("click", this.onLogoutClick);
     this.restartHandler = null;
     this.nextLevelHandler = null;
     this.loginHandler = null;
-    this.logoutHandler = null;
     this.root.remove();
   }
 
@@ -165,7 +145,10 @@ export class RunEndOverlay {
   }
 
   private onRestartClick = (): void => {
-    if (this.restartButton.textContent === "Next Level" && this.nextLevelHandler) {
+    if (
+      this.restartButton.textContent === "Next Level" &&
+      this.nextLevelHandler
+    ) {
       this.nextLevelHandler();
     } else {
       this.restartHandler?.();
@@ -178,14 +161,6 @@ export class RunEndOverlay {
       this.loginButton.textContent = "Logging in...";
       this.loginButton.disabled = true;
       this.loginHandler(username);
-    }
-  };
-
-  private onLogoutClick = (): void => {
-    if (this.logoutHandler) {
-      this.logoutButton.textContent = "Logging out...";
-      this.logoutButton.disabled = true;
-      this.logoutHandler();
     }
   };
 }

@@ -30,12 +30,17 @@ export class HudController {
   private readonly minimapWidget: MinimapCurvatureWidget;
   private readonly onBrakeButtonChange: (isDown: boolean) => void;
   private readonly brakeButton: HTMLButtonElement;
+  private readonly usernameDisplay: HTMLDivElement;
+  private readonly username: string | null;
+  private readonly onUsernameClick: () => void;
   private brakeButtonDown = false;
   private brakeTouchId: number | null = null;
 
   constructor(
     container: HTMLElement,
     onBrakeButtonChange: (isDown: boolean) => void = () => {},
+    username: string | null = null,
+    onUsernameClick: () => void = () => {},
   ) {
     this.onBrakeButtonChange = onBrakeButtonChange;
     this.lockMobileViewportScale();
@@ -127,12 +132,21 @@ export class HudController {
     window.addEventListener("touchcancel", this.onBrakeTouchEnd);
     window.addEventListener("blur", this.onWindowBlur);
 
+    this.username = username;
+    this.onUsernameClick = onUsernameClick;
+
+    this.usernameDisplay = document.createElement("div");
+    this.usernameDisplay.className = "username-display";
+    this.usernameDisplay.textContent = this.username || "Login";
+    this.usernameDisplay.addEventListener("click", this.onUsernameClick);
+
     this.root.append(
       this.statusBanner,
       previewCluster,
       speedLimitSign,
       this.comfortGauge,
       this.brakeButton,
+      this.usernameDisplay,
     );
     container.appendChild(this.root);
   }
