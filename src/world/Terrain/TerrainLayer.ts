@@ -145,6 +145,9 @@ export class TerrainLayer {
             p = vec2( dot(p,vec2(127.1,311.7)), dot(p,vec2(269.5,183.3)) );
             return -1.0 + 2.0*fract(sin(p)*43758.5453123);
         }
+        vec4 hash4( vec2 p ) {
+            return fract(sin(vec4( dot(p,vec2(127.1,311.7)), dot(p,vec2(269.5,183.3)), dot(p,vec2(113.5,271.9)), dot(p,vec2(246.1,124.6)))) * 43758.5453123);
+        }
         
         // Simplex Noise
         float snoise( in vec2 p ) {
@@ -171,27 +174,42 @@ export class TerrainLayer {
                              dot( hash2( i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y) * 2.0;
         }
 
-        // Voronoi / Cellular Noise for Tessellation
-        vec2 voronoi( in vec2 x ) {
-            vec2 n = floor(x);
-            vec2 f = fract(x);
-            float f1 = 8.0;
-            float f2 = 8.0;
-            for( int j=-1; j<=1; j++ ) {
-                for( int i=-1; i<=1; i++ ) {
-                    vec2 g = vec2( float(i), float(j) );
-                    vec2 o = hash2( n + g );
-                    vec2 r = g + o - f;
-                    float d = dot(r,r);
-                    if( d < f1 ) {
-                        f2 = f1;
-                        f1 = d;
-                    } else if( d < f2 ) {
-                        f2 = d;
-                    }
+        // Stochastic Texture Sampling
+        vec4 textureNoTile( sampler2D samp, vec2 uv, float vScale ) {
+            // Distort the grid to create organic, cellular-like boundaries
+            vec2 gridUv = uv * vScale;
+            gridUv += vec2(snoise(gridUv * 2.0), snoise(gridUv * 2.0 + 11.0)) * 0.2;
+            
+            vec2 p = floor( gridUv );
+            vec2 f = fract( gridUv );
+            
+            // Smoothstep for smooth blending across the distorted grid boundaries
+            vec2 blend = f * f * (3.0 - 2.0 * f);
+            
+            vec4 va = vec4( 0.0 );
+            for( int j=0; j<=1; j++ ) {
+                for( int i=0; i<=1; i++ ) {
+                    vec2 g = vec2( float(i),float(j) );
+                    vec4 o = hash4( p + g );
+                    
+                    // Bilinear weight (sum of all 4 is exactly 1.0)
+                    vec2 w2 = mix( 1.0 - blend, blend, g );
+                    float w = w2.x * w2.y;
+                    
+                    // Skew / Rotate the texture UV bounding box
+                    float angle = o.z * 6.2831853;
+                    float s = sin(angle), c = cos(angle);
+                    mat2 rot = mat2(c, -s, s, c);
+                    
+                    // Scale UV slightly per cell to add more variation
+                    float scale = 1.0 + (o.w - 0.5) * 0.4;
+                    vec2 sampleUv = rot * (uv * scale * 2.0) + o.xy * 10.0;
+                    
+                    vec4 col = texture2D( samp, sampleUv );
+                    va += w*col;
                 }
             }
-            return vec2(sqrt(f1), sqrt(f2));
+            return va;
         }
 
         ${shader.fragmentShader}
@@ -201,55 +219,36 @@ export class TerrainLayer {
         #ifdef USE_MAP
           vec4 sampledDiffuseColor = texture2D( map, vMapUv );
           
-          vec2 vNoise = voronoi(vWorldPosition.xz * 0.015);
-          float cellularPattern = vNoise.y - vNoise.x; // F2 - F1 gives tessellated boundaries
-          
-          // Domain distortion (Musgrave) to break up tiling
-          // Using Simplex noise + Voronoi for distortion as it avoids axis-aligned artifacts better
-          vec2 distort = vec2(snoise(vWorldPosition.xz * 0.008), snoise(vWorldPosition.xz * 0.008 + vec2(10.5, 10.5)));
-          distort += cellularPattern * 0.35;
-          
-          vec2 uvGrass = vWorldPosition.xz * 0.04 + distort * 0.3;
-          vec4 grassColor = texture2D(tGrass, uvGrass);
+          vec2 uvGrass = vWorldPosition.xz * 0.04;
+          // Apply cellular tessellation texture sampling (Voronoi Bombing)
+          vec4 grassColor = textureNoTile(tGrass, uvGrass, 0.25);
           
           vec3 blending = abs(vWorldNormal);
           blending = normalize(max(blending, 0.00001));
           float b = (blending.x + blending.y + blending.z);
           blending /= vec3(b, b, b);
           
-          // Triplanar rock mapping with domain distortion
-          vec4 xaxis = texture2D( tRock, vWorldPosition.yz * 0.04 + distort * 0.3 );
-          vec4 yaxis = texture2D( tRock, vWorldPosition.xz * 0.04 + distort * 0.3 );
-          vec4 zaxis = texture2D( tRock, vWorldPosition.xy * 0.04 + distort * 0.3 );
+          // Triplanar rock mapping with cellular tessellation sampling
+          vec4 xaxis = textureNoTile( tRock, vWorldPosition.yz * 0.04, 0.25 );
+          vec4 yaxis = textureNoTile( tRock, vWorldPosition.xz * 0.04, 0.25 );
+          vec4 zaxis = textureNoTile( tRock, vWorldPosition.xy * 0.04, 0.25 );
           vec4 rockColor = xaxis * blending.x + yaxis * blending.y + zaxis * blending.z;
 
           float slope = 1.0 - max(0.0, vWorldNormal.y);
           
-          // Modern splat blending using multiple frequencies and noise types
-          // 1. Broad strokes from Perlin noise to create large patches
+          // Modern splat blending using multiple frequencies
           float nBroad = pnoise(vWorldPosition.xz * 0.012) * 0.5 + 0.5;
-          // 2. High frequency detail from Simplex noise for broken, organic edges
           float nDetail = snoise(vWorldPosition.xz * 0.06) * 0.5 + 0.5;
-          // 3. Voronoi cellular tessellations
-          float nCells = smoothstep(0.0, 0.5, cellularPattern);
           
-          // Combine noises: broad strokes broken up by high frequency details and tessellations
-          float blendMask = mix(mix(nBroad, nDetail, 0.3), nCells, 0.25);
-          
-          // The blending is driven by slope, but heavily modulated by our noise mask.
-          // By subtracting the blendMask from slope, we allow grass on shallow slopes to be broken up
-          // by rock patches, and vice versa.
+          float blendMask = mix(nBroad, nDetail, 0.3);
           float rockBlend = smoothstep(0.1, 0.5, slope + (blendMask - 0.5) * 0.6);
           
           vec4 detailTex = mix(grassColor, rockColor, rockBlend);
           
           // Extract high-frequency detail as luminance from the splat textures
           float detailLum = dot(detailTex.rgb, vec3(0.299, 0.587, 0.114));
-          // Apply a subtle contrast curve to the detail map
           detailLum = mix(0.4, detailLum, 1.4);
           
-          // Use the beautiful procedural canvas map (sampledDiffuseColor) as the base hue,
-          // overlaid with the high-frequency detail luminance.
           sampledDiffuseColor = vec4(sampledDiffuseColor.rgb * detailLum * 1.5, sampledDiffuseColor.a);
 
           diffuseColor *= sampledDiffuseColor;
