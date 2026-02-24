@@ -174,42 +174,38 @@ export class TerrainLayer {
                              dot( hash2( i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y) * 2.0;
         }
 
-        // Stochastic Texture Sampling
+        // Stochastic Texture Sampling (Organic 3-Way Projection Blend)
         vec4 textureNoTile( sampler2D samp, vec2 uv, float vScale ) {
-            // Distort the grid to create organic, cellular-like boundaries
-            vec2 gridUv = uv * vScale;
-            gridUv += vec2(snoise(gridUv * 2.0), snoise(gridUv * 2.0 + 11.0)) * 0.2;
+            vec2 scaledUv = uv * vScale;
             
-            vec2 p = floor( gridUv );
-            vec2 f = fract( gridUv );
+            // Sample 1: Base projection
+            vec4 col1 = texture2D(samp, scaledUv);
             
-            // Smoothstep for smooth blending across the distorted grid boundaries
-            vec2 blend = f * f * (3.0 - 2.0 * f);
+            // Sample 2: Rotated 45 degrees, scaled up slightly, arbitrary offset
+            const float angle2 = 0.785398;
+            const float s2 = 0.707106, c2 = 0.707106;
+            mat2 rot2 = mat2(c2, -s2, s2, c2);
+            vec2 uv2 = rot2 * (scaledUv * 0.8) + vec2(12.3, 45.6);
+            vec4 col2 = texture2D(samp, uv2);
             
-            vec4 va = vec4( 0.0 );
-            for( int j=0; j<=1; j++ ) {
-                for( int i=0; i<=1; i++ ) {
-                    vec2 g = vec2( float(i),float(j) );
-                    vec4 o = hash4( p + g );
-                    
-                    // Bilinear weight (sum of all 4 is exactly 1.0)
-                    vec2 w2 = mix( 1.0 - blend, blend, g );
-                    float w = w2.x * w2.y;
-                    
-                    // Skew / Rotate the texture UV bounding box
-                    float angle = o.z * 6.2831853;
-                    float s = sin(angle), c = cos(angle);
-                    mat2 rot = mat2(c, -s, s, c);
-                    
-                    // Scale UV slightly per cell to add more variation
-                    float scale = 1.0 + (o.w - 0.5) * 0.4;
-                    vec2 sampleUv = rot * (uv * scale * 2.0) + o.xy * 10.0;
-                    
-                    vec4 col = texture2D( samp, sampleUv );
-                    va += w*col;
-                }
-            }
-            return va;
+            // Sample 3: Rotated -30 degrees, scaled down slightly, arbitrary offset
+            const float angle3 = -0.523598;
+            const float s3 = -0.499999, c3 = 0.866025;
+            mat2 rot3 = mat2(c3, -s3, s3, c3);
+            vec2 uv3 = rot3 * (scaledUv * 1.1) + vec2(78.9, 12.3);
+            vec4 col3 = texture2D(samp, uv3);
+            
+            // Generate low-frequency organic masks using Simplex noise
+            // We use the unscaled 'uv' so the masks are large and swooping
+            float mask1 = snoise(uv * 0.1) * 0.5 + 0.5;
+            float mask2 = snoise(uv * 0.1 + vec2(11.1, 22.2)) * 0.5 + 0.5;
+            
+            // Blend them smoothly. smoothstep adds a little contrast to the mask boundaries
+            // so we don't get too much muddy variance-loss
+            vec4 finalCol = mix(col1, col2, smoothstep(0.3, 0.7, mask1));
+            finalCol = mix(finalCol, col3, smoothstep(0.3, 0.7, mask2));
+            
+            return finalCol;
         }
 
         ${shader.fragmentShader}
@@ -219,19 +215,20 @@ export class TerrainLayer {
         #ifdef USE_MAP
           vec4 sampledDiffuseColor = texture2D( map, vMapUv );
           
-          vec2 uvGrass = vWorldPosition.xz * 0.04;
-          // Apply cellular tessellation texture sampling (Voronoi Bombing)
-          vec4 grassColor = textureNoTile(tGrass, uvGrass, 0.25);
+          vec2 uvGrass = vWorldPosition.xz * 0.15;
+          // Zoomed out: Multiplier 0.15 controls scale. Higher = smaller texture.
+          vec4 grassColor = textureNoTile(tGrass, uvGrass, 1.0);
           
           vec3 blending = abs(vWorldNormal);
           blending = normalize(max(blending, 0.00001));
           float b = (blending.x + blending.y + blending.z);
           blending /= vec3(b, b, b);
           
-          // Triplanar rock mapping with cellular tessellation sampling
-          vec4 xaxis = textureNoTile( tRock, vWorldPosition.yz * 0.04, 0.25 );
-          vec4 yaxis = textureNoTile( tRock, vWorldPosition.xz * 0.04, 0.25 );
-          vec4 zaxis = textureNoTile( tRock, vWorldPosition.xy * 0.04, 0.25 );
+          // Triplanar rock mapping with organic stochastic sampling
+          // Multiplier 0.15 controls texture scale. Increase to zoom out.
+          vec4 xaxis = textureNoTile( tRock, vWorldPosition.yz * 0.15, 1.0 );
+          vec4 yaxis = textureNoTile( tRock, vWorldPosition.xz * 0.15, 1.0 );
+          vec4 zaxis = textureNoTile( tRock, vWorldPosition.xy * 0.15, 1.0 );
           vec4 rockColor = xaxis * blending.x + yaxis * blending.y + zaxis * blending.z;
 
           float slope = 1.0 - max(0.0, vWorldNormal.y);

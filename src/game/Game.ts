@@ -177,6 +177,7 @@ export class Game {
       trackConfig,
       preloadedAssets.dirtPathTexture,
       preloadedAssets.woodenPlankTexture,
+      preloadedAssets.railTexture,
     ).build();
     this.scene.add(trackMesh);
     this.trackEndSet = new TrackEndSet(this.trackSpline, {
