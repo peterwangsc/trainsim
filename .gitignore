@@ -8,3 +8,4 @@ AGENTS.md
 GEMINI.md
 .env
 mcp-*/
+.gemini/
