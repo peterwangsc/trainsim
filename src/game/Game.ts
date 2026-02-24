@@ -86,11 +86,6 @@ export class Game {
   private readonly brakePressureAudio: TrainMovementAudio;
   private readonly randomAmbientAudio: RandomAmbientAudio;
   private readonly gameMusic: GameMusic;
-  private readonly trainHeadlight: SpotLight;
-  private readonly trainHeadlightTarget: Object3D;
-  private readonly cameraForward = new Vector3();
-  private readonly headlightAnchor = new Vector3();
-  private readonly headlightTargetPosition = new Vector3();
   private toneMappingExposure = 1;
   private readonly onRestartRequested: () => void;
   private readonly onNextLevelRequested?: () => void;
@@ -180,10 +175,16 @@ export class Game {
       preloadedAssets.railTexture,
     ).build();
     this.scene.add(trackMesh);
-    this.trackEndSet = new TrackEndSet(this.trackSpline, {
-      ...CONFIG.terminal,
-      railGauge: CONFIG.track.railGauge,
-    });
+    this.trackEndSet = new TrackEndSet(
+      this.trackSpline,
+      {
+        ...CONFIG.terminal,
+        railGauge: CONFIG.track.railGauge,
+      },
+      preloadedAssets.dirtPathTexture,
+      preloadedAssets.darkBrushedMetalTexture,
+      preloadedAssets.knurledMetalTexture,
+    );
     this.trackEndLayout = this.trackEndSet.getLayout();
     this.scene.add(this.trackEndSet.root);
     this.terrainLayer = new TerrainLayer(
@@ -222,26 +223,6 @@ export class Game {
     this.dayNightSky.enableDirectionalFog();
     this.birdFlock = new BirdFlock(this.scene, CONFIG.birds);
 
-    this.trainHeadlight = new SpotLight(
-      "#ffe8c4",
-      0,
-      220,
-      Math.PI * 0.16,
-      0.36,
-      1.6,
-    );
-    this.trainHeadlightTarget = new Object3D();
-    this.trainHeadlight.castShadow = true;
-    this.trainHeadlight.shadow.mapSize.set(512, 512);
-    this.trainHeadlight.shadow.bias = -0.0002;
-    this.trainHeadlight.shadow.normalBias = 0.018;
-    this.trainHeadlight.shadow.camera.near = 0.8;
-    this.trainHeadlight.shadow.camera.far = 240;
-    this.trainHeadlight.visible = false;
-    this.trainHeadlight.target = this.trainHeadlightTarget;
-    this.scene.add(this.trainHeadlight);
-    this.scene.add(this.trainHeadlightTarget);
-
     this.renderer = new Renderer(container);
     this.introSplash = new IntroSplash(container);
     this.runEndOverlay = new RunEndOverlay(container);
@@ -251,6 +232,9 @@ export class Game {
       CONFIG.camera,
       container.clientWidth / container.clientHeight,
     );
+
+    this.scene.add(this.cameraRig.headlight);
+    this.scene.add(this.cameraRig.headlightTarget);
 
     const desktopControls = new DesktopControls({
       throttleRatePerSecond: CONFIG.train.throttleRatePerSecond,
@@ -354,8 +338,8 @@ export class Game {
     this.randomAmbientAudio.dispose();
     this.gameMusic.dispose();
     this.trackEndSet.dispose();
-    this.scene.remove(this.trainHeadlight);
-    this.scene.remove(this.trainHeadlightTarget);
+    this.scene.remove(this.cameraRig.headlight);
+    this.scene.remove(this.cameraRig.headlightTarget);
     this.renderer.dispose();
 
     window.removeEventListener("resize", this.handleResizeBound);
@@ -622,29 +606,10 @@ export class Game {
   }
 
   private updateTrainHeadlight(): void {
-    const camera = this.cameraRig.camera;
     const nightFactor = this.dayNightSky.getNightFactor();
     const lightFactor = MathUtils.smoothstep(nightFactor, 0.28, 0.76);
 
-    camera.getWorldDirection(this.cameraForward);
-    this.headlightAnchor
-      .copy(camera.position)
-      .addScaledVector(this.cameraForward, 3.5);
-    this.headlightAnchor.y += 1.1;
-
-    this.headlightTargetPosition
-      .copy(camera.position)
-      .addScaledVector(this.cameraForward, 54);
-    this.headlightTargetPosition.y -= 1.4;
-
-    this.trainHeadlight.position.copy(this.headlightAnchor);
-    this.trainHeadlightTarget.position.copy(this.headlightTargetPosition);
-    this.trainHeadlightTarget.updateMatrixWorld();
-
-    this.trainHeadlight.intensity = 120 * lightFactor;
-    this.trainHeadlight.distance = MathUtils.lerp(80, 220, lightFactor);
-    this.trainHeadlight.castShadow = lightFactor > 0.22;
-    this.trainHeadlight.visible = lightFactor > 0.01;
+    this.cameraRig.setHeadlightIntensity(lightFactor);
   }
 
   private trackSamplerSamplesPlaceholder(): CurvaturePreviewSample[] {

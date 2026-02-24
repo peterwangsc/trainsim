@@ -1,4 +1,4 @@
-import { MathUtils, PerspectiveCamera, Quaternion, Vector3 } from "three";
+import { MathUtils, Object3D, PerspectiveCamera, Quaternion, SpotLight, Vector3 } from "three";
 import { TrackSpline } from "../world/Track/TrackSpline";
 
 export type CameraRigConfig = {
@@ -14,6 +14,8 @@ export type CameraRigConfig = {
 
 export class CameraRig {
   readonly camera: PerspectiveCamera;
+  readonly headlight: SpotLight;
+  readonly headlightTarget: Object3D;
   private elapsedTime = 0;
   private debugLookEnabled = false;
   private debugYaw = 0;
@@ -39,6 +41,24 @@ export class CameraRig {
       config.near,
       config.far,
     );
+
+    this.headlight = new SpotLight(
+      "#ffe8c4",
+      0,
+      220,
+      Math.PI * 0.16,
+      0.36,
+      1.6,
+    );
+    this.headlightTarget = new Object3D();
+    this.headlight.castShadow = true;
+    this.headlight.shadow.mapSize.set(512, 512);
+    this.headlight.shadow.bias = -0.0002;
+    this.headlight.shadow.normalBias = 0.018;
+    this.headlight.shadow.camera.near = 0.8;
+    this.headlight.shadow.camera.far = 240;
+    this.headlight.visible = false;
+    this.headlight.target = this.headlightTarget;
   }
 
   update(distance: number, speed: number, dt: number): void {
@@ -73,6 +93,14 @@ export class CameraRig {
 
     this.camera.position.copy(eyePosition);
 
+    // Update headlight using true train position and orientation (no sway, no debug look)
+    const trainFront = position.clone();
+    trainFront.y += 1.1; // Headlight height
+    this.headlight.position.copy(trainFront);
+    this.headlightTarget.position.copy(trainFront).addScaledVector(tangent, 54);
+    this.headlightTarget.position.y -= 1.4; // Point slightly down
+    this.headlightTarget.updateMatrixWorld();
+
     if (!this.debugLookEnabled) {
       this.camera.lookAt(lookAt);
       return;
@@ -95,6 +123,13 @@ export class CameraRig {
       .copy(eyePosition)
       .addScaledVector(this.debugForward, this.config.lookAheadDistance);
     this.camera.lookAt(this.debugLookTarget);
+  }
+
+  setHeadlightIntensity(lightFactor: number): void {
+    this.headlight.intensity = 120 * lightFactor;
+    this.headlight.distance = MathUtils.lerp(80, 220, lightFactor);
+    this.headlight.castShadow = lightFactor > 0.22;
+    this.headlight.visible = lightFactor > 0.01;
   }
 
   isDebugLookEnabled(): boolean {

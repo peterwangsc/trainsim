@@ -12,6 +12,7 @@ import {
   Object3D,
   PlaneGeometry,
   SRGBColorSpace,
+  Texture,
   Vector3,
 } from "three";
 import { TrackSpline } from "./TrackSpline";
@@ -60,6 +61,9 @@ export class TrackEndSet {
   constructor(
     private readonly spline: TrackSpline,
     private readonly config: TrackEndSetConfig,
+    private readonly dirtPathTexture: Texture,
+    private readonly darkBrushedMetalTexture: Texture,
+    private readonly knurledMetalTexture: Texture,
   ) {
     const trackLength = this.spline.getLength();
     const bumperOffset = Math.max(1, this.config.bumperOffsetFromTrackEnd);
@@ -151,9 +155,10 @@ export class TrackEndSet {
     );
     const platformMaterial = this.createMaterial(
       new MeshStandardMaterial({
-        color: "#b5b5b0",
-        roughness: 0.86,
+        color: "#d0d0c8",
+        roughness: 0.9,
         metalness: 0.05,
+        map: this.dirtPathTexture,
       }),
     );
 
@@ -162,9 +167,10 @@ export class TrackEndSet {
     );
     const canopyPostMaterial = this.createMaterial(
       new MeshStandardMaterial({
-        color: "#535c66",
+        color: "#8a94a0",
         roughness: 0.6,
-        metalness: 0.25,
+        metalness: 0.8,
+        map: this.darkBrushedMetalTexture,
       }),
     );
 
@@ -173,9 +179,10 @@ export class TrackEndSet {
     );
     const canopyRoofMaterial = this.createMaterial(
       new MeshStandardMaterial({
-        color: "#2f3d4b",
+        color: "#5f6c7a",
         roughness: 0.5,
-        metalness: 0.3,
+        metalness: 0.8,
+        map: this.knurledMetalTexture,
       }),
     );
 
@@ -231,9 +238,10 @@ export class TrackEndSet {
       this.createGeometry(new BoxGeometry(6.6, 3.4, 8.8)),
       this.createMaterial(
         new MeshStandardMaterial({
-          color: "#d4d4cb",
-          roughness: 0.84,
-          metalness: 0.02,
+          color: "#e8e8e0",
+          roughness: 0.85,
+          metalness: 0.0,
+          map: this.dirtPathTexture,
         }),
       ),
     );
@@ -251,9 +259,10 @@ export class TrackEndSet {
       this.createGeometry(new BoxGeometry(7.4, 0.36, 9.6)),
       this.createMaterial(
         new MeshStandardMaterial({
-          color: "#3a424b",
-          roughness: 0.6,
-          metalness: 0.25,
+          color: "#4a5460",
+          roughness: 0.7,
+          metalness: 0.6,
+          map: this.knurledMetalTexture,
         }),
       ),
     );
@@ -295,23 +304,26 @@ export class TrackEndSet {
 
     const postMaterial = this.createMaterial(
       new MeshStandardMaterial({
-        color: "#8f1616",
-        roughness: 0.55,
-        metalness: 0.35,
+        color: "#c02020",
+        roughness: 0.6,
+        metalness: 0.8,
+        map: this.darkBrushedMetalTexture,
       }),
     );
     const beamMaterial = this.createMaterial(
       new MeshStandardMaterial({
-        color: "#b21717",
-        roughness: 0.45,
-        metalness: 0.45,
+        color: "#d41a1a",
+        roughness: 0.5,
+        metalness: 0.8,
+        map: this.knurledMetalTexture,
       }),
     );
     const plateMaterial = this.createMaterial(
       new MeshStandardMaterial({
-        color: "#f2c84a",
-        roughness: 0.62,
-        metalness: 0.08,
+        color: "#ffd44a",
+        roughness: 0.5,
+        metalness: 0.8,
+        map: this.darkBrushedMetalTexture,
       }),
     );
 
@@ -386,9 +398,10 @@ export class TrackEndSet {
       this.createGeometry(new CylinderGeometry(0.06, 0.08, postHeight, 10)),
       this.createMaterial(
         new MeshStandardMaterial({
-          color: "#444b53",
+          color: "#555d66",
           roughness: 0.6,
-          metalness: 0.4,
+          metalness: 0.8,
+          map: this.darkBrushedMetalTexture,
         }),
       ),
     );

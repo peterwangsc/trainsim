@@ -19,6 +19,8 @@ export type CriticalPreloadedAssets = {
   rockyMountainTexture: Texture;
   woodenPlankTexture: Texture;
   railTexture: Texture;
+  darkBrushedMetalTexture: Texture;
+  knurledMetalTexture: Texture;
 };
 
 type ProgressCallback = (progress: number) => void;
@@ -45,6 +47,8 @@ export async function preloadCriticalAssets(
     "/rocky_mountain.png",
     "/wooden_plank.png",
     "/brushed_steel_rail.png",
+    "/dark_brushed_metal.png",
+    "/knurled_metal.png",
   ];
 
   const totalAssets =
@@ -95,6 +99,8 @@ export async function preloadCriticalAssets(
     rockyMountainTexture,
     woodenPlankTexture,
     railTexture,
+    darkBrushedMetalTexture,
+    knurledMetalTexture,
   ] = await Promise.all([
     track(loadHowl(firstMusicTrackSrc)),
     ...textureSrcs.map((src) => track(loadTexture(src))),
@@ -126,6 +132,12 @@ export async function preloadCriticalAssets(
   railTexture.colorSpace = SRGBColorSpace;
   railTexture.wrapS = RepeatWrapping;
   railTexture.wrapT = RepeatWrapping;
+  darkBrushedMetalTexture.colorSpace = SRGBColorSpace;
+  darkBrushedMetalTexture.wrapS = RepeatWrapping;
+  darkBrushedMetalTexture.wrapT = RepeatWrapping;
+  knurledMetalTexture.colorSpace = SRGBColorSpace;
+  knurledMetalTexture.wrapS = RepeatWrapping;
+  knurledMetalTexture.wrapT = RepeatWrapping;
 
   return {
     movementHowls,
@@ -143,6 +155,8 @@ export async function preloadCriticalAssets(
     rockyMountainTexture,
     woodenPlankTexture,
     railTexture,
+    darkBrushedMetalTexture,
+    knurledMetalTexture,
   };
 }
 
