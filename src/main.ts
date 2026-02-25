@@ -219,8 +219,43 @@ async function runBootSequence(): Promise<void> {
           }
         },
         onLogout: async () => {
-          // Simplified logout for brevity in this replacement
-          window.location.reload();
+          const oldUuid = localStorage.getItem("trainsim_userless_uuid");
+          let newUserId = "";
+          let nextLevel = 1;
+          if (oldUuid) {
+            localStorage.setItem("trainsim_uuid", oldUuid);
+            localStorage.removeItem("trainsim_userless_uuid");
+            newUserId = oldUuid;
+            try {
+              const { data } = await supabase
+                .from("user_progress")
+                .select("level")
+                .eq("id", oldUuid)
+                .maybeSingle();
+              if (data) {
+                nextLevel = data.level;
+              } else {
+                await supabase
+                  .from("user_progress")
+                  .upsert({ id: oldUuid, level: 1 });
+              }
+            } catch (err) {
+              console.error("Failed to update userless progress", err);
+            }
+          } else {
+            newUserId = crypto.randomUUID();
+            localStorage.setItem("trainsim_uuid", newUserId);
+            try {
+              await supabase
+                .from("user_progress")
+                .upsert({ id: newUserId, level: 1 });
+            } catch (err) {
+              console.error("Failed to init new userless progress", err);
+            }
+          }
+          localStorage.removeItem("trainsim_username");
+          startGameAtLevel(nextLevel, newUserId, null);
+          game?.start();
         },
       });
     }
