@@ -3,14 +3,18 @@ import {
   BufferGeometry,
   CanvasTexture,
   ClampToEdgeWrapping,
+  Color,
   CylinderGeometry,
   FrontSide,
   Group,
   Material,
   Mesh,
   MeshStandardMaterial,
+  MeshBasicMaterial,
   Object3D,
   PlaneGeometry,
+  PointLight,
+  RepeatWrapping,
   SRGBColorSpace,
   Texture,
   Vector3,
@@ -55,7 +59,7 @@ export class TrackEndSet {
 
   private readonly disposableGeometries: BufferGeometry[] = [];
   private readonly disposableMaterials: Material[] = [];
-  private readonly disposableTextures: CanvasTexture[] = [];
+  private readonly disposableTextures: Texture[] = [];
 
   private readonly layout: TrackEndLayout;
 
@@ -168,48 +172,43 @@ export class TrackEndSet {
       Math.ceil(stationDistance / segmentLength),
     );
 
-    const platformGeometry = this.createGeometry(
-      new BoxGeometry(
-        this.config.platformWidth,
-        this.config.platformHeight,
-        segmentLength * 1.02,
-      ),
-    );
-    const platformMaterial = this.createMaterial(
-      new MeshStandardMaterial({
-        color: "#d0d0c8",
-        roughness: 0.9,
-        metalness: 0.05,
-        map: this.concretePlatformTexture,
-      }),
+    const pw = this.config.platformWidth;
+    const ph = this.config.platformHeight;
+    const pd = segmentLength * 1.02;
+    const platformGeometry = this.createGeometry(new BoxGeometry(pw, ph, pd));
+    const platformMaterials = this.createBoxMaterials(
+      this.concretePlatformTexture,
+      pw,
+      ph,
+      pd,
+      1.0,
+      { color: "#d0d0c8", roughness: 0.9, metalness: 0.05 },
     );
 
     const canopyPostGeometry = this.createGeometry(
       new BoxGeometry(0.2, 2.7, 0.2),
     );
-    const canopyPostMaterial = this.createMaterial(
-      new MeshStandardMaterial({
-        color: "#8a94a0",
-        roughness: 0.6,
-        metalness: 0.8,
-        map: this.darkBrushedMetalTexture,
-      }),
+    const canopyPostMaterials = this.createBoxMaterials(
+      this.darkBrushedMetalTexture,
+      0.2,
+      2.7,
+      0.2,
+      0.3,
+      { color: "#8a94a0", roughness: 0.6, metalness: 0.8 },
     );
 
+    const crw = this.config.platformWidth * 0.76;
+    const crd = segmentLength * 1.02;
     const canopyRoofGeometry = this.createGeometry(
-      new BoxGeometry(
-        this.config.platformWidth * 0.76,
-        0.16,
-        segmentLength * 1.02,
-      ),
+      new BoxGeometry(crw, 0.16, crd),
     );
-    const canopyRoofMaterial = this.createMaterial(
-      new MeshStandardMaterial({
-        color: "#5f6c7a",
-        roughness: 0.5,
-        metalness: 0.8,
-        map: this.corrugatedMetalRoofTexture,
-      }),
+    const canopyRoofMaterials = this.createBoxMaterials(
+      this.corrugatedMetalRoofTexture,
+      crw,
+      0.16,
+      crd,
+      1.5,
+      { color: "#5f6c7a", roughness: 0.5, metalness: 0.8 },
     );
 
     for (let index = 0; index < segmentCount; index += 1) {
@@ -219,7 +218,7 @@ export class TrackEndSet {
         continue;
       }
 
-      const platform = new Mesh(platformGeometry, platformMaterial);
+      const platform = new Mesh(platformGeometry, platformMaterials);
       platform.castShadow = false;
       platform.receiveShadow = true;
       this.placeAlongTrack(
@@ -231,7 +230,7 @@ export class TrackEndSet {
       this.root.add(platform);
 
       if (index % 2 === 0) {
-        const canopyPost = new Mesh(canopyPostGeometry, canopyPostMaterial);
+        const canopyPost = new Mesh(canopyPostGeometry, canopyPostMaterials);
         canopyPost.castShadow = false;
         canopyPost.receiveShadow = true;
         this.placeAlongTrack(
@@ -242,7 +241,7 @@ export class TrackEndSet {
         );
         this.root.add(canopyPost);
 
-        const canopyRoof = new Mesh(canopyRoofGeometry, canopyRoofMaterial);
+        const canopyRoof = new Mesh(canopyRoofGeometry, canopyRoofMaterials);
         canopyRoof.castShadow = false;
         canopyRoof.receiveShadow = true;
         this.placeAlongTrack(
@@ -252,6 +251,15 @@ export class TrackEndSet {
           2.75,
         );
         this.root.add(canopyRoof);
+
+        const platformLight = new PointLight(0xffe8b0, 12, 18, 2);
+        this.placeAlongTrack(
+          platformLight,
+          distance,
+          this.config.platformLateralOffset,
+          2.4,
+        );
+        this.root.add(platformLight);
       }
     }
   }
@@ -265,17 +273,31 @@ export class TrackEndSet {
           0.2,
       );
 
-    const building = new Mesh(
-      this.createGeometry(new BoxGeometry(6.6, 3.4, 8.8)),
-      this.createMaterial(
-        new MeshStandardMaterial({
-          color: "#e8e8e0",
-          roughness: 0.85,
-          metalness: 0.0,
-          map: this.brickStationWallTexture,
-        }),
-      ),
-    );
+    // const building = new Mesh(
+    //   this.createGeometry(new BoxGeometry(6.6, 3.4, 8.8)),
+    //   this.createBoxMaterials(
+    //     this.brickStationWallTexture, 6.6, 3.4, 8.8, 0.6,
+    //     { color: "#e8e8e0", roughness: 0.85, metalness: 0.0 },
+    //   ),
+    // );
+    // building.castShadow = false;
+    // building.receiveShadow = true;
+    // this.placeAlongTrack(
+    //   building,
+    //   stationDistance,
+    //   this.config.platformLateralOffset + this.config.platformWidth * 0.62,
+    //   1.7,
+    // );
+    const geo = new BoxGeometry(6.6, 3.4, 8.8);
+    const mats = Array(6)
+      .fill(0)
+      .map(
+        () =>
+          new MeshStandardMaterial({
+            map: this.brickStationWallTexture,
+          }),
+      );
+    const building = new Mesh(geo, mats);
     building.castShadow = false;
     building.receiveShadow = true;
     this.placeAlongTrack(
@@ -288,13 +310,13 @@ export class TrackEndSet {
 
     const roof = new Mesh(
       this.createGeometry(new BoxGeometry(7.4, 0.36, 9.6)),
-      this.createMaterial(
-        new MeshStandardMaterial({
-          color: "#4a5460",
-          roughness: 0.7,
-          metalness: 0.6,
-          map: this.corrugatedMetalRoofTexture,
-        }),
+      this.createBoxMaterials(
+        this.corrugatedMetalRoofTexture,
+        7.4,
+        0.36,
+        9.6,
+        1.5,
+        { color: "#4a5460", roughness: 0.7, metalness: 0.6 },
       ),
     );
     roof.castShadow = false;
@@ -331,54 +353,55 @@ export class TrackEndSet {
     const bumperGroup = new Group();
 
     const bumperWidth = this.config.railGauge + 0.82;
+    const bw = bumperWidth;
     const postGeometry = this.createGeometry(new BoxGeometry(0.24, 1.1, 0.28));
     const beamGeometry = this.createGeometry(
-      new BoxGeometry(bumperWidth + 0.3, 0.34, 0.32),
+      new BoxGeometry(bw + 0.3, 0.34, 0.32),
     );
     const plateGeometry = this.createGeometry(
-      new BoxGeometry(bumperWidth + 0.18, 0.58, 0.08),
+      new BoxGeometry(bw + 0.18, 0.58, 0.08),
     );
 
-    const postMaterial = this.createMaterial(
-      new MeshStandardMaterial({
-        color: "#c02020",
-        roughness: 0.6,
-        metalness: 0.8,
-        map: this.redPaintedMetalTexture,
-      }),
+    const postMaterials = this.createBoxMaterials(
+      this.redPaintedMetalTexture,
+      0.24,
+      1.1,
+      0.28,
+      0.3,
+      { color: "#c02020", roughness: 0.6, metalness: 0.8 },
     );
-    const beamMaterial = this.createMaterial(
-      new MeshStandardMaterial({
-        color: "#d41a1a",
-        roughness: 0.5,
-        metalness: 0.8,
-        map: this.redPaintedMetalTexture,
-      }),
+    const beamMaterials = this.createBoxMaterials(
+      this.redPaintedMetalTexture,
+      bw + 0.3,
+      0.34,
+      0.32,
+      0.5,
+      { color: "#d41a1a", roughness: 0.5, metalness: 0.8 },
     );
-    const plateMaterial = this.createMaterial(
-      new MeshStandardMaterial({
-        color: "#ffd44a",
-        roughness: 0.5,
-        metalness: 0.8,
-        map: this.knurledMetalTexture,
-      }),
+    const plateMaterials = this.createBoxMaterials(
+      this.knurledMetalTexture,
+      bw + 0.18,
+      0.58,
+      0.08,
+      0.4,
+      { color: "#ffd44a", roughness: 0.5, metalness: 0.8 },
     );
 
     for (const side of [-1, 1] as const) {
-      const post = new Mesh(postGeometry, postMaterial);
+      const post = new Mesh(postGeometry, postMaterials);
       post.position.set(bumperWidth * 0.5 * side, 0.55, 0);
       post.castShadow = true;
       post.receiveShadow = true;
       bumperGroup.add(post);
     }
 
-    const beam = new Mesh(beamGeometry, beamMaterial);
+    const beam = new Mesh(beamGeometry, beamMaterials);
     beam.position.set(0, 0.78, 0);
     beam.castShadow = true;
     beam.receiveShadow = true;
     bumperGroup.add(beam);
 
-    const plate = new Mesh(plateGeometry, plateMaterial);
+    const plate = new Mesh(plateGeometry, plateMaterials);
     plate.position.set(0, 0.9, -0.16);
     plate.castShadow = true;
     plate.receiveShadow = true;
@@ -452,20 +475,23 @@ export class TrackEndSet {
       detail,
       options.background,
     );
+
     const panel = new Mesh(
       this.createGeometry(new PlaneGeometry(panelWidth, panelHeight)),
       this.createMaterial(
         new MeshStandardMaterial({
           map: panelTexture,
-          roughness: 0.74,
-          metalness: 0.03,
+          emissiveMap: panelTexture,
+          emissive: new Color(0.55, 0.55, 0.55),
+          roughness: 0.6,
+          metalness: 0.0,
           side: FrontSide,
         }),
       ),
     );
     panel.position.y = postHeight + panelHeight * 0.5;
-    panel.castShadow = true;
-    panel.receiveShadow = true;
+    panel.castShadow = false;
+    panel.receiveShadow = false;
     sign.add(panel);
 
     return sign;
@@ -548,6 +574,51 @@ export class TrackEndSet {
     this.center.copy(this.spline.getPositionAtDistance(distance));
     this.tangent.copy(this.spline.getTangentAtDistance(distance));
     this.right.crossVectors(this.tangent, UP).normalize();
+  }
+
+  /**
+   * Returns an array of 6 MeshStandardMaterial instances (one per BoxGeometry
+   * face: +x, -x, +y, -y, +z, -z). Each material gets its own texture clone
+   * with `repeat` set so the texture tiles at `tileSize` metres per repeat on
+   * that face's actual physical dimensions.
+   *
+   * Face UV dimensions (Three.js BoxGeometry order):
+   *   ±x → U = depth,  V = height
+   *   ±y → U = width,  V = depth
+   *   ±z → U = width,  V = height
+   */
+  private createBoxMaterials(
+    texture: Texture,
+    width: number,
+    height: number,
+    depth: number,
+    tileSize: number,
+    props: { color?: string; roughness?: number; metalness?: number },
+  ): MeshStandardMaterial[] {
+    const faceDims: [number, number][] = [
+      [depth, height], // +x
+      [depth, height], // -x
+      [width, depth], // +y
+      [width, depth], // -y
+      [width, height], // +z
+      [width, height], // -z
+    ];
+    return faceDims.map(([u, v]) => {
+      const tex = texture.clone();
+      tex.wrapS = RepeatWrapping;
+      tex.wrapT = RepeatWrapping;
+      tex.repeat.set(u / tileSize, v / tileSize);
+      tex.needsUpdate = true;
+      this.disposableTextures.push(tex);
+      const mat = new MeshStandardMaterial({
+        map: tex,
+        color: props.color,
+        roughness: props.roughness,
+        metalness: props.metalness,
+      });
+      this.disposableMaterials.push(mat);
+      return mat;
+    });
   }
 
   private createGeometry<T extends BufferGeometry>(geometry: T): T {

@@ -44,7 +44,7 @@ export class ZooPage {
       CONFIG.camera.near,
       CONFIG.camera.far,
     );
-    this.positionCameraAtTrackStart();
+    this.positionCameraAtStation();
 
     this.panel = new ZooPanel(this.container, {
       onLevelRebuild: (level) => {
@@ -52,7 +52,7 @@ export class ZooPage {
         this.headlight.dispose();
         this.sceneSetup.rebuildScene(this.gameState);
         this.headlight = new TrainHeadlight(this.sceneSetup.scene);
-        this.positionCameraAtTrackStart();
+        this.positionCameraAtStation();
       },
       onTimeChange: (t) => {
         this.sceneSetup.dayNightSky.setTimeOverride(t);
@@ -76,11 +76,13 @@ export class ZooPage {
     this.rafId = requestAnimationFrame(this.tick);
   }
 
-  private positionCameraAtTrackStart(): void {
-    const pos = this.sceneSetup.trackSpline.getPositionAtDistance(60);
-    this.freeCam.camera.position.set(pos.x, pos.y + 8, pos.z);
-    this.freeCam.camera.rotation.set(0, 0, 0);
+  private positionCameraAtStation(): void {
+    const { stationStartDistance } = this.sceneSetup.trackEndSet.getLayout();
+    const pos = this.sceneSetup.trackSpline.getPositionAtDistance(stationStartDistance - 20);
+    const tangent = this.sceneSetup.trackSpline.getTangentAtDistance(stationStartDistance - 20);
+    this.freeCam.camera.position.set(pos.x, pos.y + 4, pos.z);
     this.freeCam.camera.rotation.order = "YXZ";
+    this.freeCam.camera.rotation.set(0, Math.atan2(tangent.x, tangent.z), 0);
   }
 
   private readonly tick = (now: number): void => {

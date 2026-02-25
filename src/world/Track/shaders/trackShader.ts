@@ -201,3 +201,48 @@ export const sleeperMapFragment = () => /* glsl */ `
   diffuseColor *= sampledDiffuseColor;
 #endif
 `;
+
+// ─── Station surface shaders ────────────────────────────────────────────────
+// Triplanar mapping: project the texture from all three world axes and blend
+// by the surface normal. Every face of a box (top, sides, ends) gets a
+// correctly-scaled texture that flows continuously across segment boundaries.
+
+export const stationSurfaceVertex = (shaderVertexShader: string) => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
+varying vec3 vWorldPosition;
+varying vec3 vWorldNormal;
+${shaderVertexShader}
+`;
+
+export const stationSurfaceWorldPosVertex = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
+#include <worldpos_vertex>
+vWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
+// objectNormal is defined earlier in the Three.js vertex shader; transform to world space.
+vWorldNormal = normalize(mat3(modelMatrix) * objectNormal);
+`;
+
+export const stationSurfaceFragment = (shaderFragmentShader: string) => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
+varying vec3 vWorldPosition;
+varying vec3 vWorldNormal;
+${shaderFragmentShader}
+`;
+
+export const stationSurfaceMapFragment = (scale: number) => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
+#ifdef USE_MAP
+  // Triplanar blend weights from the world normal.
+  vec3 triW = abs(vWorldNormal);
+  triW = max(triW - 0.2, 0.0);          // sharpen the blend zone
+  triW /= triW.x + triW.y + triW.z + 0.0001;
+
+  // One sample per axis projection.
+  vec4 xProj = texture2D(map, vWorldPosition.yz * ${scale.toFixed(4)});
+  vec4 yProj = texture2D(map, vWorldPosition.xz * ${scale.toFixed(4)});
+  vec4 zProj = texture2D(map, vWorldPosition.xy * ${scale.toFixed(4)});
+
+  vec4 sampledDiffuseColor = xProj * triW.x + yProj * triW.y + zProj * triW.z;
+  diffuseColor *= sampledDiffuseColor;
+#endif
+`;

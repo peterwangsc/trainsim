@@ -18,12 +18,17 @@ export class ZooPanel {
   private lockBtn!: HTMLButtonElement;
   private headlightBtn!: HTMLButtonElement;
   private headlightOn = false;
+  private readonly onKeyDown = (e: KeyboardEvent): void => {
+    if (e.code !== "KeyF" || e.repeat) return;
+    this.toggleHeadlight();
+  };
 
   constructor(container: HTMLElement, private readonly cb: ZooPanelCallbacks) {
     this.root = document.createElement("div");
     this.body = document.createElement("div");
     this.build();
     container.appendChild(this.root);
+    window.addEventListener("keydown", this.onKeyDown);
   }
 
   setLocked(locked: boolean): void {
@@ -38,6 +43,7 @@ export class ZooPanel {
   }
 
   dispose(): void {
+    window.removeEventListener("keydown", this.onKeyDown);
     this.root.remove();
   }
 
@@ -271,12 +277,7 @@ export class ZooPanel {
       textAlign: "left",
     });
     this.headlightBtn.addEventListener("click", () => {
-      this.headlightOn = !this.headlightOn;
-      this.headlightBtn.textContent = this.headlightOn
-        ? "💡 Headlight: ON"
-        : "💡 Headlight: OFF";
-      this.headlightBtn.style.background = this.headlightOn ? "#885500" : "#444";
-      this.cb.onHeadlightToggle(this.headlightOn);
+      this.toggleHeadlight();
     });
 
     row.appendChild(this.headlightBtn);
@@ -327,5 +328,14 @@ export class ZooPanel {
     div.style.borderTop = "1px solid rgba(255,255,255,0.08)";
     div.style.margin = "0 -2px";
     return div;
+  }
+
+  private toggleHeadlight(): void {
+    this.headlightOn = !this.headlightOn;
+    this.headlightBtn.textContent = this.headlightOn
+      ? "💡 Headlight: ON"
+      : "💡 Headlight: OFF";
+    this.headlightBtn.style.background = this.headlightOn ? "#885500" : "#444";
+    this.cb.onHeadlightToggle(this.headlightOn);
   }
 }
