@@ -1,14 +1,17 @@
 export const throttleVertexCommon = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 #include <common>
 varying vec3 vObjPos;
 `;
 
 export const throttleVertexBegin = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 #include <begin_vertex>
 vObjPos = position;
 `;
 
 export const throttleFragmentCommon = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #include <common>
 varying vec3 vObjPos;
 
@@ -81,6 +84,7 @@ vec4 textureNoTile(sampler2D samp, vec2 uv, float vScale) {
 `;
 
 export const throttleMapFragment = (isKnurled: boolean) => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #ifdef USE_MAP
   float uvScale = ${isKnurled ? '15.0' : '4.0'};
   

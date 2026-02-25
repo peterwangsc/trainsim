@@ -1,14 +1,17 @@
 export const ballastVertex = (shaderVertexShader: string) => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 varying vec3 vWorldPosition;
 ${shaderVertexShader}
 `;
 
 export const ballastWorldPosVertex = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 #include <worldpos_vertex>
 vWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
 `;
 
 export const ballastFragment = (shaderFragmentShader: string) => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 varying vec3 vWorldPosition;
 
 // Fast hash-based noise
@@ -83,6 +86,7 @@ ${shaderFragmentShader}
 `;
 
 export const ballastMapFragment = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #ifdef USE_MAP
   // Zoomed out: The multiplier 0.25 controls the frequency of the dirt texture.
   // Increase this number to zoom out (make rocks smaller), decrease to zoom in.
@@ -109,11 +113,13 @@ export const ballastMapFragment = () => /* glsl */ `
 `;
 
 export const railVertex = (shaderVertexShader: string) => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 varying vec3 vWorldPosition;
 ${shaderVertexShader}
 `;
 
 export const railWorldPosVertex = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 #include <worldpos_vertex>
 #ifdef USE_INSTANCING
   vWorldPosition = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
@@ -123,11 +129,13 @@ export const railWorldPosVertex = () => /* glsl */ `
 `;
 
 export const railFragment = (shaderFragmentShader: string) => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 varying vec3 vWorldPosition;
 ${shaderFragmentShader}
 `;
 
 export const railMapFragment = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #ifdef USE_MAP
   // Sample the rail texture along the longitudinal axis using world position
   // This ensures the brushed metal detail follows the track perfectly without stretching
@@ -145,11 +153,13 @@ export const railMapFragment = () => /* glsl */ `
 `;
 
 export const sleeperVertex = (shaderVertexShader: string) => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 varying vec3 vWorldPosition;
 ${shaderVertexShader}
 `;
 
 export const sleeperWorldPosVertex = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 #include <worldpos_vertex>
 #ifdef USE_INSTANCING
   vWorldPosition = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
@@ -159,6 +169,7 @@ export const sleeperWorldPosVertex = () => /* glsl */ `
 `;
 
 export const sleeperFragment = (shaderFragmentShader: string) => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 varying vec3 vWorldPosition;
 
 vec2 hash2( vec2 p ) {
@@ -182,6 +193,7 @@ ${shaderFragmentShader}
 `;
 
 export const sleeperMapFragment = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #ifdef USE_MAP
   // Offset the UVs per sleeper based on its world position so each sleeper looks unique
   vec2 sleeperOffset = vec2(snoise(vWorldPosition.xz * 0.1), snoise(vWorldPosition.xz * 0.1 + 10.0)) * 2.0;

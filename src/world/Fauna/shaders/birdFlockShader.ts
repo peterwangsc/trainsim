@@ -1,4 +1,5 @@
 export const birdVertex = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
       uniform float uTime;
 
       attribute float aPhase;
@@ -25,6 +26,7 @@ export const birdVertex = () => /* glsl */ `
 `;
 
 export const birdFragment = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
       uniform float uOpacity;
       varying float vWingMask;
       varying float vShade;

@@ -1,16 +1,19 @@
 export const terrainVertex = (shaderVertexShader: string) => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 varying vec3 vWorldPosition;
 varying vec3 vWorldNormal;
 ${shaderVertexShader}
 `;
 
 export const terrainWorldPosVertex = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 #include <worldpos_vertex>
 vWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
 vWorldNormal = normalize(mat3(modelMatrix) * normal);
 `;
 
 export const terrainFragment = (shaderFragmentShader: string) => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 uniform sampler2D tGrass;
 uniform sampler2D tRock;
 uniform vec3 directionalFogSunViewDirection;
@@ -90,6 +93,7 @@ ${shaderFragmentShader}
 `;
 
 export const terrainMapFragment = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #ifdef USE_MAP
   vec4 sampledDiffuseColor = texture2D( map, vMapUv );
   
@@ -131,6 +135,7 @@ export const terrainMapFragment = () => /* glsl */ `
 `;
 
 export const terrainFogFragment = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #include <fog_fragment>
 #ifdef USE_FOG
   vec2 directionalFogView = vec2( -vViewPosition.x, -vViewPosition.z );

@@ -1,21 +1,25 @@
 export const trunkFragmentCommon = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #include <common>
 uniform float trunkWrap;
 `;
 
 export const trunkLightsFragmentBegin = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #include <lights_fragment_begin>
 reflectedLight.directDiffuse *= 1.0 + trunkWrap;
 reflectedLight.indirectDiffuse *= 1.0 + trunkWrap * 0.5;
 `;
 
 export const canopyVertexCommon = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 #include <common>
 uniform float foliageNormalCompensation;
 uniform float foliageShadowReceiverBias;
 `;
 
 export const canopyDefaultNormalVertex = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 #include <defaultnormal_vertex>
 mat3 foliageModelViewNoScale = mat3(
   normalize( modelViewMatrix[ 0 ].xyz ),
@@ -31,6 +35,7 @@ transformedNormal = normalize(
 `;
 
 export const canopyShadowMapVertex = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 #if ( defined( USE_SHADOWMAP ) && ( NUM_DIR_LIGHT_SHADOWS > 0 || NUM_POINT_LIGHT_SHADOWS > 0 ) ) || ( NUM_SPOT_LIGHT_COORDS > 0 )
 
   // Extra receiver offset softens close canopy self-shadowing while preserving terrain shadows.
@@ -91,6 +96,7 @@ export const canopyShadowMapVertex = () => /* glsl */ `
 `;
 
 export const canopyFragmentCommon = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #include <common>
 uniform float foliageWrap;
 uniform float foliageBackscatter;
@@ -98,6 +104,7 @@ uniform float foliageBackscatterPower;
 `;
 
 export const canopyMapFragment = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #ifdef USE_MAP
   vec4 tex = texture2D( map, vMapUv );
   
@@ -113,6 +120,7 @@ export const canopyMapFragment = () => /* glsl */ `
 `;
 
 export const canopyLightsFragmentBegin = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #include <lights_fragment_begin>
 float foliageNoV = saturate( dot( geometryNormal, geometryViewDir ) );
 float foliageTranslucency = pow( 1.0 - foliageNoV, foliageBackscatterPower );

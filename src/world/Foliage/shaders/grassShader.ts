@@ -1,4 +1,5 @@
 export const grassVertexCommon = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 #include <common>
 attribute vec4 aBladeData;
 varying vec2 vGrassUv;
@@ -15,6 +16,7 @@ uniform sampler2D uWindNoise;
 `;
 
 export const grassVertexMain = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 #include <begin_vertex>
 vGrassUv = uv;
 float tip = clamp(uv.y, 0.0, 1.0);
@@ -53,6 +55,7 @@ vGrassWorldPos = grassWorldPosition.xyz;
 `;
 
 export const grassFragmentCommon = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #include <common>
 uniform vec2 uFadeDistance;
 uniform vec2 uColorRamp;
@@ -70,6 +73,7 @@ varying float vIsAccent;
 `;
 
 export const grassFragmentMain = (tintVariation: string) => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #include <color_fragment>
 float distanceFade = 1.0 - smoothstep(uFadeDistance.x, uFadeDistance.y, distance(cameraPosition, vGrassWorldPos));
 float ditherNoise = fract(sin(dot(gl_FragCoord.xy + vec2(vGrassSeed * 31.0, vGrassSeed * 97.0), vec2(12.9898, 78.233))) * 43758.5453);
