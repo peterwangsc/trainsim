@@ -295,6 +295,7 @@ export class DayNightSky {
   private terrainHeightSampler: TerrainHeightSampler | null = null;
 
   private elapsedSeconds = 0;
+  private timeOverrideSeconds: number | null = null;
   private nightFactor = 0;
   private recommendedExposure = EXPOSURE_DAY;
 
@@ -422,8 +423,12 @@ export class DayNightSky {
   }
 
   update(dt: number, camera: PerspectiveCamera): void {
-    this.elapsedSeconds =
-      (this.elapsedSeconds + dt) % this.dayCycleDurationSeconds;
+    if (this.timeOverrideSeconds !== null) {
+      this.elapsedSeconds = this.timeOverrideSeconds;
+    } else {
+      this.elapsedSeconds =
+        (this.elapsedSeconds + dt) % this.dayCycleDurationSeconds;
+    }
 
     const cycleProgress = this.elapsedSeconds / this.dayCycleDurationSeconds;
     const angle = cycleProgress * Math.PI * 2 + SUN_CYCLE_PHASE_OFFSET_RADIANS;
@@ -682,6 +687,24 @@ export class DayNightSky {
 
   getRecommendedExposure(): number {
     return this.recommendedExposure;
+  }
+
+  /** Set a fixed time override (0–1 fraction of the day cycle). Pass null to resume. */
+  setTimeOverride(t: number | null): void {
+    this.timeOverrideSeconds =
+      t === null ? null : t * this.dayCycleDurationSeconds;
+    if (t !== null) {
+      this.elapsedSeconds = this.timeOverrideSeconds!;
+    }
+  }
+
+  /** Current position in the day cycle as a 0–1 fraction. */
+  getElapsedFraction(): number {
+    return this.elapsedSeconds / this.dayCycleDurationSeconds;
+  }
+
+  getDayCycleDurationSeconds(): number {
+    return this.dayCycleDurationSeconds;
   }
 
   enableDirectionalFog(): void {

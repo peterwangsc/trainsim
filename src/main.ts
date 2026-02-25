@@ -6,7 +6,12 @@ import { CONFIG } from "./game/Config";
 const app = document.getElementById("app");
 if (!app) throw new Error("Missing #app root element");
 
-initSupabase();
-
-const game = new Game(app, CONFIG);
-void game.preload();
+if (window.location.pathname === "/zoo") {
+  const { ZooPage } = await import("./zoo/ZooPage");
+  const zoo = new ZooPage(app);
+  void zoo.init();
+} else {
+  initSupabase();
+  const game = new Game(app, CONFIG);
+  void game.preload();
+}
