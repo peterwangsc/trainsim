@@ -1,7 +1,7 @@
-import { Vector3 } from 'three';
-import { clamp } from '../util/Math';
-import { curvatureAtDistance } from '../world/Track/Curvature';
-import { TrackSpline } from '../world/Track/TrackSpline';
+import { Vector3 } from "three";
+import { clamp } from "../util/Math";
+import { curvatureAtDistance } from "../world/Track/Curvature";
+import { TrackSpline } from "../world/Track/TrackSpline";
 
 const UP = new Vector3(0, 1, 0);
 
@@ -34,11 +34,18 @@ export class TrackSampler {
   private readonly tangent = new Vector3();
   private readonly right = new Vector3();
   private readonly delta = new Vector3();
+  private spline!: TrackSpline;
 
   constructor(
-    private readonly spline: TrackSpline,
-    private readonly config: TrackSamplerConfig
-  ) {}
+    spline: TrackSpline,
+    private readonly config: TrackSamplerConfig,
+  ) {
+    this.spline = spline;
+  }
+
+  updateSpline(spline: TrackSpline): void {
+    this.spline = spline;
+  }
 
   sampleAhead(distance: number): CurvaturePreviewSample[] {
     this.prepareFrame(distance);
@@ -47,19 +54,20 @@ export class TrackSampler {
       const sampleDistance = distance + distanceAhead;
       const curvature = curvatureAtDistance(this.spline, sampleDistance);
       const safeSpeed = clamp(
-        this.config.safeSpeedBase
-          / Math.sqrt(Math.abs(curvature) + this.config.curvatureEpsilon),
+        this.config.safeSpeedBase /
+          Math.sqrt(Math.abs(curvature) + this.config.curvatureEpsilon),
         this.config.safeSpeedMin,
-        this.config.safeSpeedMax
+        this.config.safeSpeedMax,
       );
-      const { lateral, forward } = this.sampleRelativeCoordinates(sampleDistance);
+      const { lateral, forward } =
+        this.sampleRelativeCoordinates(sampleDistance);
 
       return {
         distanceAhead,
         curvature,
         safeSpeed,
         lateral,
-        forward
+        forward,
       };
     });
   }
@@ -71,16 +79,22 @@ export class TrackSampler {
     const spacing = Math.max(0.5, this.config.pathSampleSpacing);
     const points: MinimapPathPoint[] = [];
 
-    for (let distanceAhead = 0; distanceAhead <= lookAhead; distanceAhead += spacing) {
+    for (
+      let distanceAhead = 0;
+      distanceAhead <= lookAhead;
+      distanceAhead += spacing
+    ) {
       const sampleDistance = distance + distanceAhead;
-      const { lateral, forward } = this.sampleRelativeCoordinates(sampleDistance);
+      const { lateral, forward } =
+        this.sampleRelativeCoordinates(sampleDistance);
       points.push({ distanceAhead, lateral, forward });
     }
 
     const lastPoint = points[points.length - 1];
     if (!lastPoint || lastPoint.distanceAhead < lookAhead) {
       const sampleDistance = distance + lookAhead;
-      const { lateral, forward } = this.sampleRelativeCoordinates(sampleDistance);
+      const { lateral, forward } =
+        this.sampleRelativeCoordinates(sampleDistance);
       points.push({ distanceAhead: lookAhead, lateral, forward });
     }
 
@@ -103,7 +117,7 @@ export class TrackSampler {
 
     return {
       lateral: this.delta.dot(this.right),
-      forward: Math.max(0, this.delta.dot(this.tangent))
+      forward: Math.max(0, this.delta.dot(this.tangent)),
     };
   }
 }

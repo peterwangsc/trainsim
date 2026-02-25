@@ -8,7 +8,6 @@ import {
   Object3D,
   BoxGeometry,
   Vector3,
-  Vector2,
   Color,
   Texture,
 } from "three";
@@ -27,6 +26,7 @@ import {
   sleeperVertex,
   sleeperWorldPosVertex,
 } from "./shaders/trackShader";
+import { CriticalPreloadedAssets } from "../../loading/CriticalAssetPreloader";
 
 export type TrackMeshConfig = {
   sampleCountForMesh: number;
@@ -53,14 +53,19 @@ export class TrackMeshBuilder {
   private readonly tangent = new Vector3();
   private readonly right = new Vector3();
   private readonly tmp = new Vector3();
+  private readonly dirtPathTexture: Texture;
+  private readonly woodenPlankTexture: Texture;
+  private readonly railTexture: Texture;
 
   constructor(
     private readonly spline: TrackSpline,
     private readonly config: TrackMeshConfig,
-    private readonly dirtPathTexture: Texture,
-    private readonly woodenPlankTexture: Texture,
-    private readonly railTexture: Texture,
-  ) {}
+    preloadedAssets: CriticalPreloadedAssets,
+  ) {
+    this.dirtPathTexture = preloadedAssets.dirtPathTexture;
+    this.woodenPlankTexture = preloadedAssets.woodenPlankTexture;
+    this.railTexture = preloadedAssets.railTexture;
+  }
 
   build(): Group {
     const group = new Group();
@@ -114,10 +119,14 @@ export class TrackMeshBuilder {
 
       const uvOffset = i * 8;
       const uvV = distance / totalWidth;
-      uvs[uvOffset] = uTopLeft; uvs[uvOffset + 1] = uvV;
-      uvs[uvOffset + 2] = uTopRight; uvs[uvOffset + 3] = uvV;
-      uvs[uvOffset + 4] = 0; uvs[uvOffset + 5] = uvV;
-      uvs[uvOffset + 6] = 1; uvs[uvOffset + 7] = uvV;
+      uvs[uvOffset] = uTopLeft;
+      uvs[uvOffset + 1] = uvV;
+      uvs[uvOffset + 2] = uTopRight;
+      uvs[uvOffset + 3] = uvV;
+      uvs[uvOffset + 4] = 0;
+      uvs[uvOffset + 5] = uvV;
+      uvs[uvOffset + 6] = 1;
+      uvs[uvOffset + 7] = uvV;
 
       if (i < sampleCount) {
         const a = i * 4;
@@ -143,13 +152,13 @@ export class TrackMeshBuilder {
 
     material.onBeforeCompile = (shader) => {
       shader.vertexShader = ballastVertex(shader.vertexShader).replace(
-        '#include <worldpos_vertex>',
-        ballastWorldPosVertex()
+        "#include <worldpos_vertex>",
+        ballastWorldPosVertex(),
       );
 
       shader.fragmentShader = ballastFragment(shader.fragmentShader).replace(
-        '#include <map_fragment>',
-        ballastMapFragment()
+        "#include <map_fragment>",
+        ballastMapFragment(),
       );
     };
 
@@ -177,13 +186,13 @@ export class TrackMeshBuilder {
 
     material.onBeforeCompile = (shader) => {
       shader.vertexShader = railVertex(shader.vertexShader).replace(
-        '#include <worldpos_vertex>',
-        railWorldPosVertex()
+        "#include <worldpos_vertex>",
+        railWorldPosVertex(),
       );
 
       shader.fragmentShader = railFragment(shader.fragmentShader).replace(
-        '#include <map_fragment>',
-        railMapFragment()
+        "#include <map_fragment>",
+        railMapFragment(),
       );
     };
 
@@ -238,13 +247,13 @@ export class TrackMeshBuilder {
 
     material.onBeforeCompile = (shader) => {
       shader.vertexShader = sleeperVertex(shader.vertexShader).replace(
-        '#include <worldpos_vertex>',
-        sleeperWorldPosVertex()
+        "#include <worldpos_vertex>",
+        sleeperWorldPosVertex(),
       );
 
       shader.fragmentShader = sleeperFragment(shader.fragmentShader).replace(
-        '#include <map_fragment>',
-        sleeperMapFragment()
+        "#include <map_fragment>",
+        sleeperMapFragment(),
       );
     };
     const sleepers = new InstancedMesh(geometry, material, count);

@@ -1,5 +1,7 @@
-import { Vector3 } from 'three';
-import { clamp } from '../../util/Math';
+import { Vector3 } from "three";
+import { CONFIG } from "../../game/Config";
+import { clamp } from "../../util/Math";
+import { GameState } from "../../game/GameState";
 
 export type TrackGeneratorConfig = {
   segmentCount: number;
@@ -23,12 +25,15 @@ export type TrackGeneratorConfig = {
 
 export class TrackGenerator {
   private generationSeed: number;
+  private config: TrackGeneratorConfig;
 
   constructor(
-    private readonly seed: number,
-    private readonly config: TrackGeneratorConfig
+    config: TrackGeneratorConfig,
+    seed: number,
+    private readonly gameState: GameState,
   ) {
-    this.generationSeed = seed;
+    this.generationSeed = seed + this.gameState.level - 1;
+    this.config = config;
   }
 
   generate(): Vector3[] {
@@ -72,14 +77,24 @@ export class TrackGenerator {
         const distanceFromStem = nextDistance - this.config.stemLength;
         const distanceFromOrigin = Math.hypot(x, z);
         const noiseDistance =
-          distanceFromStem + distanceFromOrigin * this.config.originWarpStrength;
-        const macroNoise = this.sampleNoise(noiseDistance, this.config.curvatureNoiseScale, 11);
-        const detailNoise = this.sampleNoise(noiseDistance, this.config.detailNoiseScale, 37);
+          distanceFromStem +
+          distanceFromOrigin * this.config.originWarpStrength;
+        const macroNoise = this.sampleNoise(
+          noiseDistance,
+          this.config.curvatureNoiseScale,
+          11,
+        );
+        const detailNoise = this.sampleNoise(
+          noiseDistance,
+          this.config.detailNoiseScale,
+          37,
+        );
 
         const rawCurvature =
           macroNoise * this.config.baseCurvaturePerMeter +
           detailNoise * this.config.detailCurvaturePerMeter;
-        curvatureBias += (rawCurvature - curvatureBias) * this.config.biasTracking;
+        curvatureBias +=
+          (rawCurvature - curvatureBias) * this.config.biasTracking;
 
         let curvature = rawCurvature - curvatureBias;
         curvature += -heading * this.config.headingDamping;
@@ -88,14 +103,20 @@ export class TrackGenerator {
         const headingDelta = clamp(
           curvature * this.config.segmentLength,
           -this.config.maxHeadingDelta,
-          this.config.maxHeadingDelta
+          this.config.maxHeadingDelta,
         );
         targetHeading += headingDelta;
       } else {
         targetHeading = 0;
       }
 
-      heading = this.resolveHeadingWithSelfAvoidance(points, x, z, heading, targetHeading);
+      heading = this.resolveHeadingWithSelfAvoidance(
+        points,
+        x,
+        z,
+        heading,
+        targetHeading,
+      );
 
       x += Math.sin(heading) * this.config.segmentLength;
       z += Math.cos(heading) * this.config.segmentLength;
@@ -134,7 +155,11 @@ export class TrackGenerator {
     return intersections;
   }
 
-  private sampleNoise(distance: number, frequency: number, seedOffset: number): number {
+  private sampleNoise(
+    distance: number,
+    frequency: number,
+    seedOffset: number,
+  ): number {
     const x = distance * frequency;
     const x0 = Math.floor(x);
     const x1 = x0 + 1;
@@ -150,24 +175,42 @@ export class TrackGenerator {
     startX: number,
     startZ: number,
     previousHeading: number,
-    targetHeading: number
+    targetHeading: number,
   ): number {
     const maxHeadingDelta = this.config.maxHeadingDelta;
-    const baseHeadingDelta = clamp(targetHeading - previousHeading, -maxHeadingDelta, maxHeadingDelta);
-    const headingStep = this.config.avoidanceHeadingStep ?? Math.max(0.004, maxHeadingDelta / 16);
+    const baseHeadingDelta = clamp(
+      targetHeading - previousHeading,
+      -maxHeadingDelta,
+      maxHeadingDelta,
+    );
+    const headingStep =
+      this.config.avoidanceHeadingStep ?? Math.max(0.004, maxHeadingDelta / 16);
     const sweepSteps =
-      this.config.avoidanceSweepSteps ?? Math.max(8, Math.ceil(maxHeadingDelta / headingStep));
-    const minClearance = this.config.minSelfIntersectionDistance ?? this.config.segmentLength * 0.75;
+      this.config.avoidanceSweepSteps ??
+      Math.max(8, Math.ceil(maxHeadingDelta / headingStep));
+    const minClearance =
+      this.config.minSelfIntersectionDistance ??
+      this.config.segmentLength * 0.75;
     const minClearanceSq = minClearance * minClearance;
-    const recentSegmentIgnore = Math.max(1, this.config.avoidanceRecentSegmentIgnore ?? 1);
+    const recentSegmentIgnore = Math.max(
+      1,
+      this.config.avoidanceRecentSegmentIgnore ?? 1,
+    );
 
     const visitedDeltas = new Set<number>();
     let bestHeading = previousHeading + baseHeadingDelta;
     let bestClearanceSq = -1;
     let bestDeltaPenalty = Number.POSITIVE_INFINITY;
 
-    const tryDelta = function (this: TrackGenerator, candidateHeadingDelta: number): boolean {
-      const clampedDelta = clamp(candidateHeadingDelta, -maxHeadingDelta, maxHeadingDelta);
+    const tryDelta = function (
+      this: TrackGenerator,
+      candidateHeadingDelta: number,
+    ): boolean {
+      const clampedDelta = clamp(
+        candidateHeadingDelta,
+        -maxHeadingDelta,
+        maxHeadingDelta,
+      );
       const deltaKey = Math.round(clampedDelta * 1_000_000);
 
       if (visitedDeltas.has(deltaKey)) {
@@ -176,21 +219,24 @@ export class TrackGenerator {
       visitedDeltas.add(deltaKey);
 
       const candidateHeading = previousHeading + clampedDelta;
-      const candidateEndX = startX + Math.sin(candidateHeading) * this.config.segmentLength;
-      const candidateEndZ = startZ + Math.cos(candidateHeading) * this.config.segmentLength;
+      const candidateEndX =
+        startX + Math.sin(candidateHeading) * this.config.segmentLength;
+      const candidateEndZ =
+        startZ + Math.cos(candidateHeading) * this.config.segmentLength;
       const clearanceSq = this.measureCandidateClearanceSq(
         points,
         startX,
         startZ,
         candidateEndX,
         candidateEndZ,
-        recentSegmentIgnore
+        recentSegmentIgnore,
       );
       const deltaPenalty = Math.abs(clampedDelta - baseHeadingDelta);
 
       if (
         clearanceSq > bestClearanceSq ||
-        (Math.abs(clearanceSq - bestClearanceSq) <= 1e-6 && deltaPenalty < bestDeltaPenalty)
+        (Math.abs(clearanceSq - bestClearanceSq) <= 1e-6 &&
+          deltaPenalty < bestDeltaPenalty)
       ) {
         bestHeading = candidateHeading;
         bestClearanceSq = clearanceSq;
@@ -223,7 +269,7 @@ export class TrackGenerator {
     startZ: number,
     endX: number,
     endZ: number,
-    recentSegmentIgnore: number
+    recentSegmentIgnore: number,
   ): number {
     const lastSegmentIndex = points.length - 2 - recentSegmentIgnore;
     if (lastSegmentIndex < 0) {
@@ -231,7 +277,11 @@ export class TrackGenerator {
     }
 
     let nearestDistanceSq = Number.POSITIVE_INFINITY;
-    for (let segmentIndex = 0; segmentIndex <= lastSegmentIndex; segmentIndex += 1) {
+    for (
+      let segmentIndex = 0;
+      segmentIndex <= lastSegmentIndex;
+      segmentIndex += 1
+    ) {
       const segmentStart = points[segmentIndex];
       const segmentEnd = points[segmentIndex + 1];
       const ax = segmentStart.x;
@@ -239,11 +289,22 @@ export class TrackGenerator {
       const bx = segmentEnd.x;
       const bz = segmentEnd.z;
 
-      if (this.segmentsIntersectXZ(startX, startZ, endX, endZ, ax, az, bx, bz)) {
+      if (
+        this.segmentsIntersectXZ(startX, startZ, endX, endZ, ax, az, bx, bz)
+      ) {
         return -1;
       }
 
-      const distanceSq = this.segmentDistanceSqXZ(startX, startZ, endX, endZ, ax, az, bx, bz);
+      const distanceSq = this.segmentDistanceSqXZ(
+        startX,
+        startZ,
+        endX,
+        endZ,
+        ax,
+        az,
+        bx,
+        bz,
+      );
       if (distanceSq < nearestDistanceSq) {
         nearestDistanceSq = distanceSq;
       }
@@ -260,13 +321,13 @@ export class TrackGenerator {
     cx: number,
     cz: number,
     dx: number,
-    dz: number
+    dz: number,
   ): number {
     return Math.min(
       this.pointToSegmentDistanceSqXZ(ax, az, cx, cz, dx, dz),
       this.pointToSegmentDistanceSqXZ(bx, bz, cx, cz, dx, dz),
       this.pointToSegmentDistanceSqXZ(cx, cz, ax, az, bx, bz),
-      this.pointToSegmentDistanceSqXZ(dx, dz, ax, az, bx, bz)
+      this.pointToSegmentDistanceSqXZ(dx, dz, ax, az, bx, bz),
     );
   }
 
@@ -276,7 +337,7 @@ export class TrackGenerator {
     ax: number,
     az: number,
     bx: number,
-    bz: number
+    bz: number,
   ): number {
     const abx = bx - ax;
     const abz = bz - az;
@@ -303,7 +364,7 @@ export class TrackGenerator {
     cx: number,
     cz: number,
     dx: number,
-    dz: number
+    dz: number,
   ): boolean {
     const epsilon = 1e-6;
     const o1 = this.orientationXZ(ax, az, bx, bz, cx, cz);
@@ -319,10 +380,14 @@ export class TrackGenerator {
     }
 
     return (
-      (Math.abs(o1) <= epsilon && this.onSegmentXZ(ax, az, bx, bz, cx, cz, epsilon)) ||
-      (Math.abs(o2) <= epsilon && this.onSegmentXZ(ax, az, bx, bz, dx, dz, epsilon)) ||
-      (Math.abs(o3) <= epsilon && this.onSegmentXZ(cx, cz, dx, dz, ax, az, epsilon)) ||
-      (Math.abs(o4) <= epsilon && this.onSegmentXZ(cx, cz, dx, dz, bx, bz, epsilon))
+      (Math.abs(o1) <= epsilon &&
+        this.onSegmentXZ(ax, az, bx, bz, cx, cz, epsilon)) ||
+      (Math.abs(o2) <= epsilon &&
+        this.onSegmentXZ(ax, az, bx, bz, dx, dz, epsilon)) ||
+      (Math.abs(o3) <= epsilon &&
+        this.onSegmentXZ(cx, cz, dx, dz, ax, az, epsilon)) ||
+      (Math.abs(o4) <= epsilon &&
+        this.onSegmentXZ(cx, cz, dx, dz, bx, bz, epsilon))
     );
   }
 
@@ -332,7 +397,7 @@ export class TrackGenerator {
     bx: number,
     bz: number,
     cx: number,
-    cz: number
+    cz: number,
   ): number {
     return (bx - ax) * (cz - az) - (bz - az) * (cx - ax);
   }
@@ -344,7 +409,7 @@ export class TrackGenerator {
     bz: number,
     px: number,
     pz: number,
-    epsilon: number
+    epsilon: number,
   ): boolean {
     return (
       px >= Math.min(ax, bx) - epsilon &&
@@ -356,10 +421,10 @@ export class TrackGenerator {
 
   private seedForAttempt(attemptIndex: number): number {
     if (attemptIndex === 0) {
-      return this.seed;
+      return this.generationSeed;
     }
 
-    return (this.seed ^ Math.imul(attemptIndex, 0x9e3779b9)) | 0;
+    return (this.generationSeed ^ Math.imul(attemptIndex, 0x9e3779b9)) | 0;
   }
 
   private hash01(value: number): number {

@@ -1,18 +1,25 @@
+import { GameState } from "../game/GameState";
+import { login, logout } from "../util/Username";
+
 export class LoginScreen {
   private readonly root: HTMLDivElement;
   private readonly usernameInput: HTMLInputElement | null = null;
+  private readonly onStart: (
+    level: number,
+    userId: string,
+    username: string | null,
+  ) => void;
+  private readonly gameState: GameState;
+  private logoutButton: HTMLButtonElement | null = null;
+  private loginButton: HTMLButtonElement | null = null;
+
   constructor(
     container: HTMLElement,
-    private readonly onLogin?: (
-      username: string,
-      targetLevel?: number | undefined,
-    ) => void,
-    private readonly onLogout?: () => void,
-    private currentUsername: string | null = null,
-    private targetLevel?: number | undefined,
+    gameState: GameState,
+    onStart: (level: number, userId: string, username: string | null) => void,
   ) {
-    this.onLogin = onLogin;
-    this.onLogout = onLogout;
+    this.onStart = onStart;
+    this.gameState = gameState;
     this.root = document.createElement("div");
     this.root.className = "login-screen login-screen--hidden";
     this.root.addEventListener("click", (event) => {
@@ -28,22 +35,23 @@ export class LoginScreen {
     this.usernameInput.type = "text";
     this.usernameInput.placeholder = "Username (Optional)";
     this.usernameInput.className = "login-screen__username-input";
-    if (this.currentUsername) {
-      this.usernameInput.value = this.currentUsername;
+    if (this.gameState.username) {
+      this.usernameInput.value = this.gameState.username;
     }
 
     const loginButton = document.createElement("button");
     loginButton.type = "button";
     loginButton.className = "login-screen__login-button";
     if (
-      !this.currentUsername ||
-      this.currentUsername.trim() === "" ||
-      this.currentUsername === this.usernameInput?.value
+      !this.gameState.username ||
+      this.gameState.username.trim() === "" ||
+      this.gameState.username === this.usernameInput?.value
     ) {
       loginButton.classList.add("login-screen__login-button--disabled");
     }
     loginButton.textContent = "Login";
     loginButton.addEventListener("click", () => this.handleLogin(loginButton));
+    this.loginButton = loginButton;
 
     this.usernameInput.addEventListener("input", () =>
       this.updateLoginButtonState(loginButton),
@@ -52,8 +60,9 @@ export class LoginScreen {
     const logoutButton = document.createElement("button");
     logoutButton.type = "button";
     logoutButton.className = "login-screen__logout-button";
-    logoutButton.textContent = this.currentUsername ? "Logout" : "Cancel";
+    logoutButton.textContent = this.gameState.username ? "Logout" : "Cancel";
     logoutButton.addEventListener("click", () => this.handleLogout());
+    this.logoutButton = logoutButton;
 
     const loginField = document.createElement("div");
     loginField.className = "login-screen__login-field";
@@ -63,6 +72,18 @@ export class LoginScreen {
     card.append(loginField, logoutButton);
     this.root.appendChild(card);
     container.appendChild(this.root);
+  }
+
+  public reset(): void {
+    this.usernameInput!.value = this.gameState.username || "";
+    this.logoutButton!.textContent = this.gameState.username
+      ? "Logout"
+      : "Cancel";
+    this.updateLoginButtonState(this.loginButton!);
+  }
+
+  public dispose(): void {
+    this.root.remove();
   }
 
   public show(): void {
@@ -77,22 +98,65 @@ export class LoginScreen {
 
   private handleLogin(button: HTMLButtonElement): void {
     const username = this.usernameInput?.value?.trim();
-    if (username && username !== this.currentUsername) {
-      this.onLogin?.(username, this.targetLevel);
-      this.hide();
+    if (username && username !== this.gameState.username) {
+      button.disabled = true;
+      button.textContent = "Logging in...";
+      button.classList.add("login-screen__login-button--disabled");
+      login(username, this.gameState)
+        .then((result) => {
+          if (result) {
+            this.gameState.update({
+              userId: result.userId,
+              username: result.username,
+              level: result.level,
+            });
+            this.hide();
+            this.onStart(result.level, result.userId, result.username);
+            button.disabled = false;
+            button.textContent = "Login";
+            this.logoutButton!.textContent = "Logout";
+          } else {
+            button.disabled = false;
+            button.textContent = "Error. Try again";
+            button.classList.remove("login-screen__login-button--disabled");
+          }
+        })
+        .catch((error) => {
+          console.log("failed to login", error);
+          console.error("Failed to login", error);
+          button.disabled = false;
+          button.textContent = "Error. Try again";
+          button.classList.remove("login-screen__login-button--disabled");
+        });
     }
   }
 
   private handleLogout(): void {
-    this.onLogout?.();
-    this.currentUsername = null;
-    this.targetLevel = undefined;
-    this.hide();
+    if (this.logoutButton!.textContent === "Cancel") {
+      this.hide();
+      return;
+    }
+    logout()
+      .then((result) => {
+        this.gameState.update({
+          userId: result.userId,
+          level: result.level,
+          username: null,
+        });
+        this.hide();
+        this.onStart(result.level, result.userId, null);
+      })
+      .catch((error) => {
+        console.error("Failed to logout", error);
+      })
+      .finally(() => {
+        this.hide();
+      });
   }
 
   private updateLoginButtonState(button: HTMLButtonElement): void {
     const username = this.usernameInput?.value?.trim();
-    const canLogin = username && username !== this.currentUsername;
+    const canLogin = username && username !== this.gameState.username;
     button.classList.toggle("login-screen__login-button--disabled", !canLogin);
   }
 }

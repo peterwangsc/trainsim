@@ -101,6 +101,7 @@ export const CONFIG = {
     sleeperHeight: 0.14,
     sleeperDepth: 0.26,
     sleeperBaseOffset: 0.06,
+    maxGenerationAttempts: 8,
   },
   terrain: {
     worldSize: 16000,

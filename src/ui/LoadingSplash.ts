@@ -1,7 +1,9 @@
 import { ASSETS_CDN_BASE } from "../game/Config";
+import { GameState } from "../game/GameState";
 
 export class LoadingSplash {
   private readonly root: HTMLDivElement;
+  private readonly gameState: GameState;
   private readonly progressLabel: HTMLParagraphElement;
   private readonly progressTrack: HTMLDivElement;
   private readonly progressFill: HTMLDivElement;
@@ -14,9 +16,12 @@ export class LoadingSplash {
 
   constructor(
     container: HTMLElement,
-    private readonly onStart: (enteredUsername?: string) => Promise<void> | void,
-    currentUsername?: string | null,
+    gameState: GameState,
+    private readonly onStart: (
+      enteredUsername?: string,
+    ) => Promise<void> | void,
   ) {
+    this.gameState = gameState;
     this.root = document.createElement("div");
     this.root.className = "loading-splash";
     this.root.setAttribute("role", "dialog");
@@ -64,7 +69,7 @@ export class LoadingSplash {
     ctaContainer.appendChild(this.progressLabel);
     ctaContainer.appendChild(this.progressTrack);
 
-    if (!currentUsername) {
+    if (!this.gameState.username) {
       this.usernameInput = document.createElement("input");
       this.usernameInput.type = "text";
       this.usernameInput.placeholder = "Username (Optional)";

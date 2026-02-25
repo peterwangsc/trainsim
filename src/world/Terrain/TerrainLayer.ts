@@ -11,17 +11,18 @@ import {
   SRGBColorSpace,
   Scene,
   Texture,
-  Vector3
-} from 'three';
-import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js';
-import { TrackSpline } from '../Track/TrackSpline';
+  Vector3,
+} from "three";
+import { ImprovedNoise } from "three/examples/jsm/math/ImprovedNoise.js";
+import { TrackSpline } from "../Track/TrackSpline";
 import {
   terrainFogFragment,
   terrainFragment,
   terrainMapFragment,
   terrainVertex,
   terrainWorldPosVertex,
-} from './shaders/terrainShader';
+} from "./shaders/terrainShader";
+import { CriticalPreloadedAssets } from "../../loading/CriticalAssetPreloader";
 
 export type TerrainConfig = {
   worldSize: number;
@@ -83,14 +84,14 @@ export class TerrainLayer {
     private readonly spline: TrackSpline,
     private readonly seed: number,
     private readonly config: TerrainConfig,
-    sharedSimplexTexture: Texture,
-    hillyGrassTexture: Texture,
-    rockyMountainTexture: Texture,
+    preloadedAssets: CriticalPreloadedAssets,
   ) {
+    const { simplexNoiseTexture, hillyGrassTexture, rockyMountainTexture } =
+      preloadedAssets;
     this.worldHalfSize = this.config.worldSize * 0.5;
     this.noiseZ = this.seed * 0.0127 + 17.3;
     this.trackSamples = this.buildTrackSamples();
-    const simplexNoise = this.decodeSimplexNoiseTexture(sharedSimplexTexture);
+    const simplexNoise = this.decodeSimplexNoiseTexture(simplexNoiseTexture);
     this.simplexNoiseData = simplexNoise.data;
     this.simplexNoiseWidth = simplexNoise.width;
     this.simplexNoiseHeight = simplexNoise.height;
@@ -103,12 +104,14 @@ export class TerrainLayer {
       this.config.worldSize,
       this.config.worldSize,
       width - 1,
-      depth - 1
+      depth - 1,
     );
     this.geometry.rotateX(-Math.PI * 0.5);
     this.applyHeightsToGeometry(this.geometry, data);
 
-    this.texture = new CanvasTexture(this.generateTerrainTexture(data, width, depth));
+    this.texture = new CanvasTexture(
+      this.generateTerrainTexture(data, width, depth),
+    );
     this.texture.wrapS = ClampToEdgeWrapping;
     this.texture.wrapT = ClampToEdgeWrapping;
     this.texture.colorSpace = SRGBColorSpace;
@@ -116,37 +119,35 @@ export class TerrainLayer {
     this.material = new MeshStandardMaterial({
       map: this.texture,
       roughness: 1.0,
-      metalness: 0.0
+      metalness: 0.0,
     });
 
     this.material.onBeforeCompile = (shader) => {
       shader.uniforms.tGrass = { value: hillyGrassTexture };
       shader.uniforms.tRock = { value: rockyMountainTexture };
       // Register uniforms for directional fog (will be updated by DayNightSky if enabled)
-      shader.uniforms.directionalFogSunViewDirection = { value: new Vector3(0, 0, -1) };
+      shader.uniforms.directionalFogSunViewDirection = {
+        value: new Vector3(0, 0, -1),
+      };
       shader.uniforms.directionalFogStrength = { value: 0.2 };
 
       shader.vertexShader = terrainVertex(shader.vertexShader).replace(
-        '#include <worldpos_vertex>',
-        terrainWorldPosVertex()
+        "#include <worldpos_vertex>",
+        terrainWorldPosVertex(),
       );
 
-      shader.fragmentShader = terrainFragment(shader.fragmentShader).replace(
-        '#include <map_fragment>',
-        terrainMapFragment()
-      ).replace(
-        '#include <fog_fragment>',
-        terrainFogFragment()
-      );
+      shader.fragmentShader = terrainFragment(shader.fragmentShader)
+        .replace("#include <map_fragment>", terrainMapFragment())
+        .replace("#include <fog_fragment>", terrainFogFragment());
     };
 
-    this.material.customProgramCacheKey = () => 'terrain-layer-splat-v2';
+    this.material.customProgramCacheKey = () => "terrain-layer-splat-v2";
 
     this.mesh = new Mesh(this.geometry, this.material);
     this.mesh.receiveShadow = true;
     this.mesh.castShadow = true;
 
-    this.root.name = 'terrain-layer';
+    this.root.name = "terrain-layer";
     this.root.add(this.mesh);
     this.scene.add(this.root);
   }
@@ -194,11 +195,19 @@ export class TerrainLayer {
 
     for (let z = 0; z < depth; z += 1) {
       const nz = z / (depth - 1);
-      const worldZ = MathUtils.lerp(-this.worldHalfSize, this.worldHalfSize, nz);
+      const worldZ = MathUtils.lerp(
+        -this.worldHalfSize,
+        this.worldHalfSize,
+        nz,
+      );
 
       for (let x = 0; x < width; x += 1) {
         const nx = x / (width - 1);
-        const worldX = MathUtils.lerp(-this.worldHalfSize, this.worldHalfSize, nx);
+        const worldX = MathUtils.lerp(
+          -this.worldHalfSize,
+          this.worldHalfSize,
+          nx,
+        );
         data[x + z * width] = this.evaluateProceduralHeightAt(worldX, worldZ);
       }
     }
@@ -210,28 +219,28 @@ export class TerrainLayer {
     const proximity = this.getTrackProximity(worldX, worldZ);
     const embankmentHeight = this.sampleTrackBulgeHeight(
       proximity.distance,
-      proximity.trackHeight
+      proximity.trackHeight,
     );
     const radialRise = this.sampleRadialRiseHeight(
       proximity.distance,
       worldX,
-      worldZ
+      worldZ,
     );
     const mountainHeight = this.sampleBaseHeight(worldX, worldZ) + radialRise;
     const transitionStart = Math.max(
       this.config.trackFlattenOuter,
       this.config.trackBulgeRadius +
-      this.config.trackShoulderOffset +
-      this.config.trackShoulderWidth * 1.5
+        this.config.trackShoulderOffset +
+        this.config.trackShoulderWidth * 1.5,
     );
     const mountainBlendRadius = Math.max(
       transitionStart + 1,
-      this.config.mountainBlendRadius
+      this.config.mountainBlendRadius,
     );
     const mountainBlend = MathUtils.smoothstep(
       proximity.distance,
       transitionStart,
-      mountainBlendRadius
+      mountainBlendRadius,
     );
     const mountainLandscape = Math.max(embankmentHeight, mountainHeight);
 
@@ -241,25 +250,40 @@ export class TerrainLayer {
   private sampleRadialRiseHeight(
     distanceToTrack: number,
     worldX: number,
-    worldZ: number
+    worldZ: number,
   ): number {
-    const start = Math.max(this.config.trackFlattenOuter + 1, this.config.radialRiseStart);
+    const start = Math.max(
+      this.config.trackFlattenOuter + 1,
+      this.config.radialRiseStart,
+    );
     const range = Math.max(1, this.config.radialRiseRange);
     const normalized = MathUtils.clamp((distanceToTrack - start) / range, 0, 1);
-    const rise = Math.pow(normalized, Math.max(0.1, this.config.radialRisePower));
+    const rise = Math.pow(
+      normalized,
+      Math.max(0.1, this.config.radialRisePower),
+    );
     const noiseFactor = MathUtils.lerp(
       1 - this.config.radialRiseNoiseStrength,
       1 + this.config.radialRiseNoiseStrength,
-      this.sampleSimplexNoise(worldX + 540, worldZ - 420, this.config.radialRiseNoiseScale)
+      this.sampleSimplexNoise(
+        worldX + 540,
+        worldZ - 420,
+        this.config.radialRiseNoiseScale,
+      ),
     );
 
     return rise * this.config.radialRiseHeight * noiseFactor;
   }
 
-  private sampleTrackBulgeHeight(distanceToTrack: number, trackHeight: number): number {
+  private sampleTrackBulgeHeight(
+    distanceToTrack: number,
+    trackHeight: number,
+  ): number {
     const crestRadius = Math.max(0.5, this.config.trackBulgeRadius);
-    const crestFactor = 1 - MathUtils.smoothstep(distanceToTrack, 0, crestRadius);
-    const shoulderCenter = crestRadius + Math.max(0, this.config.trackShoulderOffset);
+    const crestFactor =
+      1 - MathUtils.smoothstep(distanceToTrack, 0, crestRadius);
+    const shoulderCenter =
+      crestRadius + Math.max(0, this.config.trackShoulderOffset);
     const shoulderWidth = Math.max(0.5, this.config.trackShoulderWidth);
     const shoulderOffset = (distanceToTrack - shoulderCenter) / shoulderWidth;
     const shoulderMask = Math.exp(-0.5 * shoulderOffset * shoulderOffset);
@@ -272,7 +296,10 @@ export class TerrainLayer {
     );
   }
 
-  private applyHeightsToGeometry(geometry: PlaneGeometry, data: Float32Array): void {
+  private applyHeightsToGeometry(
+    geometry: PlaneGeometry,
+    data: Float32Array,
+  ): void {
     const positions = geometry.attributes.position as BufferAttribute;
     const vertices = positions.array as Float32Array;
 
@@ -301,12 +328,12 @@ export class TerrainLayer {
       const perlinSample = this.noise.noise(
         (warpedX + this.seed * 31.1) * frequency,
         (warpedZ - this.seed * 17.7) * frequency,
-        this.noiseZ + octave * 9.1
+        this.noiseZ + octave * 9.1,
       );
       const simplexSample = this.sampleSimplexNoise(
         warpedX + octave * 47.3,
         warpedZ - octave * 61.7,
-        frequency * 46 + 0.003
+        frequency * 46 + 0.003,
       );
       const ridgePerlin = Math.pow(Math.abs(perlinSample), 1.1);
       const ridgeSimplex = Math.pow(Math.abs(simplexSample * 2 - 1), 1.05);
@@ -322,26 +349,31 @@ export class TerrainLayer {
     const macroMask = MathUtils.lerp(
       0.82,
       1.22,
-      this.sampleSimplexNoise(worldX + 330, worldZ - 240, 0.0018)
+      this.sampleSimplexNoise(worldX + 330, worldZ - 240, 0.0018),
     );
-    const shaped = Math.pow(MathUtils.clamp(normalized, 0, 1.5), 1.48) * macroMask;
+    const shaped =
+      Math.pow(MathUtils.clamp(normalized, 0, 1.5), 1.48) * macroMask;
     return shaped * this.config.maxHeight - 0.5;
   }
 
   private sampleHeightFieldAt(worldX: number, worldZ: number): number {
-    if (this.heightData.length === 0 || this.heightFieldWidth <= 1 || this.heightFieldDepth <= 1) {
+    if (
+      this.heightData.length === 0 ||
+      this.heightFieldWidth <= 1 ||
+      this.heightFieldDepth <= 1
+    ) {
       return this.evaluateProceduralHeightAt(worldX, worldZ);
     }
 
     const normalizedX = MathUtils.clamp(
       (worldX + this.worldHalfSize) / this.config.worldSize,
       0,
-      1
+      1,
     );
     const normalizedZ = MathUtils.clamp(
       (worldZ + this.worldHalfSize) / this.config.worldSize,
       0,
-      1
+      1,
     );
 
     const gridX = normalizedX * (this.heightFieldWidth - 1);
@@ -354,7 +386,8 @@ export class TerrainLayer {
     const h00 = this.heightData[cellX + cellZ * this.heightFieldWidth];
     const h10 = this.heightData[cellX + 1 + cellZ * this.heightFieldWidth];
     const h01 = this.heightData[cellX + (cellZ + 1) * this.heightFieldWidth];
-    const h11 = this.heightData[cellX + 1 + (cellZ + 1) * this.heightFieldWidth];
+    const h11 =
+      this.heightData[cellX + 1 + (cellZ + 1) * this.heightFieldWidth];
 
     if (fx + fz <= 1) {
       return h00 + (h10 - h00) * fx + (h01 - h00) * fz;
@@ -370,8 +403,10 @@ export class TerrainLayer {
     width: number;
     height: number;
   } {
-    if (typeof document === 'undefined') {
-      throw new Error("TerrainLayer requires document to decode simplex noise.");
+    if (typeof document === "undefined") {
+      throw new Error(
+        "TerrainLayer requires document to decode simplex noise.",
+      );
     }
 
     const source = texture.image as
@@ -383,11 +418,11 @@ export class TerrainLayer {
 
     const width = source.width;
     const height = source.height;
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
 
-    const context = canvas.getContext('2d');
+    const context = canvas.getContext("2d");
     if (!context) {
       throw new Error("TerrainLayer could not read simplex noise texture.");
     }
@@ -407,7 +442,11 @@ export class TerrainLayer {
     return { data: grayscale, width, height };
   }
 
-  private sampleSimplexNoise(worldX: number, worldZ: number, frequency: number): number {
+  private sampleSimplexNoise(
+    worldX: number,
+    worldZ: number,
+    frequency: number,
+  ): number {
     const u = this.fract(worldX * frequency + this.seed * 0.0131);
     const v = this.fract(worldZ * frequency - this.seed * 0.0097);
 
@@ -445,7 +484,7 @@ export class TerrainLayer {
       const dz = worldZ - this.trackSamples[2];
       return {
         distance: Math.sqrt(dx * dx + dz * dz),
-        trackHeight: this.trackSamples[1]
+        trackHeight: this.trackSamples[1],
       };
     }
 
@@ -464,7 +503,14 @@ export class TerrainLayer {
       const by = this.trackSamples[nextIndex + 1];
       const bz = this.trackSamples[nextIndex + 2];
 
-      const result = this.closestPointOnSegmentXZ(worldX, worldZ, ax, az, bx, bz);
+      const result = this.closestPointOnSegmentXZ(
+        worldX,
+        worldZ,
+        ax,
+        az,
+        bx,
+        bz,
+      );
       if (result.distanceSq < minDistanceSq) {
         minDistanceSq = result.distanceSq;
         nearestTrackHeight = MathUtils.lerp(ay, by, result.t);
@@ -473,7 +519,7 @@ export class TerrainLayer {
 
     return {
       distance: Math.sqrt(minDistanceSq),
-      trackHeight: nearestTrackHeight
+      trackHeight: nearestTrackHeight,
     };
   }
 
@@ -483,7 +529,7 @@ export class TerrainLayer {
     ax: number,
     az: number,
     bx: number,
-    bz: number
+    bz: number,
   ): { distanceSq: number; t: number } {
     const abx = bx - ax;
     const abz = bz - az;
@@ -505,13 +551,13 @@ export class TerrainLayer {
   private generateTerrainTexture(
     data: Float32Array,
     width: number,
-    depth: number
+    depth: number,
   ): HTMLCanvasElement {
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = depth;
 
-    const context = canvas.getContext('2d');
+    const context = canvas.getContext("2d");
     if (!context) {
       return canvas;
     }
@@ -520,17 +566,25 @@ export class TerrainLayer {
     const imageData = image.data;
     const slopeNormal = new Vector3();
 
-    const lowColor = new Color('#4f6b3f');
-    const midColor = new Color('#7e8f62');
-    const highColor = new Color('#a9a888');
-    const rockColor = new Color('#8b8470');
-    const snowColor = new Color('#f4f5f8');
+    const lowColor = new Color("#4f6b3f");
+    const midColor = new Color("#7e8f62");
+    const highColor = new Color("#a9a888");
+    const rockColor = new Color("#8b8470");
+    const snowColor = new Color("#f4f5f8");
     const color = new Color();
 
     for (let z = 0; z < depth; z += 1) {
-      const worldZ = MathUtils.lerp(-this.worldHalfSize, this.worldHalfSize, z / (depth - 1));
+      const worldZ = MathUtils.lerp(
+        -this.worldHalfSize,
+        this.worldHalfSize,
+        z / (depth - 1),
+      );
       for (let x = 0; x < width; x += 1) {
-        const worldX = MathUtils.lerp(-this.worldHalfSize, this.worldHalfSize, x / (width - 1));
+        const worldX = MathUtils.lerp(
+          -this.worldHalfSize,
+          this.worldHalfSize,
+          x / (width - 1),
+        );
         const index = x + z * width;
         const pixelIndex = index * 4;
         const left = data[Math.max(0, x - 1) + z * width];
@@ -541,16 +595,26 @@ export class TerrainLayer {
         slopeNormal.set(left - right, 2, up - down).normalize();
         const slope = 1 - MathUtils.clamp(Math.abs(slopeNormal.y), 0, 1);
         const largeNoise = this.sampleSimplexNoise(worldX, worldZ, 0.0045);
-        const fineNoise = this.sampleSimplexNoise(worldX + 120, worldZ - 90, 0.03);
+        const fineNoise = this.sampleSimplexNoise(
+          worldX + 120,
+          worldZ - 90,
+          0.03,
+        );
 
-        const elevation = MathUtils.clamp(data[index] / this.config.maxHeight, 0, 1.25);
+        const elevation = MathUtils.clamp(
+          data[index] / this.config.maxHeight,
+          0,
+          1.25,
+        );
         if (elevation < 0.45) {
           color.lerpColors(lowColor, midColor, elevation / 0.45);
         } else {
           color.lerpColors(midColor, highColor, (elevation - 0.45) / 0.8);
         }
 
-        const rockMask = MathUtils.smoothstep(slope, 0.18, 0.68) * MathUtils.smoothstep(elevation, 0.08, 1.0);
+        const rockMask =
+          MathUtils.smoothstep(slope, 0.18, 0.68) *
+          MathUtils.smoothstep(elevation, 0.08, 1.0);
         color.lerp(rockColor, rockMask * 0.92);
 
         const snowThreshold = 0.82 - largeNoise * 0.12;
@@ -558,7 +622,8 @@ export class TerrainLayer {
         color.lerp(snowColor, snowMask * (0.35 + slope * 0.65));
 
         const lightness = MathUtils.lerp(0.74, 1.06, 1 - slope * 0.55);
-        const grain = (fineNoise - 0.5) * 0.14 + (this.grainAtPixel(x, z) - 0.5) * 0.04;
+        const grain =
+          (fineNoise - 0.5) * 0.14 + (this.grainAtPixel(x, z) - 0.5) * 0.04;
         color.multiplyScalar(lightness + grain);
 
         imageData[pixelIndex] = MathUtils.clamp(color.r * 255, 0, 255);
@@ -570,10 +635,10 @@ export class TerrainLayer {
 
     context.putImageData(image, 0, 0);
 
-    const scaled = document.createElement('canvas');
+    const scaled = document.createElement("canvas");
     scaled.width = width * 4;
     scaled.height = depth * 4;
-    const scaledContext = scaled.getContext('2d');
+    const scaledContext = scaled.getContext("2d");
     if (!scaledContext) {
       return canvas;
     }
@@ -581,7 +646,12 @@ export class TerrainLayer {
     scaledContext.scale(4, 4);
     scaledContext.drawImage(canvas, 0, 0);
 
-    const scaledImage = scaledContext.getImageData(0, 0, scaled.width, scaled.height);
+    const scaledImage = scaledContext.getImageData(
+      0,
+      0,
+      scaled.width,
+      scaled.height,
+    );
     const scaledData = scaledImage.data;
     for (let i = 0; i < scaledData.length; i += 4) {
       const noise = (this.grainAtPixel(i * 0.25, i * 0.13) - 0.5) * 8;
@@ -595,7 +665,8 @@ export class TerrainLayer {
   }
 
   private grainAtPixel(x: number, y: number): number {
-    const value = Math.sin((x + this.seed * 0.37) * 12.9898 + y * 78.233) * 43758.5453;
+    const value =
+      Math.sin((x + this.seed * 0.37) * 12.9898 + y * 78.233) * 43758.5453;
     return value - Math.floor(value);
   }
 }

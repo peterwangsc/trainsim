@@ -24,21 +24,50 @@ export class CameraRig {
   private readonly debugYawRotation = new Quaternion();
   private readonly debugPitchRotation = new Quaternion();
   private readonly worldUp = new Vector3(0, 1, 0);
+  private spline!: TrackSpline;
+  private readonly handleKeyDownBound: (e: KeyboardEvent) => void;
+  private readonly handleMouseMoveBound: (e: MouseEvent) => void;
 
   private static readonly DEBUG_LOOK_SENSITIVITY = 0.0025;
   private static readonly DEBUG_LOOK_MAX_PITCH = Math.PI * 0.46;
 
   constructor(
-    private readonly spline: TrackSpline,
+    spline: TrackSpline,
     private readonly config: CameraRigConfig,
     aspect: number,
   ) {
+    this.spline = spline;
     this.camera = new PerspectiveCamera(
       config.fov,
       aspect,
       config.near,
       config.far,
     );
+    this.handleKeyDownBound = this.handleKeyDown.bind(this);
+    this.handleMouseMoveBound = this.handleMouseMove.bind(this);
+    window.addEventListener("keydown", this.handleKeyDownBound);
+    window.addEventListener("mousemove", this.handleMouseMoveBound);
+  }
+
+  updateSpline(spline: TrackSpline): void {
+    this.spline = spline;
+    this.elapsedTime = 0;
+  }
+
+  dispose(): void {
+    window.removeEventListener("keydown", this.handleKeyDownBound);
+    window.removeEventListener("mousemove", this.handleMouseMoveBound);
+  }
+
+  private handleKeyDown(event: KeyboardEvent): void {
+    if (event.code !== "KeyP" || !event.shiftKey || event.repeat) return;
+    event.preventDefault();
+    this.setDebugLookEnabled(!this.debugLookEnabled);
+  }
+
+  private handleMouseMove(event: MouseEvent): void {
+    if (!this.debugLookEnabled) return;
+    this.addDebugLookDelta(event.movementX, event.movementY);
   }
 
   update(distance: number, speed: number, dt: number): void {
@@ -100,7 +129,6 @@ export class CameraRig {
   isDebugLookEnabled(): boolean {
     return this.debugLookEnabled;
   }
-
 
   setDebugLookEnabled(enabled: boolean): void {
     this.debugLookEnabled = enabled;

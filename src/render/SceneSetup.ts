@@ -1,117 +1,49 @@
-import { Scene, Vector3 } from "three";
+import { Scene, Group } from "three";
 import { CONFIG } from "../game/Config";
 import { DayNightSky } from "./DayNightSky";
 import { TerrainLayer } from "../world/Terrain/TerrainLayer";
 import { ForestLayer } from "../world/Foliage/ForestLayer";
 import { GrassLayer } from "../world/Foliage/GrassLayer";
 import { BirdFlock } from "../world/Fauna/BirdFlock";
+import { TrackGenerator } from "../world/Track/TrackGenerator";
 import { TrackSpline } from "../world/Track/TrackSpline";
 import { TrackMeshBuilder } from "../world/Track/TrackMeshBuilder";
 import { TrackEndSet } from "../world/Track/TrackEndSet";
 import type { CriticalPreloadedAssets } from "../loading/CriticalAssetPreloader";
 import type { PerspectiveCamera } from "three";
+import { GameState } from "../game/GameState";
 
 export class SceneSetup {
   public readonly scene: Scene;
-  public readonly dayNightSky: DayNightSky;
-  public readonly terrainLayer: TerrainLayer;
-  public readonly forestLayer: ForestLayer;
-  public readonly grassLayer: GrassLayer;
-  public readonly birdFlock: BirdFlock;
-  public readonly trackEndSet: TrackEndSet;
+  public dayNightSky!: DayNightSky;
+  public terrainLayer!: TerrainLayer;
+  public forestLayer!: ForestLayer;
+  public grassLayer!: GrassLayer;
+  public birdFlock!: BirdFlock;
+  public trackEndSet!: TrackEndSet;
+  public trackSpline!: TrackSpline;
+  public trackGroup!: Group;
+  private gameState!: GameState;
 
   constructor(
-    public readonly trackSpline: TrackSpline,
-    preloadedAssets: CriticalPreloadedAssets,
-    level: number,
+    private readonly preloadedAssets: CriticalPreloadedAssets,
+    gameState: GameState,
+    private readonly config: typeof CONFIG,
   ) {
     this.scene = new Scene();
-    this.dayNightSky = new DayNightSky(this.scene, {
-      cloudTexture: preloadedAssets.cloudTexture,
-    });
+    this.gameState = gameState;
+    this.buildScene();
+  }
 
-    const trackConfig = {
-      ...CONFIG.track,
-      segmentCount: CONFIG.track.segmentCount + (level - 1) * 160,
-      baseCurvaturePerMeter:
-        CONFIG.track.baseCurvaturePerMeter * (1 + (level - 1) * 0.25),
-      detailCurvaturePerMeter:
-        CONFIG.track.detailCurvaturePerMeter * (1 + (level - 1) * 0.25),
-    };
-
-    const trackMesh = new TrackMeshBuilder(
-      this.trackSpline,
-      trackConfig,
-      preloadedAssets.dirtPathTexture,
-      preloadedAssets.woodenPlankTexture,
-      preloadedAssets.railTexture,
-    ).build();
-    this.scene.add(trackMesh);
-
-    this.trackEndSet = new TrackEndSet(
-      this.trackSpline,
-      {
-        ...CONFIG.terminal,
-        railGauge: CONFIG.track.railGauge,
-      },
-      preloadedAssets.dirtPathTexture,
-      preloadedAssets.darkBrushedMetalTexture,
-      preloadedAssets.knurledMetalTexture,
-      preloadedAssets.concretePlatformTexture,
-      preloadedAssets.corrugatedMetalRoofTexture,
-      preloadedAssets.redPaintedMetalTexture,
-      preloadedAssets.brickStationWallTexture,
-    );
-    this.scene.add(this.trackEndSet.root);
-
-    this.terrainLayer = new TerrainLayer(
-      this.scene,
-      this.trackSpline,
-      CONFIG.seed,
-      CONFIG.terrain,
-      preloadedAssets.simplexNoiseTexture,
-      preloadedAssets.hillyGrassTexture,
-      preloadedAssets.rockyMountainTexture,
-    );
-
-    this.dayNightSky.setTerrainHeightSampler(
-      this.terrainLayer.getHeightAt.bind(this.terrainLayer),
-    );
-
-    this.forestLayer = new ForestLayer(
-      this.scene,
-      this.trackSpline,
-      CONFIG.seed,
-      CONFIG.forest,
-      this.terrainLayer.getHeightAt.bind(this.terrainLayer),
-      this.terrainLayer.getDistanceToTrack.bind(this.terrainLayer),
-      preloadedAssets.treeBarkTexture,
-      preloadedAssets.pineFoliageTexture,
-    );
-
-    this.grassLayer = new GrassLayer(
-      this.scene,
-      this.trackSpline,
-      CONFIG.seed,
-      CONFIG.grass,
-      this.terrainLayer.getHeightAt.bind(this.terrainLayer),
-      this.terrainLayer.getDistanceToTrack.bind(this.terrainLayer),
-      preloadedAssets.simplexNoiseTexture,
-      preloadedAssets.grassLeafTexture,
-      preloadedAssets.grassAccentTexture,
-    );
-
-    this.dayNightSky.enableDirectionalFog();
-    this.birdFlock = new BirdFlock(this.scene, CONFIG.birds);
+  rebuildScene(gameState: GameState): void {
+    this.dispose();
+    this.gameState = gameState;
+    this.buildScene();
   }
 
   update(dt: number, camera: PerspectiveCamera): void {
     this.dayNightSky.update(dt, camera);
-    this.birdFlock.update(
-      dt,
-      camera,
-      this.dayNightSky.getNightFactor(),
-    );
+    this.birdFlock.update(dt, camera, this.dayNightSky.getNightFactor());
     this.grassLayer.update(dt);
   }
 
@@ -122,5 +54,101 @@ export class SceneSetup {
     this.terrainLayer.dispose();
     this.dayNightSky.dispose();
     this.trackEndSet.dispose();
+    this.scene.remove(this.trackGroup);
+  }
+
+  private buildScene(): void {
+    this.buildSky();
+    this.buildTrack();
+    this.buildTerrain();
+    this.dayNightSky.setTerrainHeightSampler(
+      this.terrainLayer.getHeightAt.bind(this.terrainLayer),
+    );
+    this.buildForest();
+    this.buildGrass();
+    this.buildBirdFlock();
+    this.dayNightSky.enableDirectionalFog();
+  }
+
+  private buildSky(): void {
+    this.dayNightSky = new DayNightSky(this.scene, {
+      cloudTexture: this.preloadedAssets.cloudTexture,
+    });
+  }
+
+  private buildTrack(): void {
+    const trackConfig = {
+      ...this.config.track,
+      segmentCount:
+        this.config.track.segmentCount + (this.gameState.level - 1) * 160,
+      baseCurvaturePerMeter:
+        this.config.track.baseCurvaturePerMeter *
+        (1 + (this.gameState.level - 1) * 0.25),
+      detailCurvaturePerMeter:
+        this.config.track.detailCurvaturePerMeter *
+        (1 + (this.gameState.level - 1) * 0.25),
+    };
+
+    const trackPoints = new TrackGenerator(
+      trackConfig,
+      this.config.seed,
+      this.gameState,
+    ).generate();
+    this.trackSpline = new TrackSpline(trackPoints, { closed: false });
+
+    this.trackGroup = new TrackMeshBuilder(
+      this.trackSpline,
+      trackConfig,
+      this.preloadedAssets,
+    ).build();
+    this.scene.add(this.trackGroup);
+
+    this.trackEndSet = new TrackEndSet(
+      this.trackSpline,
+      {
+        ...this.config.terminal,
+        railGauge: this.config.track.railGauge,
+      },
+      this.preloadedAssets,
+    );
+    this.scene.add(this.trackEndSet.root);
+  }
+
+  private buildTerrain(): void {
+    this.terrainLayer = new TerrainLayer(
+      this.scene,
+      this.trackSpline,
+      this.config.seed,
+      this.config.terrain,
+      this.preloadedAssets,
+    );
+  }
+
+  private buildForest(): void {
+    this.forestLayer = new ForestLayer(
+      this.scene,
+      this.trackSpline,
+      this.config.seed,
+      this.config.forest,
+      this.preloadedAssets,
+      this.terrainLayer.getHeightAt.bind(this.terrainLayer),
+      this.terrainLayer.getDistanceToTrack.bind(this.terrainLayer),
+    );
+  }
+
+  private buildGrass(): void {
+    this.grassLayer = new GrassLayer(
+      this.scene,
+      this.trackSpline,
+      this.config.seed,
+      this.config.grass,
+      this.preloadedAssets,
+      this.terrainLayer.getHeightAt.bind(this.terrainLayer),
+      this.terrainLayer.getDistanceToTrack.bind(this.terrainLayer),
+    );
+  }
+
+  private buildBirdFlock(): void {
+    this.birdFlock = new BirdFlock(this.scene, this.config.birds);
   }
 }

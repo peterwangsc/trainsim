@@ -14,6 +14,7 @@ import {
   SingleTreeSpecies,
   SingleTreeTrunkCollider,
 } from "./SingleTree";
+import { CriticalPreloadedAssets } from "../../loading/CriticalAssetPreloader";
 
 export type ForestConfig = {
   treeSpacing: number;
@@ -66,17 +67,20 @@ export class ForestLayer {
   private readonly tangent = new Vector3();
   private readonly right = new Vector3();
   private readonly position = new Vector3();
+  private readonly treeBarkTexture: Texture;
+  private readonly pineFoliageTexture: Texture;
 
   constructor(
     private readonly scene: Scene,
     private readonly spline: TrackSpline,
     private readonly seed: number,
     private readonly config: ForestConfig,
+    preloadedAssets: CriticalPreloadedAssets,
     private readonly sampleTerrainHeight?: TerrainHeightSampler,
     private readonly sampleTrackDistance?: TrackDistanceSampler,
-    private readonly treeBarkTexture?: Texture,
-    private readonly pineFoliageTexture?: Texture,
   ) {
+    this.treeBarkTexture = preloadedAssets.treeBarkTexture;
+    this.pineFoliageTexture = preloadedAssets.pineFoliageTexture;
     this.root.name = "forest-layer";
     this.root.frustumCulled = false;
     this.scene.add(this.root);

@@ -16,6 +16,7 @@ import {
   Vector3,
 } from "three";
 import { TrackSpline } from "./TrackSpline";
+import { CriticalPreloadedAssets } from "../../loading/CriticalAssetPreloader";
 
 export type TrackEndSetConfig = {
   bumperOffsetFromTrackEnd: number;
@@ -58,24 +59,37 @@ export class TrackEndSet {
 
   private readonly layout: TrackEndLayout;
 
+  private readonly dirtPathTexture: Texture;
+  private readonly darkBrushedMetalTexture: Texture;
+  private readonly knurledMetalTexture: Texture;
+  private readonly concretePlatformTexture: Texture;
+  private readonly corrugatedMetalRoofTexture: Texture;
+  private readonly redPaintedMetalTexture: Texture;
+  private readonly brickStationWallTexture: Texture;
+
   constructor(
     private readonly spline: TrackSpline,
     private readonly config: TrackEndSetConfig,
-    private readonly dirtPathTexture: Texture,
-    private readonly darkBrushedMetalTexture: Texture,
-    private readonly knurledMetalTexture: Texture,
-    private readonly concretePlatformTexture: Texture,
-    private readonly corrugatedMetalRoofTexture: Texture,
-    private readonly redPaintedMetalTexture: Texture,
-    private readonly brickStationWallTexture: Texture,
+    preloadedAssets: CriticalPreloadedAssets,
   ) {
+    this.dirtPathTexture = preloadedAssets.dirtPathTexture;
+    this.darkBrushedMetalTexture = preloadedAssets.darkBrushedMetalTexture;
+    this.knurledMetalTexture = preloadedAssets.knurledMetalTexture;
+    this.concretePlatformTexture = preloadedAssets.concretePlatformTexture;
+    this.corrugatedMetalRoofTexture =
+      preloadedAssets.corrugatedMetalRoofTexture;
+    this.redPaintedMetalTexture = preloadedAssets.redPaintedMetalTexture;
+    this.brickStationWallTexture = preloadedAssets.brickStationWallTexture;
     const trackLength = this.spline.getLength();
     const bumperOffset = Math.max(1, this.config.bumperOffsetFromTrackEnd);
     const bumperDistance = Math.max(4, trackLength - bumperOffset);
     const stationGap = Math.max(5, this.config.stationGapToBumper);
     const stationEndDistance = Math.max(0, bumperDistance - stationGap);
     const stationLength = Math.max(20, this.config.stationLength);
-    const stationStartDistance = Math.max(0, stationEndDistance - stationLength);
+    const stationStartDistance = Math.max(
+      0,
+      stationEndDistance - stationLength,
+    );
 
     this.layout = {
       bumperDistance,
@@ -147,8 +161,12 @@ export class TrackEndSet {
 
   private addStationPlatform(): void {
     const segmentLength = Math.max(6, this.config.platformSegmentLength);
-    const stationDistance = this.layout.stationEndDistance - this.layout.stationStartDistance;
-    const segmentCount = Math.max(1, Math.ceil(stationDistance / segmentLength));
+    const stationDistance =
+      this.layout.stationEndDistance - this.layout.stationStartDistance;
+    const segmentCount = Math.max(
+      1,
+      Math.ceil(stationDistance / segmentLength),
+    );
 
     const platformGeometry = this.createGeometry(
       new BoxGeometry(
@@ -179,7 +197,11 @@ export class TrackEndSet {
     );
 
     const canopyRoofGeometry = this.createGeometry(
-      new BoxGeometry(this.config.platformWidth * 0.76, 0.16, segmentLength * 1.02),
+      new BoxGeometry(
+        this.config.platformWidth * 0.76,
+        0.16,
+        segmentLength * 1.02,
+      ),
     );
     const canopyRoofMaterial = this.createMaterial(
       new MeshStandardMaterial({
@@ -191,7 +213,8 @@ export class TrackEndSet {
     );
 
     for (let index = 0; index < segmentCount; index += 1) {
-      const distance = this.layout.stationStartDistance + (index + 0.5) * segmentLength;
+      const distance =
+        this.layout.stationStartDistance + (index + 0.5) * segmentLength;
       if (distance >= this.layout.stationEndDistance) {
         continue;
       }
@@ -236,7 +259,11 @@ export class TrackEndSet {
   private addStationBuilding(): void {
     const stationDistance =
       this.layout.stationStartDistance +
-      Math.min(18, (this.layout.stationEndDistance - this.layout.stationStartDistance) * 0.2);
+      Math.min(
+        18,
+        (this.layout.stationEndDistance - this.layout.stationStartDistance) *
+          0.2,
+      );
 
     const building = new Mesh(
       this.createGeometry(new BoxGeometry(6.6, 3.4, 8.8)),
@@ -280,12 +307,16 @@ export class TrackEndSet {
     );
     this.root.add(roof);
 
-    const stationSign = this.createSign("RIDGE TERMINAL", "STOP BEFORE PLATFORM END", {
-      background: "#f8f0c6",
-      panelWidth: 2.9,
-      panelHeight: 0.9,
-      postHeight: 2.8,
-    });
+    const stationSign = this.createSign(
+      "RIDGE TERMINAL",
+      "STOP BEFORE PLATFORM END",
+      {
+        background: "#f8f0c6",
+        panelWidth: 2.9,
+        panelHeight: 0.9,
+        postHeight: 2.8,
+      },
+    );
     this.placeAlongTrack(
       stationSign,
       this.layout.stationStartDistance + 12,
@@ -304,7 +335,9 @@ export class TrackEndSet {
     const beamGeometry = this.createGeometry(
       new BoxGeometry(bumperWidth + 0.3, 0.34, 0.32),
     );
-    const plateGeometry = this.createGeometry(new BoxGeometry(bumperWidth + 0.18, 0.58, 0.08));
+    const plateGeometry = this.createGeometry(
+      new BoxGeometry(bumperWidth + 0.18, 0.58, 0.08),
+    );
 
     const postMaterial = this.createMaterial(
       new MeshStandardMaterial({
@@ -333,7 +366,7 @@ export class TrackEndSet {
 
     for (const side of [-1, 1] as const) {
       const post = new Mesh(postGeometry, postMaterial);
-      post.position.set((bumperWidth * 0.5) * side, 0.55, 0);
+      post.position.set(bumperWidth * 0.5 * side, 0.55, 0);
       post.castShadow = true;
       post.receiveShadow = true;
       bumperGroup.add(post);
@@ -414,7 +447,11 @@ export class TrackEndSet {
     post.receiveShadow = true;
     sign.add(post);
 
-    const panelTexture = this.createSignTexture(heading, detail, options.background);
+    const panelTexture = this.createSignTexture(
+      heading,
+      detail,
+      options.background,
+    );
     const panel = new Mesh(
       this.createGeometry(new PlaneGeometry(panelWidth, panelHeight)),
       this.createMaterial(
@@ -460,10 +497,20 @@ export class TrackEndSet {
     context.textBaseline = "middle";
 
     context.font = "700 98px 'Trebuchet MS', 'Segoe UI', sans-serif";
-    context.fillText(heading, canvas.width / 2, canvas.height * 0.38, canvas.width * 0.84);
+    context.fillText(
+      heading,
+      canvas.width / 2,
+      canvas.height * 0.38,
+      canvas.width * 0.84,
+    );
 
     context.font = "700 64px 'Trebuchet MS', 'Segoe UI', sans-serif";
-    context.fillText(detail, canvas.width / 2, canvas.height * 0.67, canvas.width * 0.84);
+    context.fillText(
+      detail,
+      canvas.width / 2,
+      canvas.height * 0.67,
+      canvas.width * 0.84,
+    );
 
     const texture = new CanvasTexture(canvas);
     texture.colorSpace = SRGBColorSpace;
@@ -483,7 +530,9 @@ export class TrackEndSet {
   ): void {
     this.sampleFrame(distance);
 
-    object.position.copy(this.center).addScaledVector(this.right, lateralOffset);
+    object.position
+      .copy(this.center)
+      .addScaledVector(this.right, lateralOffset);
     object.position.y += heightOffset;
 
     this.lookTarget.copy(this.tangent);

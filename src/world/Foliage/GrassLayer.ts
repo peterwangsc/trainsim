@@ -26,6 +26,7 @@ import {
   grassVertexCommon,
   grassVertexMain,
 } from "./shaders/grassShader";
+import { CriticalPreloadedAssets } from "../../loading/CriticalAssetPreloader";
 
 export type TerrainHeightSampler = (x: number, z: number) => number;
 export type TrackDistanceSampler = (x: number, z: number) => number;
@@ -112,12 +113,12 @@ export class GrassLayer {
     private readonly spline: TrackSpline,
     private readonly seed: number,
     private readonly config: GrassConfig,
+    preloadedAssets: CriticalPreloadedAssets,
     private readonly sampleTerrainHeight: TerrainHeightSampler,
     private readonly sampleTrackDistance: TrackDistanceSampler,
-    sharedSimplexTexture: Texture,
-    grassLeafTexture: Texture,
-    grassAccentTexture: Texture,
   ) {
+    const { simplexNoiseTexture, grassLeafTexture, grassAccentTexture } =
+      preloadedAssets;
     this.geometry = new PlaneGeometry(1, 1, 1, 4);
     this.geometry.translate(0, 0.5, 0);
 
@@ -171,7 +172,7 @@ export class GrassLayer {
     this.scene.add(this.root);
 
     this.bindPreloadedTextures(
-      sharedSimplexTexture,
+      simplexNoiseTexture,
       grassLeafTexture,
       grassAccentTexture,
     );
