@@ -1,4 +1,4 @@
-import { MathUtils, PerspectiveCamera, Quaternion, Vector3 } from "three";
+import { PerspectiveCamera, Vector3 } from "three";
 import { TrackSpline } from "../world/Track/TrackSpline";
 
 export type CameraRigConfig = {
@@ -15,21 +15,8 @@ export type CameraRigConfig = {
 export class CameraRig {
   readonly camera: PerspectiveCamera;
   private elapsedTime = 0;
-  private debugLookEnabled = false;
-  private debugYaw = 0;
-  private debugPitch = 0;
-  private readonly debugForward = new Vector3();
-  private readonly debugRight = new Vector3();
-  private readonly debugLookTarget = new Vector3();
-  private readonly debugYawRotation = new Quaternion();
-  private readonly debugPitchRotation = new Quaternion();
   private readonly worldUp = new Vector3(0, 1, 0);
   private spline!: TrackSpline;
-  private readonly handleKeyDownBound: (e: KeyboardEvent) => void;
-  private readonly handleMouseMoveBound: (e: MouseEvent) => void;
-
-  private static readonly DEBUG_LOOK_SENSITIVITY = 0.0025;
-  private static readonly DEBUG_LOOK_MAX_PITCH = Math.PI * 0.46;
 
   constructor(
     spline: TrackSpline,
@@ -43,10 +30,6 @@ export class CameraRig {
       config.near,
       config.far,
     );
-    this.handleKeyDownBound = this.handleKeyDown.bind(this);
-    this.handleMouseMoveBound = this.handleMouseMove.bind(this);
-    window.addEventListener("keydown", this.handleKeyDownBound);
-    window.addEventListener("mousemove", this.handleMouseMoveBound);
   }
 
   updateSpline(spline: TrackSpline): void {
@@ -54,21 +37,7 @@ export class CameraRig {
     this.elapsedTime = 0;
   }
 
-  dispose(): void {
-    window.removeEventListener("keydown", this.handleKeyDownBound);
-    window.removeEventListener("mousemove", this.handleMouseMoveBound);
-  }
-
-  private handleKeyDown(event: KeyboardEvent): void {
-    if (event.code !== "KeyP" || !event.shiftKey || event.repeat) return;
-    event.preventDefault();
-    this.setDebugLookEnabled(!this.debugLookEnabled);
-  }
-
-  private handleMouseMove(event: MouseEvent): void {
-    if (!this.debugLookEnabled) return;
-    this.addDebugLookDelta(event.movementX, event.movementY);
-  }
+  dispose(): void {}
 
   update(distance: number, speed: number, dt: number): void {
     this.elapsedTime += dt;
@@ -101,54 +70,7 @@ export class CameraRig {
     lookAt.y += this.config.eyeHeight * 0.7;
 
     this.camera.position.copy(eyePosition);
-
-    if (!this.debugLookEnabled) {
-      this.camera.lookAt(lookAt);
-      return;
-    }
-
-    this.debugForward.copy(lookAt).sub(eyePosition).normalize();
-    this.debugYawRotation.setFromAxisAngle(this.worldUp, this.debugYaw);
-    this.debugForward.applyQuaternion(this.debugYawRotation).normalize();
-
-    this.debugRight.crossVectors(this.debugForward, this.worldUp);
-    if (this.debugRight.lengthSq() < 1e-6) {
-      this.debugRight.set(1, 0, 0);
-    } else {
-      this.debugRight.normalize();
-    }
-
-    this.debugPitchRotation.setFromAxisAngle(this.debugRight, this.debugPitch);
-    this.debugForward.applyQuaternion(this.debugPitchRotation).normalize();
-    this.debugLookTarget
-      .copy(eyePosition)
-      .addScaledVector(this.debugForward, this.config.lookAheadDistance);
-    this.camera.lookAt(this.debugLookTarget);
-  }
-
-  isDebugLookEnabled(): boolean {
-    return this.debugLookEnabled;
-  }
-
-  setDebugLookEnabled(enabled: boolean): void {
-    this.debugLookEnabled = enabled;
-    if (!enabled) {
-      this.debugYaw = 0;
-      this.debugPitch = 0;
-    }
-  }
-
-  addDebugLookDelta(deltaX: number, deltaY: number): void {
-    if (!this.debugLookEnabled) {
-      return;
-    }
-
-    this.debugYaw -= deltaX * CameraRig.DEBUG_LOOK_SENSITIVITY;
-    this.debugPitch = MathUtils.clamp(
-      this.debugPitch - deltaY * CameraRig.DEBUG_LOOK_SENSITIVITY,
-      -CameraRig.DEBUG_LOOK_MAX_PITCH,
-      CameraRig.DEBUG_LOOK_MAX_PITCH,
-    );
+    this.camera.lookAt(lookAt);
   }
 
   reset(): void {
