@@ -109,6 +109,8 @@ export class RunEndOverlay {
       this.loginButton.style.display = "block";
       this.loginInput.value = "";
       this.authSection.style.display = "flex";
+    } else {
+      this.authSection.style.display = "none";
     }
 
     if (this.revealFrameId !== null) {

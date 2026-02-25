@@ -406,28 +406,29 @@ export class Game {
 
   private showRunEndOverlay(): void {
     if (this.gameState.status === GameStatus.Won) {
+      const nextLevel = this.gameState.level + 1;
+      this.gameState.update({ level: nextLevel });
+      saveProgress(this.gameState.userId, this.gameState.username, nextLevel);
       this.runEndOverlay.show({
         tone: "won",
         title: "Station Stop Complete",
         message: "You stopped before the platform end.",
         onRestart: () => this.restart(),
         onNextLevel: async () => {
-          this.gameState.level += 1;
-          await saveProgress(
-            this.gameState.userId,
-            this.gameState.username,
-            this.gameState.level,
-          );
           this.startLevel(
-            this.gameState.level,
+            nextLevel,
             this.gameState.userId,
             this.gameState.username,
           );
         },
         onLogin: async (username) => {
-          this.gameState.level += 1;
           const result = await login(username, this.gameState);
           if (result) {
+            this.gameState.update({
+              userId: result.userId,
+              username: result.username,
+              level: result.level,
+            });
             this.startLevel(result.level, result.userId, result.username);
           }
         },
