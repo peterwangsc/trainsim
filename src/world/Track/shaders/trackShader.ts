@@ -222,7 +222,9 @@ vWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
 vWorldNormal = normalize(mat3(modelMatrix) * objectNormal);
 `;
 
-export const stationSurfaceFragment = (shaderFragmentShader: string) => /* glsl */ `
+export const stationSurfaceFragment = (
+  shaderFragmentShader: string,
+) => /* glsl */ `
 #pragma vscode_glsllint_stage: frag
 varying vec3 vWorldPosition;
 varying vec3 vWorldNormal;
@@ -231,7 +233,7 @@ ${shaderFragmentShader}
 
 export const stationSurfaceMapFragment = (scale: number) => /* glsl */ `
 #pragma vscode_glsllint_stage: frag
-#ifdef USE_MAP
+// #ifdef USE_MAP
   // Triplanar blend weights from the world normal.
   vec3 triW = abs(vWorldNormal);
   triW = max(triW - 0.2, 0.0);          // sharpen the blend zone
@@ -242,7 +244,9 @@ export const stationSurfaceMapFragment = (scale: number) => /* glsl */ `
   vec4 yProj = texture2D(map, vWorldPosition.xz * ${scale.toFixed(4)});
   vec4 zProj = texture2D(map, vWorldPosition.xy * ${scale.toFixed(4)});
 
-  vec4 sampledDiffuseColor = xProj * triW.x + yProj * triW.y + zProj * triW.z;
+  // vec4 sampledDiffuseColor = xProj * triW.x + yProj * triW.y + zProj * triW.z;
+  vec4 sampledDiffuseColor = vec4(1.0, 0.0, 0.0, 1.0);
   diffuseColor *= sampledDiffuseColor;
-#endif
+// #endif
+totalEmissiveRadiance = vec3(1.0, 0.0, 0.0);
 `;

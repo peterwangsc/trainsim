@@ -807,17 +807,17 @@ export class DayNightSky {
 
     fragmentShader = fragmentShader.replace(
       "uniform vec3 up;",
-      skyUniformsHeader()
+      skyUniformsHeader(),
     );
 
     fragmentShader = fragmentShader.replace(
       "void main() {",
-      skyNoiseFunctions()
+      skyNoiseFunctions(),
     );
 
     fragmentShader = fragmentShader.replace(
       "vec3 texColor = ( Lin + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );",
-      skyCloudColorReplace()
+      skyCloudColorReplace(),
     );
 
     this.skyMaterial.fragmentShader = fragmentShader;
@@ -857,14 +857,8 @@ export class DayNightSky {
       }
 
       shader.fragmentShader = shader.fragmentShader
-        .replace(
-          "#include <fog_pars_fragment>",
-          directionalFogPars()
-        )
-        .replace(
-          "#include <fog_fragment>",
-          directionalFogFragment()
-        );
+        .replace("#include <fog_pars_fragment>", directionalFogPars())
+        .replace("#include <fog_fragment>", directionalFogFragment());
     };
 
     const previousCacheKey = (material as any).customProgramCacheKey;
@@ -997,22 +991,21 @@ export class DayNightSky {
         spriteCloudVertexBase() +
         shader.vertexShader.replace(
           "#include <fog_vertex>",
-          spriteCloudFogVertex()
+          spriteCloudFogVertex(),
         );
 
       let fragmentShader = shader.fragmentShader;
-      fragmentShader =
-        spriteCloudFragmentBase() + fragmentShader;
+      fragmentShader = spriteCloudFragmentBase() + fragmentShader;
 
       if (fragmentShader.includes("#include <opaque_fragment>")) {
         fragmentShader = fragmentShader.replace(
           "#include <opaque_fragment>",
-          spriteCloudOpaqueFragment()
+          spriteCloudOpaqueFragment(),
         );
       } else if (fragmentShader.includes("#include <output_fragment>")) {
         fragmentShader = fragmentShader.replace(
           "#include <output_fragment>",
-          spriteCloudOutputFragment()
+          spriteCloudOutputFragment(),
         );
       }
 

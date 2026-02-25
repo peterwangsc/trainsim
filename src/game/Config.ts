@@ -198,10 +198,10 @@ export const CONFIG = {
     stationGapToBumper: 12,
     stopSpeedThreshold: 0.35,
     signDistancesFromBumper: [300, 220, 150, 90, 50],
-    signLateralOffset: 6.8,
+    signLateralOffset: -6.8,
     platformWidth: 7.6,
     platformHeight: 0.32,
-    platformLateralOffset: 5.1,
+    platformLateralOffset: 5.4,
     platformSegmentLength: 10,
   },
 } as const;
