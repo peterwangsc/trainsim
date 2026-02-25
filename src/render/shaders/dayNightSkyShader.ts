@@ -1,7 +1,5 @@
-/* GLSL Lint: The shader stage could not be determined automatically. Please add: '#pragma vscode_glsllint_stage: STAGE' to the shader code. Where STAGE is a valid shader stage (e.g.: 'vert' or 'frag', see 'Available stages' in the docs) */
-
-export const starfieldVertex =
-  () => /* glsl */ `#pragma vscode_glsllint_stage: vert
+export const starfieldVertex = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 uniform float time;
 attribute float size;
 attribute vec2 twinkle;
@@ -19,9 +17,8 @@ void main() {
 }
 `;
 
-export const starfieldFragment = (
-  colorSpaceInclude: string,
-) => /* glsl */ `#pragma vscode_glsllint_stage: frag
+export const starfieldFragment = (colorSpaceInclude: string) => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 uniform float fade;
 uniform float alpha;
 varying vec3 vColor;
@@ -41,8 +38,8 @@ void main() {
 }
 `;
 
-export const skyUniformsHeader =
-  () => /* glsl */ `#pragma vscode_glsllint_stage: frag
+export const skyUniformsHeader = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 uniform vec3 up;
 uniform float cloudCoverage;
 uniform float cloudDensity;
@@ -51,8 +48,8 @@ uniform float cloudNightFactor;
 uniform float time;
 `;
 
-export const skyNoiseFunctions =
-  () => /* glsl */ `#pragma vscode_glsllint_stage: frag
+export const skyNoiseFunctions = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 float hash2( vec2 p ) {
     return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453123 );
 }
@@ -84,8 +81,8 @@ float fbm2( vec2 p ) {
 void main() {
 `;
 
-export const skyCloudColorReplace =
-  () => /* glsl */ `#pragma vscode_glsllint_stage: frag
+export const skyCloudColorReplace = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 vec3 texColor = ( Lin + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
 
 vec2 skyUv = uv - vec2( 0.5 );
@@ -120,15 +117,15 @@ float cloudMask = cloudShape * horizonMask;
     );
 `;
 
-export const directionalFogPars =
-  () => /* glsl */ `#pragma vscode_glsllint_stage: frag
+export const directionalFogPars = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #include <fog_pars_fragment>
 uniform vec3 directionalFogSunViewDirection;
 uniform float directionalFogStrength;
 `;
 
-export const directionalFogFragment =
-  () => /* glsl */ `#pragma vscode_glsllint_stage: frag
+export const directionalFogFragment = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #include <fog_fragment>
 #ifdef USE_FOG
 	vec2 directionalFogView = vec2( -vViewPosition.x, -vViewPosition.z );
@@ -147,31 +144,31 @@ export const directionalFogFragment =
 #endif
 `;
 
-export const spriteCloudVertexBase =
-  () => /* glsl */ `#pragma vscode_glsllint_stage: vert
+export const spriteCloudVertexBase = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 attribute float cloudOpacity;
 varying float vCloudOpacity;
 `;
 
-export const spriteCloudFogVertex =
-  () => /* glsl */ `#pragma vscode_glsllint_stage: vert
+export const spriteCloudFogVertex = () => /* glsl */ `
+#pragma vscode_glsllint_stage: vert
 #include <fog_vertex>
 vCloudOpacity = cloudOpacity;
 `;
 
-export const spriteCloudFragmentBase =
-  () => /* glsl */ `#pragma vscode_glsllint_stage: frag
+export const spriteCloudFragmentBase = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 varying float vCloudOpacity;
 `;
 
-export const spriteCloudOpaqueFragment =
-  () => /* glsl */ `#pragma vscode_glsllint_stage: frag
+export const spriteCloudOpaqueFragment = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #include <opaque_fragment>
 gl_FragColor = vec4( outgoingLight, diffuseColor.a * vCloudOpacity );
 `;
 
-export const spriteCloudOutputFragment =
-  () => /* glsl */ `#pragma vscode_glsllint_stage: frag
+export const spriteCloudOutputFragment = () => /* glsl */ `
+#pragma vscode_glsllint_stage: frag
 #include <output_fragment>
 gl_FragColor = vec4( outgoingLight, diffuseColor.a * vCloudOpacity );
 `;

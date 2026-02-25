@@ -10,3 +10,4 @@ GEMINI.md
 mcp-*/
 .gemini/
 shader.*
+glsl-literal/*
