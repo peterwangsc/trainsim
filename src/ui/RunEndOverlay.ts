@@ -29,6 +29,11 @@ export class RunEndOverlay {
   constructor(container: HTMLElement) {
     this.root = document.createElement("div");
     this.root.className = "run-end-overlay run-end-overlay--hidden";
+    this.root.addEventListener("click", (event) => {
+      if (event.target === this.root) {
+        this.reset();
+      }
+    });
 
     const card = document.createElement("div");
     card.className = "run-end-overlay__card";

@@ -340,19 +340,27 @@ canvas {
 /* ─── Run-end overlay ────────────────────────────────────────────────────────── */
 
 .run-end-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  width: 100dvw;
+  height: 100dvh;
   z-index: 14;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
   padding: 24px;
-  opacity: 0;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  opacity: 0;
   background: radial-gradient(
-    ellipse 120% 80% at 50% 50%,
-    rgb(10 20 34 / 38%) 0%,
-    rgb(4 8 16 / 86%) 100%
+    ellipse at 50% 50%,
+    rgba(0, 0, 0, 0.02) 0%,
+    rgba(0, 0, 0, 0.08) 50%,
+    rgba(0, 0, 0, 0.94) 100%
   );
   transition: opacity 650ms ease;
 }
