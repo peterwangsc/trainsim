@@ -161,92 +161,10 @@ export class Game {
   }
 
   private initSystems(): void {
-    this.sceneSetup = new SceneSetup(
-      this.preloadedAssets,
-      this.gameState,
-      this.config,
-    );
-
-    this.introSplash = new IntroSplash(this.container);
-    this.runEndOverlay = new RunEndOverlay(this.container);
-
-    this.cameraRig = new CameraRig(
-      this.sceneSetup.trackSpline,
-      this.config.camera,
-      this.container.clientWidth / this.container.clientHeight,
-    );
-
-    this.headlight = new TrainHeadlight(this.sceneSetup.scene);
-
-    this.desktopControls = new DesktopControls({
-      throttleRatePerSecond: this.config.train.throttleRatePerSecond,
-      brakeRampSeconds: this.config.train.brakeRampSeconds,
-    });
-    this.inputManager = new InputManager(this.desktopControls);
-    this.cabinChrome = new CabinChrome(this.container);
-    this.throttleOverlay = new ThrottleOverlayCanvas(this.container, (value) =>
-      this.desktopControls.setThrottle(value),
-    );
-
-    this.trainSim = new TrainSim(this.config.train);
-    this.trainMovementAudio = new TrainMovementAudio({
-      srcs: this.config.audio.movementTrackSrcs,
-      maxTrainSpeed: this.config.train.maxSpeed,
-      movementThreshold: this.config.audio.movementThreshold,
-      minVolume: this.config.audio.minVolume,
-      maxVolume: this.config.audio.maxVolume,
-      releaseFadeSeconds: this.config.audio.movementReleaseFadeSeconds,
-      preloadedHowls: this.preloadedAssets.movementHowls,
-    });
-    this.brakePressureAudio = new TrainMovementAudio({
-      srcs: this.config.audio.brakeTrackSrcs,
-      maxTrainSpeed: 1,
-      movementThreshold: this.config.audio.brakePressureThreshold,
-      minVolume: this.config.audio.brakeMinVolume,
-      maxVolume: this.config.audio.brakeMaxVolume,
-      releaseFadeSeconds: this.config.audio.brakeReleaseFadeSeconds,
-      preloadedHowls: this.preloadedAssets.brakeHowls,
-    });
-    this.randomAmbientAudio = new RandomAmbientAudio({
-      tracks: this.config.audio.ambientTrackSrcs,
-      volume: this.config.audio.ambientVolume,
-      minGapMs: this.config.audio.ambientMinGapMs,
-      maxGapMs: this.config.audio.ambientMaxGapMs,
-      preloadedHowls: this.preloadedAssets.ambientHowls,
-    });
-    this.gameMusic = new GameMusic({
-      tracks: this.config.audio.musicTrackSrcs,
-      volume: this.config.audio.musicVolume,
-      fadeInMs: this.config.audio.musicFadeInMs,
-      fadeOutAtMs: this.config.audio.musicFadeOutAtMs,
-      fadeOutMs: this.config.audio.musicFadeOutMs,
-      gapMs: this.config.audio.musicGapMs,
-      preloadedFirstTrackHowl: this.preloadedAssets.musicTrack1Howl,
-    });
-    this.comfortModel = new ComfortModel(this.config.comfort);
-    this.trackSampler = new TrackSampler(
-      this.sceneSetup.trackSpline,
-      this.config.minimap,
-    );
-    this.loginScreen = new LoginScreen(
-      this.container,
-      this.gameState,
-      (level, userId, username) => this.startLevel(level, userId, username),
-    );
-
-    this.hud = new HudController(
-      this.container,
-      (isDown) => this.desktopControls.setBrakeButtonDown(isDown),
-      () => this.loginScreen.show(),
-      this.gameState,
-    );
-
-    this.loop = new GameLoop(
-      this.config.simDt,
-      (dt) => this.simulate(dt),
-      () => this.render(),
-    );
-
+    this.initVisuals();
+    this.initUiControls();
+    this.initAudio();
+    this.initSimulation();
     this.handleResize();
     this.renderer.compile(this.sceneSetup.scene, this.cameraRig.camera);
     this.simulate(0);
@@ -379,6 +297,100 @@ export class Game {
       statusMessage: this.gameState.getStatusMessage(),
       gameState: this.gameState,
     });
+  }
+
+  private initVisuals(): void {
+    this.sceneSetup = new SceneSetup(
+      this.preloadedAssets,
+      this.gameState,
+      this.config,
+    );
+
+    this.cameraRig = new CameraRig(
+      this.sceneSetup.trackSpline,
+      this.config.camera,
+      this.container.clientWidth / this.container.clientHeight,
+    );
+
+    this.headlight = new TrainHeadlight(this.sceneSetup.scene);
+  }
+
+  private initUiControls(): void {
+    this.introSplash = new IntroSplash(this.container);
+    this.runEndOverlay = new RunEndOverlay(this.container);
+    this.desktopControls = new DesktopControls({
+      throttleRatePerSecond: this.config.train.throttleRatePerSecond,
+      brakeRampSeconds: this.config.train.brakeRampSeconds,
+    });
+    this.inputManager = new InputManager(this.desktopControls);
+    this.cabinChrome = new CabinChrome(this.container);
+    this.throttleOverlay = new ThrottleOverlayCanvas(this.container, (value) =>
+      this.desktopControls.setThrottle(value),
+    );
+    this.loginScreen = new LoginScreen(
+      this.container,
+      this.gameState,
+      (level, userId, username) => this.startLevel(level, userId, username),
+    );
+    this.hud = new HudController(
+      this.container,
+      (isDown) => this.desktopControls.setBrakeButtonDown(isDown),
+      () => this.loginScreen.show(),
+      this.gameState,
+    );
+  }
+
+  private initAudio(): void {
+    this.trainMovementAudio = new TrainMovementAudio({
+      srcs: this.config.audio.movementTrackSrcs,
+      maxTrainSpeed: this.config.train.maxSpeed,
+      movementThreshold: this.config.audio.movementThreshold,
+      minVolume: this.config.audio.minVolume,
+      maxVolume: this.config.audio.maxVolume,
+      releaseFadeSeconds: this.config.audio.movementReleaseFadeSeconds,
+      preloadedHowls: this.preloadedAssets.movementHowls,
+    });
+    this.brakePressureAudio = new TrainMovementAudio({
+      srcs: this.config.audio.brakeTrackSrcs,
+      maxTrainSpeed: 1,
+      movementThreshold: this.config.audio.brakePressureThreshold,
+      minVolume: this.config.audio.brakeMinVolume,
+      maxVolume: this.config.audio.brakeMaxVolume,
+      releaseFadeSeconds: this.config.audio.brakeReleaseFadeSeconds,
+      preloadedHowls: this.preloadedAssets.brakeHowls,
+    });
+    this.randomAmbientAudio = new RandomAmbientAudio({
+      tracks: this.config.audio.ambientTrackSrcs,
+      volume: this.config.audio.ambientVolume,
+      minGapMs: this.config.audio.ambientMinGapMs,
+      maxGapMs: this.config.audio.ambientMaxGapMs,
+      preloadedHowls: this.preloadedAssets.ambientHowls,
+    });
+    this.gameMusic = new GameMusic({
+      tracks: this.config.audio.musicTrackSrcs,
+      volume: this.config.audio.musicVolume,
+      fadeInMs: this.config.audio.musicFadeInMs,
+      fadeOutAtMs: this.config.audio.musicFadeOutAtMs,
+      fadeOutMs: this.config.audio.musicFadeOutMs,
+      gapMs: this.config.audio.musicGapMs,
+      preloadedFirstTrackHowl: this.preloadedAssets.musicTrack1Howl,
+    });
+  }
+
+  private initSimulation(): void {
+    this.trainSim = new TrainSim(this.config.train);
+
+    this.comfortModel = new ComfortModel(this.config.comfort);
+    this.trackSampler = new TrackSampler(
+      this.sceneSetup.trackSpline,
+      this.config.minimap,
+    );
+
+    this.loop = new GameLoop(
+      this.config.simDt,
+      (dt) => this.simulate(dt),
+      () => this.render(),
+    );
   }
 
   private handleResize(): void {
