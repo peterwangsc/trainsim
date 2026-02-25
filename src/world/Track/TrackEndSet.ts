@@ -19,12 +19,6 @@ import {
 } from "three";
 import { TrackSpline } from "./TrackSpline";
 import { CriticalPreloadedAssets } from "../../loading/CriticalAssetPreloader";
-import {
-  stationSurfaceWorldPosVertex,
-  stationSurfaceMapFragment,
-  stationSurfaceVertex,
-  stationSurfaceFragment,
-} from "./shaders/trackShader";
 
 export type TrackEndSetConfig = {
   bumperOffsetFromTrackEnd: number;
@@ -230,6 +224,7 @@ export class TrackEndSet {
         distance,
         this.config.platformLateralOffset,
         this.config.platformHeight * 0.5,
+        true,
       );
       this.root.add(platform);
 
@@ -277,9 +272,6 @@ export class TrackEndSet {
           0.2,
       );
 
-    const buildingGeometry = this.createGeometry(
-      new BoxGeometry(6.6, 3.4, 8.8),
-    );
     const buildingMaterial = this.createMaterial(
       new MeshStandardMaterial({
         color: "#e8e8e0",
@@ -288,25 +280,57 @@ export class TrackEndSet {
         map: this.brickStationWallTexture,
       }),
     );
-    buildingMaterial.onBeforeCompile = (shader) => {
-      shader.vertexShader = stationSurfaceVertex(shader.vertexShader).replace(
-        "#include <worldpos_vertex>",
-        stationSurfaceWorldPosVertex(),
-      );
-      shader.fragmentShader = stationSurfaceFragment(
-        shader.fragmentShader,
-      ).replace("#include <map_fragment>", stationSurfaceMapFragment(0.6));
+
+    const buildingGroup = new Group();
+    const frontBackGeometry = this.createGeometry(new PlaneGeometry(6.6, 3.4));
+    const leftRightGeometry = this.createGeometry(new PlaneGeometry(8.8, 3.4));
+
+    const scaleUvs = (geometry: BufferGeometry, scaleX: number, scaleY: number) => {
+      const uvs = geometry.attributes.uv;
+      if (uvs) {
+        for (let i = 0; i < uvs.count; i++) {
+          uvs.setXY(i, uvs.getX(i) * scaleX, uvs.getY(i) * scaleY);
+        }
+        uvs.needsUpdate = true;
+      }
     };
-    const building = new Mesh(buildingGeometry, buildingMaterial);
-    building.castShadow = false;
-    building.receiveShadow = true;
+    scaleUvs(frontBackGeometry, 6.6 * 0.6, 3.4 * 0.6);
+    scaleUvs(leftRightGeometry, 8.8 * 0.6, 3.4 * 0.6);
+
+    const frontWall = new Mesh(frontBackGeometry, buildingMaterial);
+    frontWall.position.set(0, 0, 4.4);
+    frontWall.castShadow = false;
+    frontWall.receiveShadow = true;
+    buildingGroup.add(frontWall);
+
+    const backWall = new Mesh(frontBackGeometry, buildingMaterial);
+    backWall.position.set(0, 0, -4.4);
+    backWall.rotation.y = Math.PI;
+    backWall.castShadow = false;
+    backWall.receiveShadow = true;
+    buildingGroup.add(backWall);
+
+    const leftWall = new Mesh(leftRightGeometry, buildingMaterial);
+    leftWall.position.set(-3.3, 0, 0);
+    leftWall.rotation.y = -Math.PI / 2;
+    leftWall.castShadow = false;
+    leftWall.receiveShadow = true;
+    buildingGroup.add(leftWall);
+
+    const rightWall = new Mesh(leftRightGeometry, buildingMaterial);
+    rightWall.position.set(3.3, 0, 0);
+    rightWall.rotation.y = Math.PI / 2;
+    rightWall.castShadow = false;
+    rightWall.receiveShadow = true;
+    buildingGroup.add(rightWall);
+
     this.placeAlongTrack(
-      building,
+      buildingGroup,
       stationDistance - 3,
       this.config.platformLateralOffset + this.config.platformWidth * 0.75,
       1.7,
     );
-    this.root.add(building);
+    this.root.add(buildingGroup);
 
     const roof = new Mesh(
       this.createGeometry(new BoxGeometry(7.4, 0.36, 9.6)),

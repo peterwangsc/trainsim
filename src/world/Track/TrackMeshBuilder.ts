@@ -150,6 +150,8 @@ export class TrackMeshBuilder {
       color: new Color("#ffffff"),
     });
 
+    material.customProgramCacheKey = () => "track-ballast-shader";
+
     material.onBeforeCompile = (shader) => {
       shader.vertexShader = ballastVertex(shader.vertexShader).replace(
         "#include <worldpos_vertex>",
@@ -183,6 +185,8 @@ export class TrackMeshBuilder {
       metalness: 0.95,
       map: this.railTexture,
     });
+
+    material.customProgramCacheKey = () => "track-rail-shader";
 
     material.onBeforeCompile = (shader) => {
       shader.vertexShader = railVertex(shader.vertexShader).replace(
@@ -244,6 +248,8 @@ export class TrackMeshBuilder {
       metalness: 0.08,
       map: this.woodenPlankTexture,
     });
+
+    material.customProgramCacheKey = () => "track-sleeper-shader";
 
     material.onBeforeCompile = (shader) => {
       shader.vertexShader = sleeperVertex(shader.vertexShader).replace(
