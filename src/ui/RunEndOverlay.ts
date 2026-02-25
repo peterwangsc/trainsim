@@ -49,7 +49,9 @@ export class RunEndOverlay {
     this.restartButton.type = "button";
     this.restartButton.className = "run-end-overlay__restart";
     this.restartButton.textContent = "Restart";
-    this.restartButton.addEventListener("click", () => this.handleRestartClick());
+    this.restartButton.addEventListener("click", () =>
+      this.handleRestartClick(),
+    );
 
     this.authSection = document.createElement("div");
     this.authSection.className = "run-end-overlay__auth";
@@ -98,7 +100,9 @@ export class RunEndOverlay {
     this.root.classList.toggle("is-failed", options.tone === "failed");
 
     this.restartButton.textContent =
-      options.tone === "won" && this.nextLevelHandler ? "Next Level" : "Restart";
+      options.tone === "won" && this.nextLevelHandler
+        ? "Next Level"
+        : "Restart";
 
     if (!options.username) {
       this.loginInput.style.display = "block";
@@ -111,7 +115,10 @@ export class RunEndOverlay {
       window.cancelAnimationFrame(this.revealFrameId);
     }
 
-    this.root.classList.remove("run-end-overlay--visible", "run-end-overlay--hidden");
+    this.root.classList.remove(
+      "run-end-overlay--visible",
+      "run-end-overlay--hidden",
+    );
 
     this.revealFrameId = window.requestAnimationFrame(() => {
       this.revealFrameId = null;
@@ -136,6 +143,8 @@ export class RunEndOverlay {
     this.root.classList.add("run-end-overlay--hidden");
     this.title.textContent = "";
     this.message.textContent = "";
+    this.loginButton.textContent = "Log In to Save Progress";
+    this.loginButton.disabled = false;
   }
 
   private handleRestartClick(): void {
