@@ -151,6 +151,19 @@ export async function login(
         username: data.username as string,
         level: data.level as number,
       });
+    } else {
+      // new user creation
+      const payload: Record<string, unknown> = {
+        id: currentUserId,
+        level: targetLevel,
+        username: normalizedUsername,
+      };
+      await supabase.from("user_progress").upsert(payload);
+
+      saveUsername(normalizedUsername);
+      gameState.update({
+        username: normalizedUsername,
+      });
     }
 
     return {
