@@ -25,6 +25,7 @@ import {
   throttleVertexBegin,
   throttleVertexCommon,
 } from "./shaders/throttleShader";
+import { ASSETS_CDN_BASE } from "../game/Config";
 
 const OVERLAY_WIDTH_RATIO = 0.22;
 const OVERLAY_WIDTH_RATIO_COMPACT = 0.19;
@@ -115,7 +116,10 @@ export class ThrottleOverlayCanvas {
       "pointerleave",
       this.handlePointerLeaveBound,
     );
-    this.renderer.domElement.addEventListener("pointerup", this.handlePointerUpBound);
+    this.renderer.domElement.addEventListener(
+      "pointerup",
+      this.handlePointerUpBound,
+    );
     this.renderer.domElement.addEventListener(
       "pointercancel",
       this.handlePointerUpBound,
@@ -217,22 +221,61 @@ export class ThrottleOverlayCanvas {
 
   private buildLever(): Mesh {
     const loader = new TextureLoader();
-    
-    const darkMetalTex = loader.load('/dark_brushed_metal.png');
+
+    const darkMetalTex = loader.load(
+      ASSETS_CDN_BASE + "/textures/dark_brushed_metal.png",
+    );
     darkMetalTex.wrapS = RepeatWrapping;
     darkMetalTex.wrapT = RepeatWrapping;
     darkMetalTex.colorSpace = SRGBColorSpace;
 
-    const knurledMetalTex = loader.load('/knurled_metal.png');
+    const knurledMetalTex = loader.load(
+      ASSETS_CDN_BASE + "/textures/knurled_metal.png",
+    );
     knurledMetalTex.wrapS = RepeatWrapping;
     knurledMetalTex.wrapT = RepeatWrapping;
     knurledMetalTex.colorSpace = SRGBColorSpace;
 
-    const panelMaterial = this.makeMaterial(0x212a37, 0.76, 0.2, 0x121822, darkMetalTex, false);
-    const trackMaterial = this.makeMaterial(0x283243, 0.68, 0.26, 0x141b27, darkMetalTex, false);
-    const stemMaterial = this.makeMaterial(0xb8c8da, 0.26, 0.72, 0x2a3646, darkMetalTex, false);
-    const handleMaterial = this.makeMaterial(0xdbe5ef, 0.24, 0.78, 0x3b4b60, knurledMetalTex, true);
-    const harnessMaterial = this.makeMaterial(0x212a37, 0.25, 0.87, 0x121822, darkMetalTex, false);
+    const panelMaterial = this.makeMaterial(
+      0x212a37,
+      0.76,
+      0.2,
+      0x121822,
+      darkMetalTex,
+      false,
+    );
+    const trackMaterial = this.makeMaterial(
+      0x283243,
+      0.68,
+      0.26,
+      0x141b27,
+      darkMetalTex,
+      false,
+    );
+    const stemMaterial = this.makeMaterial(
+      0xb8c8da,
+      0.26,
+      0.72,
+      0x2a3646,
+      darkMetalTex,
+      false,
+    );
+    const handleMaterial = this.makeMaterial(
+      0xdbe5ef,
+      0.24,
+      0.78,
+      0x3b4b60,
+      knurledMetalTex,
+      true,
+    );
+    const harnessMaterial = this.makeMaterial(
+      0x212a37,
+      0.25,
+      0.87,
+      0x121822,
+      darkMetalTex,
+      false,
+    );
 
     const panel = this.createMesh(
       new BoxGeometry(0.7, 0.94, 0.08),
@@ -324,7 +367,7 @@ export class ThrottleOverlayCanvas {
     metalness: number,
     emissive: number,
     map?: Texture,
-    isKnurled?: boolean
+    isKnurled?: boolean,
   ): MeshStandardMaterial {
     const mat = new MeshStandardMaterial({
       color,
@@ -338,22 +381,22 @@ export class ThrottleOverlayCanvas {
     if (map) {
       mat.onBeforeCompile = (shader) => {
         shader.vertexShader = shader.vertexShader.replace(
-          '#include <common>',
-          throttleVertexCommon()
+          "#include <common>",
+          throttleVertexCommon(),
         );
         shader.vertexShader = shader.vertexShader.replace(
-          '#include <begin_vertex>',
-          throttleVertexBegin()
+          "#include <begin_vertex>",
+          throttleVertexBegin(),
         );
 
         shader.fragmentShader = shader.fragmentShader.replace(
-          '#include <common>',
-          throttleFragmentCommon()
+          "#include <common>",
+          throttleFragmentCommon(),
         );
 
         shader.fragmentShader = shader.fragmentShader.replace(
-          '#include <map_fragment>',
-          throttleMapFragment(isKnurled ?? false)
+          "#include <map_fragment>",
+          throttleMapFragment(isKnurled ?? false),
         );
       };
     }
@@ -436,7 +479,7 @@ export class ThrottleOverlayCanvas {
     this.releasePointer();
     this.isPointerHoveringHandle = false;
     this.setCursor("default");
-  };
+  }
 
   private releasePointer(): void {
     if (this.activePointerId === null) {
