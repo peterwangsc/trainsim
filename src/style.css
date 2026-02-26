@@ -263,7 +263,7 @@ canvas {
   border-radius: 4px;
   color: var(--text-bright);
   font-family: var(--font-ui);
-  font-size: 0.95rem;
+  font-size: 1rem; /* ≥16px prevents iOS Safari zoom-on-focus */
   text-align: center;
   transition:
     border-color 0.2s,
