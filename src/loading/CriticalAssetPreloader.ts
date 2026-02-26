@@ -1,7 +1,6 @@
 import { Howl, Howler } from "howler";
 import { RepeatWrapping, SRGBColorSpace, Texture, TextureLoader } from "three";
 import { CONFIG } from "../game/Config";
-import { delay } from "../util/Time";
 
 export type CriticalPreloadedAssets = {
   movementHowls: Howl[];
@@ -201,15 +200,22 @@ export async function warmupAudioContext(): Promise<void> {
   source.start(0);
 }
 
-export async function primeHowlForInstantPlayback(howl: Howl): Promise<void> {
-  await ensureHowlLoaded(howl);
-  const soundId = howl.play();
-  if (soundId === undefined) {
-    return;
+export function primeAllHowls(assets: CriticalPreloadedAssets): void {
+  const allHowls = [
+    ...assets.movementHowls,
+    ...assets.brakeHowls,
+    ...assets.ambientHowls,
+    assets.musicTrack1Howl,
+  ];
+
+  for (const howl of allHowls) {
+    const soundId = howl.play();
+    if (soundId !== undefined) {
+      howl.volume(0.001, soundId);
+      howl.pause(soundId);
+      howl.seek(0, soundId);
+    }
   }
-  howl.volume(0.001, soundId);
-  await delay(50);
-  howl.stop(soundId);
 }
 
 function loadTexture(src: string): Promise<Texture> {

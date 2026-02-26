@@ -2,7 +2,6 @@ import { Howl } from "howler";
 import { clamp } from "../util/Math";
 import {
   ensureHowlLoaded,
-  primeHowlForInstantPlayback,
 } from "../loading/CriticalAssetPreloader";
 
 export type GameMusicConfig = {
@@ -74,15 +73,6 @@ export class GameMusic {
     }
 
     void this.prefetchUpcomingTracks(runToken);
-
-    try {
-      await primeHowlForInstantPlayback(firstTrackHowl);
-    } catch (error) {
-      console.warn("Music priming failed; continuing without priming.", error);
-    }
-    if (!this.isRunActive(runToken)) {
-      return;
-    }
 
     void this.playbackLoop(runToken);
   }

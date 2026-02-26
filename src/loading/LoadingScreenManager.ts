@@ -3,6 +3,7 @@ import {
   CriticalPreloadedAssets,
   preloadCriticalAssets,
   warmupAudioContext,
+  primeAllHowls,
 } from "../loading/CriticalAssetPreloader";
 import { LoadingSplash } from "../ui/LoadingSplash";
 import { fetchSavedLevel, login } from "../util/Username";
@@ -12,6 +13,7 @@ export class LoadingScreenManager {
   private gameState: GameState;
   private onStart: () => void;
   private loadingSplash: LoadingSplash | null = null;
+  private preloadedAssets: CriticalPreloadedAssets | null = null;
 
   constructor(
     container: HTMLElement,
@@ -29,6 +31,9 @@ export class LoadingScreenManager {
       this.gameState,
       async (enteredUsername) => {
         await warmupAudioContext();
+        if (this.preloadedAssets) {
+          primeAllHowls(this.preloadedAssets);
+        }
         if (enteredUsername) {
           await login(enteredUsername, this.gameState);
         }
@@ -42,6 +47,7 @@ export class LoadingScreenManager {
       ),
       fetchSavedLevel(this.gameState.userId, this.gameState.username),
     ]);
+    this.preloadedAssets = assets;
     this.gameState.update({ level });
     this.loadingSplash.setReady();
     return { assets };
