@@ -1,6 +1,6 @@
-import { Howl, Howler } from "howler";
+import { Howl } from "howler";
 import { RepeatWrapping, SRGBColorSpace, Texture, TextureLoader } from "three";
-import { CONFIG } from "../game/Config";
+import { ASSETS_CDN_BASE, CONFIG } from "../game/Config";
 
 export type CriticalPreloadedAssets = {
   movementHowls: Howl[];
@@ -190,7 +190,7 @@ export async function preloadCriticalAssets(
 function loadTexture(src: string): Promise<Texture> {
   return new Promise((resolve, reject) => {
     TEXTURE_LOADER.load(
-      src,
+      ASSETS_CDN_BASE + src,
       (texture) => resolve(texture),
       undefined,
       () => reject(new Error(`Failed to preload texture: ${src}`)),
