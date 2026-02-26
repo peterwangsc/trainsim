@@ -35,6 +35,8 @@ export class Game {
   private readonly loadingScreenManager: LoadingScreenManager;
   private readonly handleResizeBound: () => void;
 
+  private currentLoadedLevel: number | null = null;
+
   // 3d visuals
   private preloadedAssets!: CriticalPreloadedAssets;
   private sceneSetup!: SceneSetup;
@@ -143,8 +145,9 @@ export class Game {
       userId,
       status: GameStatus.Running,
     });
-    if (level !== this.gameState.level) {
+    if (level !== this.currentLoadedLevel) {
       this.sceneSetup.rebuildScene(this.gameState);
+      this.currentLoadedLevel = level;
     }
     this.runEndOverlay.reset();
     this.cameraRig.updateSpline(this.sceneSetup.trackSpline);
@@ -173,6 +176,7 @@ export class Game {
     this.gameState.update({
       sceneSetup: this.sceneSetup,
     });
+    this.currentLoadedLevel = this.gameState.level;
   }
 
   private disposeSystems(): void {

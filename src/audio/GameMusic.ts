@@ -1,8 +1,6 @@
 import { Howl } from "howler";
 import { clamp } from "../util/Math";
-import {
-  ensureHowlLoaded,
-} from "../loading/CriticalAssetPreloader";
+import { ensureHowlLoaded } from "../loading/CriticalAssetPreloader";
 
 export type GameMusicConfig = {
   tracks: readonly string[];
@@ -145,7 +143,10 @@ export class GameMusic {
     }
   }
 
-  private async playTrackLifecycle(howl: Howl, runToken: number): Promise<void> {
+  private async playTrackLifecycle(
+    howl: Howl,
+    runToken: number,
+  ): Promise<void> {
     if (!this.isRunActive(runToken)) {
       return;
     }
@@ -190,7 +191,7 @@ export class GameMusic {
       }
 
       try {
-        await this.ensureTrackHowlLoaded(index);
+        this.ensureTrackHowlLoaded(index);
       } catch (error) {
         console.warn(
           `Background music prefetch failed for ${this.tracks[index]}.`,

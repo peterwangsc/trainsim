@@ -187,37 +187,6 @@ export async function preloadCriticalAssets(
   };
 }
 
-export async function warmupAudioContext(): Promise<void> {
-  const audioContext = Howler.ctx;
-  if (audioContext.state !== "running") {
-    await audioContext.resume();
-  }
-
-  const silentBuffer = audioContext.createBuffer(1, 1, audioContext.sampleRate);
-  const source = audioContext.createBufferSource();
-  source.buffer = silentBuffer;
-  source.connect(audioContext.destination);
-  source.start(0);
-}
-
-export function primeAllHowls(assets: CriticalPreloadedAssets): void {
-  const allHowls = [
-    ...assets.movementHowls,
-    ...assets.brakeHowls,
-    ...assets.ambientHowls,
-    assets.musicTrack1Howl,
-  ];
-
-  for (const howl of allHowls) {
-    const soundId = howl.play();
-    if (soundId !== undefined) {
-      howl.volume(0.001, soundId);
-      howl.pause(soundId);
-      howl.seek(0, soundId);
-    }
-  }
-}
-
 function loadTexture(src: string): Promise<Texture> {
   return new Promise((resolve, reject) => {
     TEXTURE_LOADER.load(
