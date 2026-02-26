@@ -1,9 +1,6 @@
 import "./style.css";
 import { initSupabase } from "./util/Supabase";
 import { CONFIG } from "./game/Config";
-import { inject } from "@vercel/analytics";
-
-inject();
 
 const app = document.getElementById("app");
 if (!app) throw new Error("Missing #app root element");
