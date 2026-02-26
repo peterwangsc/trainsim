@@ -205,26 +205,5 @@ function loadHowl(src: string): Promise<Howl> {
     html5: false,
   });
 
-  return ensureHowlLoaded(howl).then(() => howl);
-}
-
-export function ensureHowlLoaded(howl: Howl): Promise<void> {
-  if (howl.state() === "loaded") {
-    return Promise.resolve();
-  }
-
-  return new Promise((resolve, reject) => {
-    const onLoad = (): void => {
-      howl.off("loaderror", onLoadError);
-      resolve();
-    };
-    const onLoadError = (_soundId: number, error: unknown): void => {
-      howl.off("load", onLoad);
-      howl.unload();
-      reject(new Error(`Failed to preload audio (${String(error)})`));
-    };
-
-    howl.once("load", onLoad);
-    howl.once("loaderror", onLoadError);
-  });
+  return Promise.resolve(howl);
 }

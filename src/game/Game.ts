@@ -375,9 +375,6 @@ export class Game {
     this.gameMusic = new GameMusic({
       tracks: this.config.audio.musicTrackSrcs,
       volume: this.config.audio.musicVolume,
-      fadeInMs: this.config.audio.musicFadeInMs,
-      fadeOutAtMs: this.config.audio.musicFadeOutAtMs,
-      fadeOutMs: this.config.audio.musicFadeOutMs,
       gapMs: this.config.audio.musicGapMs,
       preloadedFirstTrackHowl: this.preloadedAssets.musicTrack1Howl,
     });

@@ -66,11 +66,6 @@ export const CONFIG = {
       `${ASSETS_CDN_BASE}/track4.mp3`,
     ],
     musicVolume: 0.3,
-    musicFadeInMs: 4_000,
-    // Tracks are 60 s long with a hard cut. Fade out starts at 50 s, giving
-    // 10 s of headroom so the abrupt ending is never heard.
-    musicFadeOutAtMs: 50_000,
-    musicFadeOutMs: 8_000,
     musicGapMs: 4_000,
   },
   track: {
