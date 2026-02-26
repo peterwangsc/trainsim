@@ -25,7 +25,6 @@ export class GameState {
   public comfort = 100;
   public comfortRatio = 1;
   public curvatureSafeSpeed = 0;
-  public distanceToEnd = Infinity;
   public sceneSetup: SceneSetup | null = null;
   public config: typeof CONFIG;
 
@@ -63,7 +62,10 @@ export class GameState {
     );
 
     if (this.status === GameStatus.Running) {
-      if (this.distanceToEnd <= this.config.terminal.bumperOffsetFromTrackEnd) {
+      const trackEndLayout = this.sceneSetup?.trackEndSet.getLayout();
+      const hasHitBumper = trackEndLayout && this.distance >= trackEndLayout.bumperDistance;
+
+      if (hasHitBumper) {
         this.status = GameStatus.Failed;
         this.failureReason = "BUMPER";
       } else if (this.isStoppedInStation(this.distance, this.speed)) {
