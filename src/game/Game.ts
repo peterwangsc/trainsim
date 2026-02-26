@@ -143,7 +143,9 @@ export class Game {
       userId,
       status: GameStatus.Running,
     });
-    this.sceneSetup.rebuildScene(this.gameState);
+    if (level !== this.gameState.level) {
+      this.sceneSetup.rebuildScene(this.gameState);
+    }
     this.runEndOverlay.reset();
     this.cameraRig.updateSpline(this.sceneSetup.trackSpline);
     this.trackSampler.updateSpline(this.sceneSetup.trackSpline);
