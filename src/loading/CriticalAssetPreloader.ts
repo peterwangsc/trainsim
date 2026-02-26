@@ -199,11 +199,16 @@ function loadTexture(src: string): Promise<Texture> {
 }
 
 function loadHowl(src: string): Promise<Howl> {
-  const howl = new Howl({
-    src: [src],
-    preload: true,
-    html5: false,
-  });
+  return new Promise((resolve, reject) => {
+    const howl = new Howl({
+      src: [src],
+      preload: true,
+      html5: false,
+    });
 
-  return Promise.resolve(howl);
+    howl.once("load", () => resolve(howl));
+    howl.once("loaderror", () =>
+      reject(new Error(`Failed to preload audio: ${src}`)),
+    );
+  });
 }
