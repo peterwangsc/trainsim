@@ -53,7 +53,7 @@ const SPECIES_BUCKET: SingleTreeSpecies[] = [
 ];
 
 const UP = new Vector3(0, 1, 0);
-const TREE_ROOT_BURY_OFFSET = 0.06;
+const TREE_ROOT_BURY_OFFSET = 0.75;
 const TREE_FOOTPRINT_CLEARANCE = 0.2;
 
 export class ForestLayer {

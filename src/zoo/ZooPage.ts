@@ -13,7 +13,6 @@ export class ZooPage {
   private sceneSetup!: SceneSetup;
   private freeCam!: FreeCameraController;
   private headlight!: TrainHeadlight;
-  private headlightEnabled = false;
   private panel!: ZooPanel;
   private gameState!: GameState;
   private rafId = 0;
@@ -29,14 +28,17 @@ export class ZooPage {
 
     this.renderer = new Renderer(this.container);
     const canvas = this.renderer.getCanvas();
-    Object.assign(canvas.style, { display: "block", width: "100%", height: "100%" });
+    Object.assign(canvas.style, {
+      display: "block",
+      width: "100%",
+      height: "100%",
+    });
 
     this.gameState = new GameState(null, "zoo", CONFIG);
     this.gameState.level = 1;
     this.gameState.status = GameStatus.Running;
 
     this.sceneSetup = new SceneSetup(assets, this.gameState, CONFIG);
-    this.headlight = new TrainHeadlight(this.sceneSetup.scene);
 
     this.freeCam = new FreeCameraController(
       canvas,
@@ -44,22 +46,25 @@ export class ZooPage {
       CONFIG.camera.near,
       CONFIG.camera.far,
     );
+
+    this.headlight = new TrainHeadlight(
+      this.sceneSetup.scene,
+      this.freeCam.camera,
+    );
     this.positionCameraAtStation();
 
     this.panel = new ZooPanel(this.container, {
       onLevelRebuild: (level) => {
         this.gameState.level = level;
-        this.headlight.dispose();
         this.sceneSetup.rebuildScene(this.gameState);
-        this.headlight = new TrainHeadlight(this.sceneSetup.scene);
         this.positionCameraAtStation();
       },
       onTimeChange: (t) => {
         this.sceneSetup.dayNightSky.setTimeOverride(t);
       },
       onHeadlightToggle: (on) => {
-        this.headlightEnabled = on;
-        if (!on) this.headlight.light.visible = false;
+        this.headlight.isEnabled = on;
+        this.headlight.update(on ? 1 : 0);
       },
       onLock: () => this.freeCam.lock(),
       onUnlock: () => this.freeCam.unlock(),
@@ -78,8 +83,12 @@ export class ZooPage {
 
   private positionCameraAtStation(): void {
     const { stationStartDistance } = this.sceneSetup.trackEndSet.getLayout();
-    const pos = this.sceneSetup.trackSpline.getPositionAtDistance(stationStartDistance - 20);
-    const tangent = this.sceneSetup.trackSpline.getTangentAtDistance(stationStartDistance - 20);
+    const pos = this.sceneSetup.trackSpline.getPositionAtDistance(
+      stationStartDistance - 20,
+    );
+    const tangent = this.sceneSetup.trackSpline.getTangentAtDistance(
+      stationStartDistance - 20,
+    );
     this.freeCam.camera.position.set(pos.x, pos.y + 4, pos.z);
     this.freeCam.camera.rotation.order = "YXZ";
     this.freeCam.camera.rotation.set(0, Math.atan2(tangent.x, tangent.z), 0);
@@ -90,15 +99,8 @@ export class ZooPage {
     this.lastTime = now;
 
     this.freeCam.update(dt);
-
-    if (this.headlightEnabled) {
-      this.freeCam.camera.getWorldDirection(this.camForward);
-      this.headlight.update(
-        0,
-        this.camForward,
-        this.freeCam.camera.position,
-        1.0, // always full brightness when manually enabled
-      );
+    if (this.headlight.isEnabled) {
+      this.headlight.update(1);
     }
 
     this.sceneSetup.update(dt, this.freeCam.camera);

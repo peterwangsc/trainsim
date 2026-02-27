@@ -36,9 +36,19 @@ export class SceneSetup {
   }
 
   rebuildScene(gameState: GameState): void {
-    this.dispose();
+    this.grassLayer.dispose();
+    this.forestLayer.dispose();
+    this.terrainLayer.dispose();
+    this.trackEndSet.dispose();
+    this.scene.remove(this.trackGroup);
     this.gameState = gameState;
-    this.buildScene();
+    this.buildTrack();
+    this.buildTerrain();
+    this.dayNightSky.setTerrainHeightSampler(
+      this.terrainLayer.getHeightAt.bind(this.terrainLayer),
+    );
+    this.buildForest();
+    this.buildGrass();
   }
 
   update(dt: number, camera: PerspectiveCamera): void {

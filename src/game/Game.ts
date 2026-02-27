@@ -277,14 +277,7 @@ export class Game {
     );
     this.renderer.setToneMappingExposure(this.toneMappingExposure);
 
-    const position = trackSpline.getPositionAtDistance(wrappedDistance);
-    const tangent = trackSpline.getTangentAtDistance(wrappedDistance);
-    this.headlight.update(
-      wrappedDistance,
-      tangent,
-      position,
-      this.sceneSetup.dayNightSky.getNightFactor(),
-    );
+    this.headlight.update(this.sceneSetup.dayNightSky.getNightFactor());
   }
 
   private render(): void {
@@ -318,7 +311,11 @@ export class Game {
       this.container.clientWidth / this.container.clientHeight,
     );
 
-    this.headlight = new TrainHeadlight(this.sceneSetup.scene);
+    this.headlight = new TrainHeadlight(
+      this.sceneSetup.scene,
+      this.cameraRig.camera,
+    );
+    this.headlight.isEnabled = true;
   }
 
   private initUiControls(): void {
