@@ -1,6 +1,7 @@
 {
   "name": "TrainSim",
   "short_name": "TrainSim",
+  "description": "TrainSim is a realistic 3D train driving simulator. Drive a train, maintain passenger comfort, and stop safely at the terminal station.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b1622",

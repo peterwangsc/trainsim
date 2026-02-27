@@ -1,6 +1,8 @@
-# trainsim
+# TrainSim
 
-Train simulation project.
+TrainSim is a realistic 3D train driving simulator built with TypeScript and Three.js. Drive a train from start to a terminal station, maintaining passenger comfort while stopping safely.
+
+**Play the game live at:** [https://trainsim.io/](https://trainsim.io/)
 
 ## Development
 
