@@ -396,6 +396,7 @@ export class Game {
     this.settingsScreen = new SettingsScreen(
       this.container,
       this.gameState,
+      (level) => this.startLevel(level, this.gameState.userId, this.gameState.username),
     );
     this.hud = new HudController(
       this.container,
@@ -469,9 +470,14 @@ export class Game {
 
   private showRunEndOverlay(): void {
     if (this.gameState.status === GameStatus.Won) {
-      const nextLevel = this.gameState.level + 1;
-      this.gameState.update({ level: nextLevel });
-      saveProgress(this.gameState.userId, this.gameState.username, nextLevel);
+      const currentLevel = this.gameState.level;
+      const nextLevel = currentLevel + 1;
+
+      if (nextLevel > this.gameState.maxLevel) {
+        this.gameState.update({ maxLevel: nextLevel });
+        saveProgress(this.gameState.userId, this.gameState.username, nextLevel);
+      }
+
       this.runEndOverlay.show({
         tone: "won",
         title: "Station Stop Complete",
@@ -487,11 +493,6 @@ export class Game {
         onLogin: async (username) => {
           const result = await login(username, this.gameState);
           if (result) {
-            this.gameState.update({
-              userId: result.userId,
-              username: result.username,
-              level: result.level,
-            });
             this.startLevel(result.level, result.userId, result.username);
           }
         },

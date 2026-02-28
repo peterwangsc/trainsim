@@ -14,6 +14,7 @@ export enum GameStatus {
 
 export class GameState {
   public level: number = 1;
+  public maxLevel: number = 1;
   public username: string | null;
   public userId: string;
   public status = GameStatus.Ready;

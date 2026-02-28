@@ -109,6 +109,7 @@ export class LoginScreen {
               userId: result.userId,
               username: result.username,
               level: result.level,
+              maxLevel: result.level,
             });
             this.hide();
             this.onStart(result.level, result.userId, result.username);
@@ -141,6 +142,7 @@ export class LoginScreen {
         this.gameState.update({
           userId: result.userId,
           level: result.level,
+          maxLevel: result.level,
           username: null,
         });
         this.hide();

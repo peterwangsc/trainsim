@@ -178,6 +178,7 @@ export async function login(
           userId: data.id as string,
           username: data.username as string,
           level: newLevel,
+          maxLevel: newLevel,
           masterVolume: data.master_volume as number,
           musicVolume: data.music_volume as number,
           sfxVolume: data.sfx_volume as number,
@@ -192,6 +193,7 @@ export async function login(
         userId: data.id as string,
         username: data.username as string,
         level: data.level as number,
+        maxLevel: data.level as number,
         masterVolume: data.master_volume as number,
         musicVolume: data.music_volume as number,
         sfxVolume: data.sfx_volume as number,
@@ -208,6 +210,7 @@ export async function login(
       saveUsername(normalizedUsername);
       gameState.update({
         username: normalizedUsername,
+        maxLevel: targetLevel,
       });
     }
 

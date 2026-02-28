@@ -40,13 +40,13 @@ export class LoadingScreenManager {
       ),
       fetchUserPresetContents(this.gameState.userId, this.gameState.username),
     ]);
-    this.gameState.update({ 
+    this.gameState.update({
       level: presetContents.level,
+      maxLevel: presetContents.level,
       masterVolume: presetContents.masterVolume ?? 0.5,
       musicVolume: presetContents.musicVolume ?? 0.5,
       sfxVolume: presetContents.sfxVolume ?? 0.5,
-    });
-    // Let the splash screen know the initial sound settings for the sliders
+    });    // Let the splash screen know the initial sound settings for the sliders
     this.loadingSplash.setSoundSettings(
       this.gameState.masterVolume,
       this.gameState.musicVolume,

@@ -1519,11 +1519,11 @@ canvas {
 }
 
 .settings-panel {
-  flex: 1;
+  flex: 0 1 auto;
   background: rgba(20, 20, 25, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
-  padding: 4dvh 3dvw;
+  padding: 32px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
@@ -1534,7 +1534,7 @@ canvas {
 
 .settings-panel h3 {
   margin-top: 0;
-  font-size: clamp(16px, 3dvh, 20px);
+  font-size: 18px;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: #fff;
@@ -1545,7 +1545,6 @@ canvas {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  flex: 1;
   width: 100%;
   min-height: 0;
 }
@@ -1555,13 +1554,12 @@ canvas {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
   flex: 1;
 }
 
 .throttle-slider-wrapper {
   position: relative;
-  height: 40dvh;
+  height: 180px;
   width: 40px;
   display: flex;
   align-items: center;
@@ -1570,7 +1568,7 @@ canvas {
 
 .throttle-slider {
   transform: rotate(-90deg);
-  width: 40dvh;
+  width: 180px;
   height: 40px;
   margin: 0;
   cursor: pointer;
@@ -1654,4 +1652,29 @@ canvas {
 
 .tutorial-content strong {
   color: #fff;
+}
+
+.settings-panel__content {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-around;
+  width: 100%;
+  gap: 32px;
+}
+
+.settings-panel__section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+}
+
+@media (max-width: 650px) and (orientation: portrait) {
+  .settings-panel__content {
+    flex-direction: column;
+    gap: 24px;
+  }
 }
