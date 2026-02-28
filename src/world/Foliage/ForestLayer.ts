@@ -207,7 +207,9 @@ export class ForestLayer {
 
   private pickSpecies(rng: SeededRandom): SingleTreeSpecies {
     const index = Math.floor(rng.range(0, SPECIES_BUCKET.length));
-    return SPECIES_BUCKET[Math.min(index, SPECIES_BUCKET.length - 1)];
+    return SPECIES_BUCKET[
+      (index + SPECIES_BUCKET.length) % SPECIES_BUCKET.length
+    ];
   }
 
   private overlapsExistingTree(

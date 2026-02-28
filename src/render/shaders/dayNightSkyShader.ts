@@ -83,7 +83,11 @@ void main() {
 
 export const skyCloudColorReplace = () => /* glsl */ `
 #pragma vscode_glsllint_stage: frag
-vec3 texColor = ( Lin + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
+vec3 baseSkyColor = ( Lin + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
+
+// Blend the Preetham scattering into a dark night color to kill the below-horizon orange glow
+vec3 nightSkyBase = vec3( 0.00015, 0.0003, 0.00075 );
+vec3 texColor = mix( baseSkyColor, nightSkyBase, cloudNightFactor);
 
 vec2 skyUv = uv - vec2( 0.5 );
 vec2 rotatedSkyUv = vec2( skyUv.y, -skyUv.x );
@@ -107,7 +111,7 @@ float cloudMask = cloudShape * horizonMask;
         clamp( 1.0 - direction.y * 1.2, 0.0, 1.0 )
     );
     vec3 cloudTint = mix( cloudTintDay, cloudTintNight, cloudNightFactor );
-    float cloudDensityMix = cloudDensity * mix( 1.0, 0.35, cloudNightFactor );
+    float cloudDensityMix = cloudDensity * mix( 1.0, 0.15, cloudNightFactor );
     float cloudDarken = mix( 0.6, 0.78, cloudNightFactor );
     float cloudTintStrength = mix( 0.08, 0.03, cloudNightFactor );
     texColor = mix(

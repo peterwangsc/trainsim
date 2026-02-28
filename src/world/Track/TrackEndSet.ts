@@ -217,7 +217,7 @@ export class TrackEndSet {
       }
 
       const platform = new Mesh(platformGeometry, platformMaterials);
-      platform.castShadow = false;
+      platform.castShadow = true;
       platform.receiveShadow = true;
       this.placeAlongTrack(
         platform,
@@ -230,7 +230,7 @@ export class TrackEndSet {
 
       if (index % 2 === 0) {
         const canopyPost = new Mesh(canopyPostGeometry, canopyPostMaterials);
-        canopyPost.castShadow = false;
+        canopyPost.castShadow = true;
         canopyPost.receiveShadow = true;
         this.placeAlongTrack(
           canopyPost,
@@ -241,7 +241,7 @@ export class TrackEndSet {
         this.root.add(canopyPost);
 
         const canopyRoof = new Mesh(canopyRoofGeometry, canopyRoofMaterials);
-        canopyRoof.castShadow = false;
+        canopyRoof.castShadow = true;
         canopyRoof.receiveShadow = true;
         this.placeAlongTrack(
           canopyRoof,
@@ -285,7 +285,11 @@ export class TrackEndSet {
     const frontBackGeometry = this.createGeometry(new PlaneGeometry(6.6, 3.4));
     const leftRightGeometry = this.createGeometry(new PlaneGeometry(8.8, 3.4));
 
-    const scaleUvs = (geometry: BufferGeometry, scaleX: number, scaleY: number) => {
+    const scaleUvs = (
+      geometry: BufferGeometry,
+      scaleX: number,
+      scaleY: number,
+    ) => {
       const uvs = geometry.attributes.uv;
       if (uvs) {
         for (let i = 0; i < uvs.count; i++) {
@@ -299,28 +303,28 @@ export class TrackEndSet {
 
     const frontWall = new Mesh(frontBackGeometry, buildingMaterial);
     frontWall.position.set(0, 0, 4.4);
-    frontWall.castShadow = false;
+    frontWall.castShadow = true;
     frontWall.receiveShadow = true;
     buildingGroup.add(frontWall);
 
     const backWall = new Mesh(frontBackGeometry, buildingMaterial);
     backWall.position.set(0, 0, -4.4);
     backWall.rotation.y = Math.PI;
-    backWall.castShadow = false;
+    backWall.castShadow = true;
     backWall.receiveShadow = true;
     buildingGroup.add(backWall);
 
     const leftWall = new Mesh(leftRightGeometry, buildingMaterial);
     leftWall.position.set(-3.3, 0, 0);
     leftWall.rotation.y = -Math.PI / 2;
-    leftWall.castShadow = false;
+    leftWall.castShadow = true;
     leftWall.receiveShadow = true;
     buildingGroup.add(leftWall);
 
     const rightWall = new Mesh(leftRightGeometry, buildingMaterial);
     rightWall.position.set(3.3, 0, 0);
     rightWall.rotation.y = Math.PI / 2;
-    rightWall.castShadow = false;
+    rightWall.castShadow = true;
     rightWall.receiveShadow = true;
     buildingGroup.add(rightWall);
 
@@ -343,7 +347,7 @@ export class TrackEndSet {
         }),
       ),
     );
-    roof.castShadow = false;
+    roof.castShadow = true;
     roof.receiveShadow = true;
     this.placeAlongTrack(
       roof,
@@ -516,7 +520,7 @@ export class TrackEndSet {
       ),
     );
     panel.position.y = postHeight + panelHeight * 0.5 - 2.5;
-    panel.castShadow = false;
+    panel.castShadow = true;
     panel.receiveShadow = false;
     sign.add(panel);
 

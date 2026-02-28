@@ -132,12 +132,12 @@ const HEMISPHERE_DAY_INTENSITY = 0.58;
 const HEMISPHERE_NIGHT_INTENSITY = 0.05;
 const AMBIENT_DAY_INTENSITY = 0.64;
 const AMBIENT_NIGHT_INTENSITY = 0.055;
-const EXPOSURE_DAY = 0.56;
-const EXPOSURE_NIGHT = 0.46;
+const EXPOSURE_DAY = 0.8;
+const EXPOSURE_NIGHT = 1.1;
 const EXPOSURE_TWILIGHT_LIFT = 0.08;
 const EXPOSURE_MOON_LIFT = 0.06;
-const EXPOSURE_MIN = 0.8;
-const EXPOSURE_MAX = 1.06;
+const EXPOSURE_MIN = 0.65;
+const EXPOSURE_MAX = 1.15;
 
 type DayNightSkyOptions = {
   dayCycleDurationSeconds?: number;
