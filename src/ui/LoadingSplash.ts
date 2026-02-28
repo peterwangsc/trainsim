@@ -146,10 +146,53 @@ export class LoadingSplash {
     loadLeaderboardsBtn.style.display = "none";
     loadLeaderboardsBtn.textContent = "Loading Leaderboards...";
 
+    const createSkeleton = () => {
+      const lbSection = document.createElement("div");
+      lbSection.className = "lb-skeleton";
+      lbSection.style.marginBottom = "16px";
+      lbSection.style.background = "rgba(255,255,255,0.05)";
+      lbSection.style.padding = "12px";
+      lbSection.style.borderRadius = "8px";
+      lbSection.style.border = "1px solid rgba(255,255,255,0.05)";
+      lbSection.style.opacity = "0.6";
+
+      const title = document.createElement("div");
+      title.style.height = "16px";
+      title.style.width = "80px";
+      title.style.background = "rgba(255,255,255,0.1)";
+      title.style.marginBottom = "12px";
+      title.style.borderRadius = "4px";
+      lbSection.appendChild(title);
+
+      for (let i = 0; i < 3; i++) {
+        const row = document.createElement("div");
+        row.style.display = "flex";
+        row.style.justifyContent = "space-between";
+        row.style.marginBottom = "8px";
+
+        const name = document.createElement("div");
+        name.style.height = "12px";
+        name.style.width = "100px";
+        name.style.background = "rgba(255,255,255,0.08)";
+        name.style.borderRadius = "3px";
+
+        const time = document.createElement("div");
+        time.style.height = "12px";
+        time.style.width = "60px";
+        time.style.background = "rgba(255,255,255,0.08)";
+        time.style.borderRadius = "3px";
+
+        row.append(name, time);
+        lbSection.appendChild(row);
+      }
+      return lbSection;
+    };
+
     const renderLeaderboards = async (startMaxLevel: number | null) => {
-      loadLeaderboardsBtn.disabled = true;
-      loadLeaderboardsBtn.textContent = "Loading...";
-      loadLeaderboardsBtn.style.display = "block";
+      loadLeaderboardsBtn.style.display = "none";
+
+      const skeletons = [createSkeleton(), createSkeleton()];
+      skeletons.forEach((s) => leaderboardsContainer.appendChild(s));
 
       let maxToLoad = startMaxLevel;
       if (maxToLoad === null) {
@@ -158,6 +201,8 @@ export class LoadingSplash {
 
       const minToLoad = Math.max(1, maxToLoad - 10);
       const leaderboards = await getTopTimesForLevels(maxToLoad, minToLoad);
+
+      skeletons.forEach((s) => s.remove());
 
       for (const lb of leaderboards) {
         const lbSection = document.createElement("div");
@@ -219,6 +264,7 @@ export class LoadingSplash {
       if (currentLoadMaxLevel >= 1) {
         loadLeaderboardsBtn.textContent = "Show More";
         loadLeaderboardsBtn.disabled = false;
+        loadLeaderboardsBtn.style.display = "inline-block";
       } else {
         loadLeaderboardsBtn.style.display = "none";
       }
@@ -365,15 +411,71 @@ export class LoadingSplash {
     const link = document.createElement("a");
     link.href = "https://trainsim.io";
     link.target = "_blank";
-    link.textContent = "https://trainsim.io";
-    link.style.color = "#4da6ff";
+    link.textContent = "trainsim.io";
+    link.style.color = "rgba(255, 255, 255, 0.7)";
+    link.style.textDecoration = "none";
     link.style.display = "block";
     link.style.marginBottom = "12px";
+    link.style.transition = "color 0.2s ease";
+    link.addEventListener("mouseenter", () => (link.style.color = "#fff"));
+    link.addEventListener(
+      "mouseleave",
+      () => (link.style.color = "rgba(255, 255, 255, 0.7)"),
+    );
 
-    const email = document.createElement("p");
-    email.textContent = "peterwangsc";
+    const shareLink = document.createElement("button");
+    shareLink.style.background = "none";
+    shareLink.style.border = "none";
+    shareLink.style.color = "rgba(255, 255, 255, 0.7)";
+    shareLink.style.textDecoration = "none";
+    shareLink.style.cursor = "pointer";
+    shareLink.style.padding = "0";
+    shareLink.style.font = "inherit";
+    shareLink.style.display = "flex";
+    shareLink.style.alignItems = "center";
+    shareLink.style.justifyContent = "center";
+    shareLink.style.gap = "6px";
+    shareLink.style.margin = "0 auto 12px auto";
+    shareLink.style.transition = "color 0.2s ease";
 
-    oldCreditsContainer.append(link, email);
+    shareLink.innerHTML = `
+      <span>Share</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+        <polyline points="16 6 12 2 8 6"></polyline>
+        <line x1="12" y1="2" x2="12" y2="15"></line>
+      </svg>
+    `;
+
+    shareLink.addEventListener(
+      "mouseenter",
+      () => (shareLink.style.color = "#fff"),
+    );
+    shareLink.addEventListener(
+      "mouseleave",
+      () => (shareLink.style.color = "rgba(255, 255, 255, 0.7)"),
+    );
+
+    shareLink.addEventListener("click", () => {
+      const shareData = {
+        title: "TrainSim",
+        text: "Drive trains in 3D in your browser!",
+        url: "https://trainsim.io/",
+      };
+
+      if (
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare(shareData)
+      ) {
+        navigator.share(shareData).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(shareData.url);
+        alert("Link copied to clipboard!");
+      }
+    });
+
+    oldCreditsContainer.append(link, shareLink);
     creditsContent.appendChild(oldCreditsContainer);
 
     this.creditsPage = this.createPage(creditsContent);
