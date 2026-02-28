@@ -90,13 +90,13 @@ export class SceneSetup {
     const trackConfig = {
       ...this.config.track,
       segmentCount:
-        this.config.track.segmentCount + (this.gameState.level - 1) * 160,
+        this.config.track.segmentCount + (this.gameState.level - 1) * 50,
       baseCurvaturePerMeter:
         this.config.track.baseCurvaturePerMeter *
-        (1 + (this.gameState.level - 1) * 0.25),
+        (1 + (this.gameState.level - 1) * 0.05),
       detailCurvaturePerMeter:
         this.config.track.detailCurvaturePerMeter *
-        (1 + (this.gameState.level - 1) * 0.25),
+        (1 + (this.gameState.level - 1) * 0.05),
     };
 
     const trackPoints = new TrackGenerator(

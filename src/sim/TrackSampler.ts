@@ -54,14 +54,20 @@ export class TrackSampler {
       const sampleDistance = distance + distanceAhead;
       const curvature = curvatureAtDistance(this.spline, sampleDistance);
       const safeSpeed = clamp(
-        this.config.safeSpeedBase /
-          Math.sqrt(Math.abs(curvature) + this.config.curvatureEpsilon),
+        (this.config.safeSpeedBase /
+          Math.sqrt(Math.abs(curvature) + this.config.curvatureEpsilon)) *
+          0.22,
         this.config.safeSpeedMin,
         this.config.safeSpeedMax,
       );
       const { lateral, forward } =
         this.sampleRelativeCoordinates(sampleDistance);
-
+      console.log(
+        "safeSpeed raw",
+        (this.config.safeSpeedBase /
+          Math.sqrt(Math.abs(curvature) + this.config.curvatureEpsilon)) *
+          0.22,
+      );
       return {
         distanceAhead,
         curvature,
