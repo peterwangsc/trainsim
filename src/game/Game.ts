@@ -158,6 +158,13 @@ export class Game {
     this.comfortModel.reset();
     this.gameState.reset();
     this.loginScreen.reset();
+
+    const expectedDuration = this.trackSampler.computeExpectedDuration(
+      this.sceneSetup.trackSpline.getLength(),
+      this.config.terminal.parTimeBaseSpeed,
+    );
+    this.gameState.update({ expectedDuration });
+
     this.simulate(0);
     this.gameState.update({
       sceneSetup: this.sceneSetup,
@@ -201,6 +208,28 @@ export class Game {
     const previousStatus = this.gameState.status;
     const input = this.inputManager.update(dt);
 
+    if (this.gameState.status === GameStatus.Running) {
+      this.gameState.elapsedTime += dt;
+    }
+
+    const timeOfDayHours = this.sceneSetup.dayNightSky.getTimeOfDayHours();
+    this.gameState.timeOfDayHours = timeOfDayHours;
+
+    if (
+      this.gameState.status === GameStatus.Running ||
+      this.gameState.status === GameStatus.Ready
+    ) {
+      this.gameState.expectedArrivalHours =
+        (timeOfDayHours +
+          (Math.max(
+            0,
+            this.gameState.expectedDuration - this.gameState.elapsedTime,
+          ) /
+            this.sceneSetup.dayNightSky.getDayCycleDurationSeconds()) *
+            24) %
+        24;
+    }
+
     if (
       this.gameState.status !== GameStatus.Running &&
       this.gameState.status !== GameStatus.Ready
@@ -230,6 +259,8 @@ export class Game {
         safeSpeed: curvatureSafeSpeed,
         accel: train.accel,
         jerk: train.jerk,
+        elapsedTime: this.gameState.elapsedTime,
+        expectedDuration: this.gameState.expectedDuration,
       },
       dt,
     );

@@ -938,6 +938,55 @@ canvas {
   text-transform: uppercase;
 }
 
+/* Time cluster */
+.hud-time-cluster {
+  position: absolute;
+  top: 72px;
+  right: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  background: rgb(9 18 30 / 72%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 8px 12px;
+  box-shadow:
+    0 8px 18px rgb(0 0 0 / 36%),
+    inset 0 1px 0 rgb(160 210 255 / 8%);
+  backdrop-filter: blur(3px);
+}
+
+.hud-time-label {
+  font-family: var(--font-ui);
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+
+.hud-time-value {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--text-bright);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 6px;
+}
+
+.hud-time-label--eta {
+  color: var(--accent-amber);
+  margin-top: 2px;
+}
+
+.hud-time-value--eta {
+  color: var(--accent-amber);
+  margin-bottom: 0;
+}
+
 /* Comfort gauge */
 .comfort-gauge {
   position: fixed;
@@ -1185,6 +1234,21 @@ canvas {
     font-size: 0.44rem;
   }
 
+  .hud-time-cluster {
+    top: 84px;
+    right: 80px;
+    padding: 6px 10px;
+  }
+
+  .hud-time-label {
+    font-size: 0.5rem;
+  }
+
+  .hud-time-value {
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+  }
+
   .comfort-gauge {
     top: 50dvh;
     right: 12px;
@@ -1278,6 +1342,21 @@ canvas {
   .speed-limit-unit {
     margin-top: 2px;
     font-size: 0.42rem;
+  }
+
+  .hud-time-cluster {
+    top: 62px;
+    right: 70px;
+    padding: 5px 8px;
+  }
+
+  .hud-time-label {
+    font-size: 0.45rem;
+  }
+
+  .hud-time-value {
+    font-size: 0.85rem;
+    margin-bottom: 3px;
   }
 
   .comfort-gauge {

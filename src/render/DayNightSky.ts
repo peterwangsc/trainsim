@@ -707,6 +707,11 @@ export class DayNightSky {
     return this.dayCycleDurationSeconds;
   }
 
+  getTimeOfDayHours(): number {
+    const cycleProgress = this.elapsedSeconds / this.dayCycleDurationSeconds;
+    return (cycleProgress * 24 + 5.4) % 24;
+  }
+
   enableDirectionalFog(): void {
     if (this.directionalFogEnabled) {
       return;

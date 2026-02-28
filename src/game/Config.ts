@@ -32,6 +32,7 @@ export const CONFIG = {
     hardBrakePenaltyRate: 4.5,
     jerkThreshold: 2.8,
     jerkPenaltyRate: 0.4,
+    latePenaltyRate: 0.5,
   },
   audio: {
     movementTrackSrcs: Array.from(
@@ -198,5 +199,6 @@ export const CONFIG = {
     platformHeight: 0.32,
     platformLateralOffset: 5.4,
     platformSegmentLength: 10,
+    parTimeBaseSpeed: 25,
   },
 } as const;

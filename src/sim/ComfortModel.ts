@@ -8,6 +8,7 @@ export type ComfortConfig = {
   hardBrakePenaltyRate: number;
   jerkThreshold: number;
   jerkPenaltyRate: number;
+  latePenaltyRate: number;
 };
 
 export type ComfortInput = {
@@ -15,6 +16,8 @@ export type ComfortInput = {
   safeSpeed: number;
   accel: number;
   jerk: number;
+  elapsedTime: number;
+  expectedDuration: number;
 };
 
 export class ComfortModel {
@@ -38,7 +41,12 @@ export class ComfortModel {
       Math.max(0, Math.abs(input.jerk) - this.config.jerkThreshold) *
       this.config.jerkPenaltyRate;
 
-    const totalPenalty = overspeedPenalty + hardBrakePenalty + jerkPenalty;
+    const latePenalty =
+      input.elapsedTime > input.expectedDuration && input.expectedDuration > 0
+        ? this.config.latePenaltyRate
+        : 0;
+
+    const totalPenalty = overspeedPenalty + hardBrakePenalty + jerkPenalty + latePenalty;
     const regen = totalPenalty === 0 ? this.config.regenRate : 0;
 
     this.comfort = clamp(

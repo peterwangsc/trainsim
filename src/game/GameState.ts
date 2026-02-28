@@ -25,6 +25,10 @@ export class GameState {
   public comfort = 100;
   public comfortRatio = 1;
   public curvatureSafeSpeed = 0;
+  public elapsedTime = 0;
+  public expectedDuration = 0;
+  public timeOfDayHours = 0;
+  public expectedArrivalHours = 0;
   public sceneSetup: SceneSetup | null = null;
   public config: typeof CONFIG;
 
@@ -43,6 +47,7 @@ export class GameState {
     this.safeSpeed = 0;
     this.comfort = 100;
     this.comfortRatio = 1;
+    this.elapsedTime = 0;
   }
 
   update(updates: Partial<GameState>): void {

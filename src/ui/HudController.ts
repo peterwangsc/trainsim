@@ -30,6 +30,8 @@ export class HudController {
   private readonly comfortValue: HTMLSpanElement;
   private readonly speedValue: HTMLSpanElement;
   private readonly speedLimitValue: HTMLSpanElement;
+  private readonly clockValue: HTMLSpanElement;
+  private readonly etaValue: HTMLSpanElement;
   private readonly minimapWidget: MinimapCurvatureWidget;
   private readonly onBrakeButtonChange: (isDown: boolean) => void;
   private readonly brakeButton: HTMLButtonElement;
@@ -115,6 +117,25 @@ export class HudController {
     );
     previewCluster.appendChild(speedReadout);
 
+    const timeCluster = document.createElement("div");
+    timeCluster.className = "hud-time-cluster";
+    
+    const clockLabel = document.createElement("span");
+    clockLabel.className = "hud-time-label";
+    clockLabel.textContent = "Time";
+    
+    this.clockValue = document.createElement("span");
+    this.clockValue.className = "hud-time-value";
+    
+    const etaLabel = document.createElement("span");
+    etaLabel.className = "hud-time-label hud-time-label--eta";
+    etaLabel.textContent = "ETA";
+
+    this.etaValue = document.createElement("span");
+    this.etaValue.className = "hud-time-value hud-time-value--eta";
+
+    timeCluster.append(clockLabel, this.clockValue, etaLabel, this.etaValue);
+
     this.comfortGauge = document.createElement("div");
     this.comfortGauge.className = "comfort-gauge";
 
@@ -171,6 +192,7 @@ export class HudController {
       this.statusBanner,
       previewCluster,
       speedLimitSign,
+      timeCluster,
       this.comfortGauge,
       this.brakeButton,
       this.usernameDisplay,
@@ -227,6 +249,14 @@ export class HudController {
     this.setBrakeVisual(metrics.brake);
     this.minimapWidget.draw(metrics.pathPoints, metrics.samples, metrics.speed);
     this.usernameDisplay.textContent = this.gameState.username ?? "Login";
+    
+    const formatTime = (hours: number) => {
+      const h = Math.floor(hours);
+      const m = Math.floor((hours - h) * 60);
+      return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+    };
+    this.clockValue.textContent = formatTime(metrics.gameState.timeOfDayHours);
+    this.etaValue.textContent = formatTime(metrics.gameState.expectedArrivalHours);
   }
 
   private setBrakeButtonDown(isDown: boolean): void {

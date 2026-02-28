@@ -107,6 +107,24 @@ export class TrackSampler {
     return points;
   }
 
+  computeExpectedDuration(trackLength: number, parTimeBaseSpeed: number): number {
+    const dx = 10;
+    let totalSeconds = 0;
+    for (let x = 0; x < trackLength; x += dx) {
+      const curvature = curvatureAtDistance(this.spline, x);
+      const safeSpeed = clamp(
+        (this.config.safeSpeedBase /
+          Math.sqrt(Math.abs(curvature) + this.config.curvatureEpsilon)) *
+          0.22,
+        this.config.safeSpeedMin,
+        this.config.safeSpeedMax,
+      );
+      // we add 15% buffer
+      totalSeconds += dx / Math.min(safeSpeed, parTimeBaseSpeed);
+    }
+    return totalSeconds * 1.15;
+  }
+
   private prepareFrame(distance: number): void {
     this.origin.copy(this.spline.getPositionAtDistance(distance));
     this.tangent.copy(this.spline.getTangentAtDistance(distance));
