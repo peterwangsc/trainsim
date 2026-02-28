@@ -40,8 +40,8 @@ export const CONFIG = {
       (_, i) => `${ASSETS_CDN_BASE}/loops/tt${i + 1}.mp3`,
     ),
     movementThreshold: 0.0,
-    minVolume: 0.0,
-    maxVolume: 0.2,
+    minVolume: 0.05,
+    maxVolume: 0.4,
     movementReleaseFadeSeconds: 0.5,
     brakeTrackSrcs: Array.from(
       { length: 4 },

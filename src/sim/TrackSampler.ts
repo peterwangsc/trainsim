@@ -62,12 +62,7 @@ export class TrackSampler {
       );
       const { lateral, forward } =
         this.sampleRelativeCoordinates(sampleDistance);
-      console.log(
-        "safeSpeed raw",
-        (this.config.safeSpeedBase /
-          Math.sqrt(Math.abs(curvature) + this.config.curvatureEpsilon)) *
-          0.22,
-      );
+
       return {
         distanceAhead,
         curvature,
@@ -107,7 +102,10 @@ export class TrackSampler {
     return points;
   }
 
-  computeExpectedDuration(trackLength: number, parTimeBaseSpeed: number): number {
+  computeExpectedDuration(
+    trackLength: number,
+    parTimeBaseSpeed: number,
+  ): number {
     const dx = 10;
     let totalSeconds = 0;
     for (let x = 0; x < trackLength; x += dx) {

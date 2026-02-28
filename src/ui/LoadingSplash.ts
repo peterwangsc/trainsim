@@ -1,5 +1,19 @@
 import { ASSETS_CDN_BASE } from "../game/Config";
 import { GameState } from "../game/GameState";
+import { saveSoundSettings } from "../util/Username";
+
+function debounce<T extends (...args: any[]) => void>(
+  func: T,
+  wait: number,
+): (...args: Parameters<T>) => void {
+  let timeout: number | null = null;
+  return (...args: Parameters<T>) => {
+    if (timeout !== null) {
+      window.clearTimeout(timeout);
+    }
+    timeout = window.setTimeout(() => func(...args), wait);
+  };
+}
 
 export class LoadingSplash {
   private readonly root: HTMLDivElement;
@@ -13,6 +27,15 @@ export class LoadingSplash {
   private dismissed = false;
   private isReady = false;
   private isStarting = false;
+
+  private creditsBtn!: HTMLButtonElement;
+  private settingsBtn!: HTMLButtonElement;
+  private settingsPage!: HTMLDivElement;
+  private creditsPage!: HTMLDivElement;
+  private activePage: "none" | "settings" | "credits" = "none";
+  private masterSlider!: HTMLInputElement;
+  private musicSlider!: HTMLInputElement;
+  private sfxSlider!: HTMLInputElement;
 
   constructor(
     container: HTMLElement,
@@ -83,7 +106,200 @@ export class LoadingSplash {
 
     card.append(logo, this.progressContainer);
     this.root.appendChild(card);
+
+    this.buildOverlays();
+
     container.appendChild(this.root);
+  }
+
+  private buildOverlays(): void {
+    const header = document.createElement("div");
+    header.className = "loading-splash__header";
+
+    this.creditsBtn = document.createElement("button");
+    this.creditsBtn.className = "loading-splash__credits-btn";
+    this.creditsBtn.textContent = "Credits";
+    this.creditsBtn.addEventListener("click", () => {
+      if (this.activePage === "credits") {
+        this.openPage("none");
+      } else {
+        this.openPage("credits");
+      }
+    });
+
+    this.settingsBtn = document.createElement("button");
+    this.settingsBtn.className = "loading-splash__settings-btn";
+    this.settingsBtn.innerHTML = this.getSettingsIcon();
+    this.settingsBtn.addEventListener("click", () => {
+      if (this.activePage === "settings") {
+        this.openPage("none");
+      } else {
+        this.openPage("settings");
+      }
+    });
+
+    header.appendChild(this.creditsBtn);
+    header.appendChild(this.settingsBtn);
+
+    const createSlider = (
+      label: string,
+      id: string,
+    ): [HTMLDivElement, HTMLInputElement] => {
+      const container = document.createElement("div");
+      container.className = "throttle-slider-container";
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "throttle-slider-wrapper";
+
+      const slider = document.createElement("input");
+      slider.type = "range";
+      slider.id = id;
+      slider.min = "0";
+      slider.max = "1";
+      slider.step = "0.01";
+      slider.className = "throttle-slider";
+
+      wrapper.appendChild(slider);
+
+      const labelEl = document.createElement("label");
+      labelEl.htmlFor = id;
+      labelEl.textContent = label;
+      labelEl.className = "throttle-slider-label";
+
+      container.appendChild(wrapper);
+      container.appendChild(labelEl);
+
+      return [container, slider];
+    };
+
+    const settingsLayout = document.createElement("div");
+    settingsLayout.className = "settings-layout";
+
+    const tutorialPanel = document.createElement("div");
+    tutorialPanel.className = "settings-panel";
+
+    const tutorialTitle = document.createElement("h3");
+    tutorialTitle.textContent = "How to Play";
+    tutorialPanel.appendChild(tutorialTitle);
+
+    const tutorialText = document.createElement("div");
+    tutorialText.className = "tutorial-content";
+    tutorialText.innerHTML = `
+      <p><strong>Controls:</strong> Push up on the slider to apply throttle. Using the <strong>Up/Down</strong> or <strong>W/S</strong> keys on a keyboard also works. Hold the <strong>Spacebar</strong> or <strong>STOP</strong> button to apply the brakes.</p>
+      <p><strong>Comfort:</strong> Going too fast, braking too hard, or taking too long will severely reduce passenger comfort. If comfort reaches 0%, you're not doing it right.</p>
+    `;
+    tutorialPanel.append(tutorialText);
+
+    const slidersPanel = document.createElement("div");
+    slidersPanel.className = "settings-panel";
+
+    const slidersTitle = document.createElement("h3");
+    slidersTitle.textContent = "Audio Mix";
+
+    const slidersContainer = document.createElement("div");
+    slidersContainer.className = "throttle-sliders";
+
+    const [masterContainer, masterSlider] = createSlider(
+      "Master",
+      "master-volume",
+    );
+    const [musicContainer, musicSlider] = createSlider("Music", "music-volume");
+    const [sfxContainer, sfxSlider] = createSlider("SFX", "sfx-volume");
+
+    this.masterSlider = masterSlider;
+    this.musicSlider = musicSlider;
+    this.sfxSlider = sfxSlider;
+
+    slidersContainer.append(masterContainer, musicContainer, sfxContainer);
+    slidersPanel.append(slidersTitle, slidersContainer);
+
+    settingsLayout.append(tutorialPanel, slidersPanel);
+
+    const handleVolumeChange = debounce(() => {
+      const master = parseFloat(this.masterSlider.value);
+      const music = parseFloat(this.musicSlider.value);
+      const sfx = parseFloat(this.sfxSlider.value);
+      this.gameState.update({
+        masterVolume: master,
+        musicVolume: music,
+        sfxVolume: sfx,
+      });
+      if (this.gameState.userId) {
+        saveSoundSettings(this.gameState.userId, master, music, sfx);
+      }
+    }, 500);
+
+    this.masterSlider.addEventListener("input", handleVolumeChange);
+    this.musicSlider.addEventListener("input", handleVolumeChange);
+    this.sfxSlider.addEventListener("input", handleVolumeChange);
+
+    this.settingsPage = this.createPage(settingsLayout);
+
+    const creditsContent = document.createElement("div");
+    const link = document.createElement("a");
+    link.href = "https://trainsim.io";
+    link.target = "_blank";
+    link.textContent = "https://trainsim.io";
+    link.style.color = "#4da6ff";
+    link.style.display = "block";
+    link.style.marginBottom = "12px";
+
+    const email = document.createElement("p");
+    email.textContent =
+      "peterwangsc on github, linkedin, youtube, gmail and itch.io";
+
+    creditsContent.append(link, email);
+
+    this.creditsPage = this.createPage(creditsContent);
+
+    this.root.appendChild(header);
+    this.root.appendChild(this.settingsPage);
+    this.root.appendChild(this.creditsPage);
+  }
+
+  private createPage(contentNode: HTMLElement): HTMLDivElement {
+    const page = document.createElement("div");
+    page.className = "loading-splash__page";
+
+    const content = document.createElement("div");
+    content.className = "loading-splash__page-content";
+
+    content.appendChild(contentNode);
+    page.appendChild(content);
+
+    return page;
+  }
+
+  public setSoundSettings(master: number, music: number, sfx: number): void {
+    if (this.masterSlider) this.masterSlider.value = master.toString();
+    if (this.musicSlider) this.musicSlider.value = music.toString();
+    if (this.sfxSlider) this.sfxSlider.value = sfx.toString();
+  }
+
+  private openPage(pageName: "none" | "settings" | "credits"): void {
+    this.activePage = pageName;
+
+    // Reset both
+    this.settingsPage.classList.remove("loading-splash__page--visible");
+    this.creditsPage.classList.remove("loading-splash__page--visible");
+    this.creditsBtn.textContent = "Credits";
+    this.settingsBtn.innerHTML = this.getSettingsIcon();
+
+    if (pageName === "settings") {
+      this.settingsPage.classList.add("loading-splash__page--visible");
+      this.settingsBtn.innerHTML = this.getCloseIcon();
+    } else if (pageName === "credits") {
+      this.creditsPage.classList.add("loading-splash__page--visible");
+      this.creditsBtn.textContent = "< Back";
+    }
+  }
+
+  private getSettingsIcon(): string {
+    return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
+  }
+
+  private getCloseIcon(): string {
+    return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
   }
 
   dispose(): void {

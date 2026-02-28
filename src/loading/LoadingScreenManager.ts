@@ -4,7 +4,7 @@ import {
   preloadCriticalAssets,
 } from "../loading/CriticalAssetPreloader";
 import { LoadingSplash } from "../ui/LoadingSplash";
-import { fetchSavedLevel, login } from "../util/Username";
+import { fetchUserPresetContents, login } from "../util/Username";
 
 export class LoadingScreenManager {
   private container: HTMLElement;
@@ -34,13 +34,24 @@ export class LoadingScreenManager {
       },
     );
 
-    const [assets, level] = await Promise.all([
+    const [assets, presetContents] = await Promise.all([
       preloadCriticalAssets((progress) =>
         this.loadingSplash?.setProgress(progress),
       ),
-      fetchSavedLevel(this.gameState.userId, this.gameState.username),
+      fetchUserPresetContents(this.gameState.userId, this.gameState.username),
     ]);
-    this.gameState.update({ level });
+    this.gameState.update({ 
+      level: presetContents.level,
+      masterVolume: presetContents.masterVolume ?? 0.5,
+      musicVolume: presetContents.musicVolume ?? 0.5,
+      sfxVolume: presetContents.sfxVolume ?? 0.5,
+    });
+    // Let the splash screen know the initial sound settings for the sliders
+    this.loadingSplash.setSoundSettings(
+      this.gameState.masterVolume,
+      this.gameState.musicVolume,
+      this.gameState.sfxVolume
+    );
     this.loadingSplash.setReady();
     return { assets };
   }

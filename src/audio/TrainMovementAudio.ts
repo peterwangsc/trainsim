@@ -43,6 +43,7 @@ export class TrainMovementAudio {
   private singleSoundId: number | null = null;
   private singleIsPaused = false;
   private singleCurrentVolume = 0;
+  private volumeScale: number = 1.0;
 
   constructor(config: TrainMovementAudioConfig) {
     this.config = config;
@@ -57,6 +58,11 @@ export class TrainMovementAudio {
       howl.loop(expectedLooping);
       this.howls.push(howl);
     }
+  }
+
+  setVolumeScale(scale: number): void {
+    this.volumeScale = scale;
+    // singleCurrentVolume or baseVolume will just update naturally in the next update() tick.
   }
 
   private getActiveCount(): number {
@@ -166,10 +172,10 @@ export class TrainMovementAudio {
       }
       const speedRatio = clamp(speed / this.config.maxTrainSpeed, 0, 1);
       this.singleCurrentVolume = clamp(
-        this.config.minVolume +
-          (this.config.maxVolume - this.config.minVolume) * speedRatio,
+        (this.config.minVolume +
+          (this.config.maxVolume - this.config.minVolume) * speedRatio) * this.volumeScale,
         0,
-        0.5
+        1
       );
       if (this.singleSoundId === null) {
         this.singleSoundId = howl.play();
@@ -213,10 +219,10 @@ export class TrainMovementAudio {
 
     const speedRatio = clamp(speed / this.config.maxTrainSpeed, 0, 1);
     this.baseVolume = clamp(
-      this.config.minVolume +
-        (this.config.maxVolume - this.config.minVolume) * speedRatio,
+      (this.config.minVolume +
+        (this.config.maxVolume - this.config.minVolume) * speedRatio) * this.volumeScale,
       0,
-      0.2
+      1
     );
 
     this.accumulatedTime += dt;

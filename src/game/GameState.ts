@@ -29,6 +29,9 @@ export class GameState {
   public expectedDuration = 0;
   public timeOfDayHours = 0;
   public expectedArrivalHours = 0;
+  public masterVolume: number = 0.5;
+  public musicVolume: number = 0.5;
+  public sfxVolume: number = 0.5;
   public sceneSetup: SceneSetup | null = null;
   public config: typeof CONFIG;
 

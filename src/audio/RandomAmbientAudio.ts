@@ -20,6 +20,7 @@ export class RandomAmbientAudio {
   private isActive = false;
   private currentTrackIndex = -1;
   private readonly volume: number;
+  private volumeScale: number = 1.0;
   private readonly tracks: readonly string[];
   private readonly preloadedHowls: Howl[];
   private readonly minGapMs: number;
@@ -37,6 +38,18 @@ export class RandomAmbientAudio {
     this.preloadedHowls = config.preloadedHowls;
     this.minGapMs = config.minGapMs;
     this.maxGapMs = config.maxGapMs;
+  }
+
+  get effectiveVolume(): number {
+    return this.volume * this.volumeScale;
+  }
+
+  setVolumeScale(scale: number): void {
+    const wasVolume = this.effectiveVolume;
+    this.volumeScale = scale;
+    if (this.currentHowl && Math.abs(wasVolume - this.effectiveVolume) > 0.001) {
+      this.currentHowl.volume(this.effectiveVolume);
+    }
   }
 
   start(): void {
@@ -101,7 +114,7 @@ export class RandomAmbientAudio {
         return;
       }
       howl.volume(0, soundId);
-      howl.fade(0, this.volume, FADE_MS, soundId);
+      howl.fade(0, this.effectiveVolume, FADE_MS, soundId);
       this.scheduleFadeOut(howl, soundId);
     });
 
@@ -124,7 +137,7 @@ export class RandomAmbientAudio {
   }
 
   private beginFadeOut(howl: Howl, soundId: number): void {
-    howl.fade(this.volume, 0, FADE_MS, soundId);
+    howl.fade(this.effectiveVolume, 0, FADE_MS, soundId);
     setTimeout(() => {
       this.resetHowl(howl);
       if (this.currentHowl === howl) this.currentHowl = null;

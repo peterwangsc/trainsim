@@ -67,34 +67,73 @@ export function getUsernameFromLocalStorage(): string | null {
   }
 }
 
-export async function fetchSavedLevel(
+export async function fetchUserPresetContents(
   userId: string,
   username: string | null,
-): Promise<number> {
-  let level = 1;
+): Promise<{
+  level: number;
+  masterVolume: number | null;
+  musicVolume: number | null;
+  sfxVolume: number | null;
+}> {
+  let result = {
+    level: 1,
+    masterVolume: null as number | null,
+    musicVolume: null as number | null,
+    sfxVolume: null as number | null,
+  };
   try {
     const { data, error } = await supabase
       .from("user_progress")
-      .select("level, username")
+      .select("level, username, master_volume, music_volume, sfx_volume")
       .eq("id", userId)
       .maybeSingle();
 
     if (error) {
       console.error("Failed to fetch user progress", error);
-      return 1;
+      return result;
     }
 
     if (data && data.username && data.username !== username) {
-      return 1;
+      return result;
     }
 
-    if (data && data.level && data.level > level) {
-      level = data.level as number;
+    if (data) {
+      if (data.level && data.level > result.level) {
+        result.level = data.level as number;
+      }
+      if (data.master_volume !== null && data.master_volume !== undefined) {
+        result.masterVolume = data.master_volume as number;
+      }
+      if (data.music_volume !== null && data.music_volume !== undefined) {
+        result.musicVolume = data.music_volume as number;
+      }
+      if (data.sfx_volume !== null && data.sfx_volume !== undefined) {
+        result.sfxVolume = data.sfx_volume as number;
+      }
     }
   } catch (err) {
     console.error("Failed to fetch user progress", err);
   }
-  return level;
+  return result;
+}
+
+export async function saveSoundSettings(
+  userId: string,
+  masterVolume: number,
+  musicVolume: number,
+  sfxVolume: number,
+): Promise<void> {
+  try {
+    await supabase.from("user_progress").upsert({
+      id: userId,
+      master_volume: masterVolume,
+      music_volume: musicVolume,
+      sfx_volume: sfxVolume,
+    });
+  } catch (err) {
+    console.error("Failed to save sound settings", err);
+  }
 }
 
 export async function login(
@@ -105,7 +144,7 @@ export async function login(
     const normalizedUsername = enteredUsername.trim().toLowerCase();
     const { data, error } = await supabase
       .from("user_progress")
-      .select("id, level, username")
+      .select("id, level, username, master_volume, music_volume, sfx_volume")
       .eq("username", normalizedUsername)
       .maybeSingle();
 
@@ -139,6 +178,9 @@ export async function login(
           userId: data.id as string,
           username: data.username as string,
           level: newLevel,
+          masterVolume: data.master_volume as number,
+          musicVolume: data.music_volume as number,
+          sfxVolume: data.sfx_volume as number,
         });
       }
 
@@ -150,6 +192,9 @@ export async function login(
         userId: data.id as string,
         username: data.username as string,
         level: data.level as number,
+        masterVolume: data.master_volume as number,
+        musicVolume: data.music_volume as number,
+        sfxVolume: data.sfx_volume as number,
       });
     } else {
       // new user creation

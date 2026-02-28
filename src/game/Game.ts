@@ -1,4 +1,5 @@
 import { MathUtils } from "three";
+import { Howler } from "howler";
 import { CONFIG } from "./Config";
 import { GameLoop } from "./GameLoop";
 import { GameStatus, GameState } from "./GameState";
@@ -16,6 +17,7 @@ import { HudController } from "../ui/HudController";
 import { IntroSplash } from "../ui/IntroSplash";
 import { RunEndOverlay } from "../ui/RunEndOverlay";
 import { LoginScreen } from "../ui/LoginScreen";
+import { SettingsScreen } from "../ui/SettingsScreen";
 import { ThrottleOverlayCanvas } from "../ui/ThrottleOverlayCanvas";
 import { TrainMovementAudio } from "../audio/TrainMovementAudio";
 import { RandomAmbientAudio } from "../audio/RandomAmbientAudio";
@@ -54,6 +56,7 @@ export class Game {
   private throttleOverlay!: ThrottleOverlayCanvas;
   private hud!: HudController;
   private loginScreen!: LoginScreen;
+  private settingsScreen!: SettingsScreen;
 
   // simulation
   private trainSim!: TrainSim;
@@ -64,6 +67,10 @@ export class Game {
   private randomAmbientAudio!: RandomAmbientAudio;
   private gameMusic!: GameMusic;
   private loop!: GameLoop;
+
+  private lastMasterVolume = -1;
+  private lastMusicVolume = -1;
+  private lastSfxVolume = -1;
 
   constructor(
     private readonly container: HTMLElement,
@@ -158,6 +165,7 @@ export class Game {
     this.comfortModel.reset();
     this.gameState.reset();
     this.loginScreen.reset();
+    this.settingsScreen.reset();
 
     const expectedDuration = this.trackSampler.computeExpectedDuration(
       this.sceneSetup.trackSpline.getLength(),
@@ -195,6 +203,7 @@ export class Game {
     this.inputManager.dispose();
     this.hud.dispose();
     this.loginScreen.dispose();
+    this.settingsScreen.dispose();
     this.sceneSetup.dispose();
     this.headlight.dispose();
     this.cameraRig.dispose();
@@ -204,7 +213,25 @@ export class Game {
     this.gameMusic.dispose();
   }
 
+  private applyAudioVolumes(): void {
+    if (this.lastMasterVolume !== this.gameState.masterVolume) {
+      this.lastMasterVolume = this.gameState.masterVolume;
+      Howler.volume(this.gameState.masterVolume);
+    }
+    if (this.lastMusicVolume !== this.gameState.musicVolume) {
+      this.lastMusicVolume = this.gameState.musicVolume;
+      this.gameMusic.setVolumeScale(this.gameState.musicVolume);
+    }
+    if (this.lastSfxVolume !== this.gameState.sfxVolume) {
+      this.lastSfxVolume = this.gameState.sfxVolume;
+      this.trainMovementAudio.setVolumeScale(this.gameState.sfxVolume);
+      this.brakePressureAudio.setVolumeScale(this.gameState.sfxVolume);
+      this.randomAmbientAudio.setVolumeScale(this.gameState.sfxVolume);
+    }
+  }
+
   private simulate(dt: number): void {
+    this.applyAudioVolumes();
     const previousStatus = this.gameState.status;
     const input = this.inputManager.update(dt);
 
@@ -366,10 +393,15 @@ export class Game {
       this.gameState,
       (level, userId, username) => this.startLevel(level, userId, username),
     );
+    this.settingsScreen = new SettingsScreen(
+      this.container,
+      this.gameState,
+    );
     this.hud = new HudController(
       this.container,
       (isDown) => this.desktopControls.setBrakeButtonDown(isDown),
       () => this.loginScreen.show(),
+      () => this.settingsScreen.show(),
       this.gameState,
     );
   }

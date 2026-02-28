@@ -15,6 +15,7 @@ export class GameMusic {
   private isActive = false;
   private currentTrackIndex = 0;
   private readonly volume: number;
+  private volumeScale: number = 1.0;
   private readonly tracks: readonly string[];
   private readonly howls: Array<Howl>;
   private readonly gapMs: number;
@@ -35,6 +36,18 @@ export class GameMusic {
       });
     });
     this.gapMs = config.gapMs;
+  }
+
+  get effectiveVolume(): number {
+    return this.volume * this.volumeScale;
+  }
+
+  setVolumeScale(scale: number): void {
+    const wasVolume = this.effectiveVolume;
+    this.volumeScale = scale;
+    if (this.currentHowl && Math.abs(wasVolume - this.effectiveVolume) > 0.001) {
+      this.currentHowl.volume(this.effectiveVolume);
+    }
   }
 
   start(): void {
@@ -100,7 +113,7 @@ export class GameMusic {
       if (!this.isActive || this.currentHowl !== howl) {
         return;
       }
-      howl.volume(this.volume, soundId);
+      howl.volume(this.effectiveVolume, soundId);
     });
 
     howl.once("end", () => {

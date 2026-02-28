@@ -36,7 +36,9 @@ export class HudController {
   private readonly onBrakeButtonChange: (isDown: boolean) => void;
   private readonly brakeButton: HTMLButtonElement;
   private readonly usernameDisplay: HTMLDivElement;
+  private readonly settingsButton: HTMLButtonElement;
   private readonly onUsernameClick: () => void;
+  private readonly onSettingsClick: () => void;
   private brakeButtonDown = false;
   private brakeTouchId: number | null = null;
 
@@ -46,11 +48,13 @@ export class HudController {
   private readonly handleBrakeTouchEndBound: (event: TouchEvent) => void;
   private readonly handleWindowBlurBound: () => void;
   private readonly handleUsernameClickBound: () => void;
+  private readonly handleSettingsClickBound: () => void;
 
   constructor(
     container: HTMLElement,
     onBrakeButtonChange: (isDown: boolean) => void = () => {},
     onUsernameClick: () => void = () => {},
+    onSettingsClick: () => void = () => {},
     gameState: GameState,
   ) {
     this.onBrakeButtonChange = onBrakeButtonChange;
@@ -119,14 +123,14 @@ export class HudController {
 
     const timeCluster = document.createElement("div");
     timeCluster.className = "hud-time-cluster";
-    
+
     const clockLabel = document.createElement("span");
     clockLabel.className = "hud-time-label";
     clockLabel.textContent = "Time";
-    
+
     this.clockValue = document.createElement("span");
     this.clockValue.className = "hud-time-value";
-    
+
     const etaLabel = document.createElement("span");
     etaLabel.className = "hud-time-label hud-time-label--eta";
     etaLabel.textContent = "ETA";
@@ -141,7 +145,7 @@ export class HudController {
 
     const comfortLabel = document.createElement("span");
     comfortLabel.className = "comfort-gauge-label";
-    comfortLabel.textContent = "Safety";
+    comfortLabel.textContent = "Comfort";
 
     const comfortTrack = document.createElement("div");
     comfortTrack.className = "comfort-gauge-track";
@@ -180,6 +184,9 @@ export class HudController {
     this.onUsernameClick = onUsernameClick;
     this.handleUsernameClickBound = this.onUsernameClick.bind(this);
 
+    this.onSettingsClick = onSettingsClick;
+    this.handleSettingsClickBound = this.onSettingsClick.bind(this);
+
     this.usernameDisplay = document.createElement("div");
     this.usernameDisplay.className = "username-display";
     this.usernameDisplay.textContent = this.gameState.username ?? "Login";
@@ -187,6 +194,12 @@ export class HudController {
       "click",
       this.handleUsernameClickBound,
     );
+
+    this.settingsButton = document.createElement("button");
+    this.settingsButton.className = "hud-settings-btn";
+    this.settingsButton.type = "button";
+    this.settingsButton.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
+    this.settingsButton.addEventListener("click", this.handleSettingsClickBound);
 
     this.root.append(
       this.statusBanner,
@@ -196,6 +209,7 @@ export class HudController {
       this.comfortGauge,
       this.brakeButton,
       this.usernameDisplay,
+      this.settingsButton,
     );
     container.appendChild(this.root);
   }
@@ -217,6 +231,10 @@ export class HudController {
     this.usernameDisplay.removeEventListener(
       "click",
       this.handleUsernameClickBound,
+    );
+    this.settingsButton.removeEventListener(
+      "click",
+      this.handleSettingsClickBound,
     );
 
     this.setBrakeButtonDown(false);
@@ -249,14 +267,16 @@ export class HudController {
     this.setBrakeVisual(metrics.brake);
     this.minimapWidget.draw(metrics.pathPoints, metrics.samples, metrics.speed);
     this.usernameDisplay.textContent = this.gameState.username ?? "Login";
-    
+
     const formatTime = (hours: number) => {
       const h = Math.floor(hours);
       const m = Math.floor((hours - h) * 60);
       return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
     };
     this.clockValue.textContent = formatTime(metrics.gameState.timeOfDayHours);
-    this.etaValue.textContent = formatTime(metrics.gameState.expectedArrivalHours);
+    this.etaValue.textContent = formatTime(
+      metrics.gameState.expectedArrivalHours,
+    );
   }
 
   private setBrakeButtonDown(isDown: boolean): void {
