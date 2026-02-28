@@ -371,8 +371,7 @@ export class LoadingSplash {
     link.style.marginBottom = "12px";
 
     const email = document.createElement("p");
-    email.textContent =
-      "peterwangsc on github, linkedin, youtube, gmail and itch.io";
+    email.textContent = "peterwangsc";
 
     oldCreditsContainer.append(link, email);
     creditsContent.appendChild(oldCreditsContainer);
