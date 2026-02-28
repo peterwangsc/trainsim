@@ -1519,11 +1519,11 @@ canvas {
 }
 
 .settings-panel {
-  flex: 0 1 auto;
+  flex: 1;
   background: rgba(20, 20, 25, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
-  padding: 32px;
+  padding: 4dvh 3dvw;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
@@ -1532,12 +1532,21 @@ canvas {
   min-height: 0;
 }
 
+.settings-panel--compact {
+  flex: 0 1 auto;
+  padding: 32px;
+}
+
 .settings-panel h3 {
   margin-top: 0;
-  font-size: 18px;
+  font-size: clamp(16px, 3dvh, 20px);
   text-transform: uppercase;
   letter-spacing: 1px;
   color: #fff;
+}
+
+.settings-panel--compact h3 {
+  font-size: 18px;
 }
 
 /* Throttle Assembly Sliders */
@@ -1545,8 +1554,13 @@ canvas {
   display: flex;
   justify-content: space-around;
   align-items: center;
+  flex: 1;
   width: 100%;
   min-height: 0;
+}
+
+.settings-panel--compact .throttle-sliders {
+  flex: unset;
 }
 
 .throttle-slider-container {
@@ -1554,27 +1568,40 @@ canvas {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  height: 100%;
   flex: 1;
+}
+
+.settings-panel--compact .throttle-slider-container {
+  height: auto;
 }
 
 .throttle-slider-wrapper {
   position: relative;
-  height: 180px;
+  height: 40dvh;
   width: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.settings-panel--compact .throttle-slider-wrapper {
+  height: 180px;
+}
+
 .throttle-slider {
   transform: rotate(-90deg);
-  width: 180px;
+  width: 40dvh;
   height: 40px;
   margin: 0;
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
   background: transparent;
+}
+
+.settings-panel--compact .throttle-slider {
+  width: 180px;
 }
 
 .throttle-slider:focus {

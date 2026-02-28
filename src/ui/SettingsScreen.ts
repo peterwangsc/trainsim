@@ -40,7 +40,7 @@ export class SettingsScreen {
     });
 
     const card = document.createElement("div");
-    card.className = "settings-panel";
+    card.className = "settings-panel settings-panel--compact";
     card.style.maxWidth = "800px";
     card.style.width = "min(92vw, 800px)";
     card.style.height = "auto";

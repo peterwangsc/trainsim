@@ -29,6 +29,7 @@ import {
   saveProgress,
   getUsernameFromLocalStorage,
 } from "../util/Username";
+import { submitTrackTime, getFastestTimeForLevel, getPersonalBestForLevel } from "../util/Supabase";
 import { LoadingScreenManager } from "../loading/LoadingScreenManager";
 
 export class Game {
@@ -472,36 +473,62 @@ export class Game {
     if (this.gameState.status === GameStatus.Won) {
       const currentLevel = this.gameState.level;
       const nextLevel = currentLevel + 1;
+      const timeMs = Math.floor(this.gameState.elapsedTime * 1000);
+
+      const finishAndShow = () => {
+        submitTrackTime(this.gameState.userId, currentLevel, timeMs).then(() => {
+          getFastestTimeForLevel(currentLevel).then((record) => {
+            this.runEndOverlay.updateRecord(record);
+          });
+          getPersonalBestForLevel(this.gameState.userId, currentLevel).then((pb) => {
+            this.runEndOverlay.updatePersonalBest(pb);
+          });
+        });
+
+        this.runEndOverlay.show({
+          tone: "won",
+          title: "Station Stop Complete",
+          message: "You stopped before the platform end.",
+          timeMs: timeMs,
+          onRestart: () => this.restart(),
+          onNextLevel: async () => {
+            this.startLevel(
+              nextLevel,
+              this.gameState.userId,
+              this.gameState.username,
+            );
+          },
+          onLogin: async (username) => {
+            const result = await login(username, this.gameState);
+            if (result) {
+              this.startLevel(result.level, result.userId, result.username);
+            }
+          },
+          username: this.gameState.username,
+        });
+      };
 
       if (nextLevel > this.gameState.maxLevel) {
         this.gameState.update({ maxLevel: nextLevel });
-        saveProgress(this.gameState.userId, this.gameState.username, nextLevel);
+        saveProgress(this.gameState.userId, this.gameState.username, nextLevel).then(() => {
+          finishAndShow();
+        });
+      } else {
+        finishAndShow();
       }
-
-      this.runEndOverlay.show({
-        tone: "won",
-        title: "Station Stop Complete",
-        message: "You stopped before the platform end.",
-        onRestart: () => this.restart(),
-        onNextLevel: async () => {
-          this.startLevel(
-            nextLevel,
-            this.gameState.userId,
-            this.gameState.username,
-          );
-        },
-        onLogin: async (username) => {
-          const result = await login(username, this.gameState);
-          if (result) {
-            this.startLevel(result.level, result.userId, result.username);
-          }
-        },
-        username: this.gameState.username,
-      });
       return;
     }
 
     const isBumperImpact = this.gameState.failureReason === "BUMPER";
+    const currentLevel = this.gameState.level;
+    
+    getFastestTimeForLevel(currentLevel).then((record) => {
+      this.runEndOverlay.updateRecord(record);
+    });
+    getPersonalBestForLevel(this.gameState.userId, currentLevel).then((pb) => {
+      this.runEndOverlay.updatePersonalBest(pb);
+    });
+
     this.runEndOverlay.show({
       tone: "failed",
       title: isBumperImpact ? "Bumper Impact" : "Run Failed",
