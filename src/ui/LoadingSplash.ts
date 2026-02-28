@@ -1,6 +1,19 @@
 import { ASSETS_CDN_BASE } from "../game/Config";
 import { GameState } from "../game/GameState";
 import { saveSoundSettings } from "../util/Username";
+import { getMaxLevelWithTimes, getTopTimesForLevels } from "../util/Supabase";
+
+function formatTime(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const milliseconds = Math.floor(ms % 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  const minStr = minutes > 0 ? `${minutes}:` : "";
+  const secStr =
+    minutes > 0 ? seconds.toString().padStart(2, "0") : seconds.toString();
+  const msStr = milliseconds.toString().padStart(3, "0");
+  return `${minStr}${secStr}.${msStr}`;
+}
 
 function debounce<T extends (...args: any[]) => void>(
   func: T,
@@ -116,6 +129,105 @@ export class LoadingSplash {
     const header = document.createElement("div");
     header.className = "loading-splash__header";
 
+    let leaderboardsLoaded = false;
+    let currentLoadMaxLevel: number | null = null;
+    const leaderboardsContainer = document.createElement("div");
+    leaderboardsContainer.className = "leaderboards-container";
+    leaderboardsContainer.style.width = "100%";
+    leaderboardsContainer.style.maxWidth = "600px";
+    leaderboardsContainer.style.margin = "0 auto";
+
+    const loadLeaderboardsBtn = document.createElement("button");
+    loadLeaderboardsBtn.className = "loading-splash__cta";
+    loadLeaderboardsBtn.style.marginTop = "16px";
+    loadLeaderboardsBtn.style.marginBottom = "24px";
+    loadLeaderboardsBtn.style.fontSize = "14px";
+    loadLeaderboardsBtn.style.padding = "8px 16px";
+    loadLeaderboardsBtn.style.display = "none";
+    loadLeaderboardsBtn.textContent = "Loading Leaderboards...";
+
+    const renderLeaderboards = async (startMaxLevel: number | null) => {
+      loadLeaderboardsBtn.disabled = true;
+      loadLeaderboardsBtn.textContent = "Loading...";
+      loadLeaderboardsBtn.style.display = "block";
+
+      let maxToLoad = startMaxLevel;
+      if (maxToLoad === null) {
+        maxToLoad = await getMaxLevelWithTimes();
+      }
+
+      const minToLoad = Math.max(1, maxToLoad - 10);
+      const leaderboards = await getTopTimesForLevels(maxToLoad, minToLoad);
+
+      for (const lb of leaderboards) {
+        const lbSection = document.createElement("div");
+        lbSection.style.marginBottom = "16px";
+        lbSection.style.background = "rgba(0,0,0,0.3)";
+        lbSection.style.padding = "12px";
+        lbSection.style.borderRadius = "8px";
+        lbSection.style.border = "1px solid rgba(255,255,255,0.1)";
+
+        const title = document.createElement("h3");
+        title.textContent = `Level ${lb.level}`;
+        title.style.marginTop = "0";
+        title.style.marginBottom = "8px";
+        title.style.fontSize = "16px";
+        title.style.color = "#fff";
+        title.style.borderBottom = "1px solid rgba(255,255,255,0.1)";
+        title.style.paddingBottom = "4px";
+        lbSection.appendChild(title);
+
+        const table = document.createElement("table");
+        table.style.width = "100%";
+        table.style.borderCollapse = "collapse";
+
+        lb.records.slice(0, 3).forEach((record, idx) => {
+          const tr = document.createElement("tr");
+
+          const tdRank = document.createElement("td");
+          tdRank.textContent = `#${idx + 1}`;
+          tdRank.style.color =
+            idx === 0 ? "#fbbf24" : idx === 1 ? "#9ca3af" : "#b45309";
+          tdRank.style.width = "40px";
+          tdRank.style.padding = "4px 0";
+
+          const tdName = document.createElement("td");
+          tdName.textContent = record.username;
+          tdName.style.padding = "4px 0";
+          tdName.style.overflow = "hidden";
+          tdName.style.textOverflow = "ellipsis";
+          tdName.style.whiteSpace = "nowrap";
+          tdName.style.maxWidth = "120px";
+
+          const tdTime = document.createElement("td");
+          tdTime.textContent = formatTime(record.timeMs);
+          tdTime.style.textAlign = "right";
+          tdTime.style.fontFamily = "monospace";
+          tdTime.style.padding = "4px 0";
+          tdTime.style.color = "#4ade80";
+
+          tr.append(tdRank, tdName, tdTime);
+          table.appendChild(tr);
+        });
+
+        lbSection.appendChild(table);
+        leaderboardsContainer.appendChild(lbSection);
+      }
+
+      currentLoadMaxLevel = minToLoad - 1;
+
+      if (currentLoadMaxLevel >= 1) {
+        loadLeaderboardsBtn.textContent = "Show More";
+        loadLeaderboardsBtn.disabled = false;
+      } else {
+        loadLeaderboardsBtn.style.display = "none";
+      }
+    };
+
+    loadLeaderboardsBtn.addEventListener("click", () =>
+      renderLeaderboards(currentLoadMaxLevel),
+    );
+
     this.creditsBtn = document.createElement("button");
     this.creditsBtn.className = "loading-splash__credits-btn";
     this.creditsBtn.textContent = "Credits";
@@ -124,6 +236,10 @@ export class LoadingSplash {
         this.openPage("none");
       } else {
         this.openPage("credits");
+        if (!leaderboardsLoaded) {
+          leaderboardsLoaded = true;
+          renderLeaderboards(null);
+        }
       }
     });
 
@@ -236,6 +352,16 @@ export class LoadingSplash {
     this.settingsPage = this.createPage(settingsLayout);
 
     const creditsContent = document.createElement("div");
+    creditsContent.style.padding = "16px";
+
+    creditsContent.append(leaderboardsContainer, loadLeaderboardsBtn);
+
+    const oldCreditsContainer = document.createElement("div");
+    oldCreditsContainer.style.textAlign = "center";
+    oldCreditsContainer.style.marginTop = "24px";
+    oldCreditsContainer.style.borderTop = "1px solid rgba(255,255,255,0.1)";
+    oldCreditsContainer.style.paddingTop = "16px";
+
     const link = document.createElement("a");
     link.href = "https://trainsim.io";
     link.target = "_blank";
@@ -248,7 +374,8 @@ export class LoadingSplash {
     email.textContent =
       "peterwangsc on github, linkedin, youtube, gmail and itch.io";
 
-    creditsContent.append(link, email);
+    oldCreditsContainer.append(link, email);
+    creditsContent.appendChild(oldCreditsContainer);
 
     this.creditsPage = this.createPage(creditsContent);
 
