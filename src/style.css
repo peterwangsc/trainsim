@@ -905,6 +905,7 @@ canvas {
   display: flex;
   align-items: baseline;
   gap: 5px;
+  --hud-speed-dynamic-color: var(--text-bright);
   color: var(--text-bright);
   line-height: 1;
 }
@@ -920,7 +921,7 @@ canvas {
   font-size: clamp(1.7rem, 3.2vw, 2.4rem);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
-  color: var(--text-bright);
+  color: var(--hud-speed-dynamic-color);
   text-shadow: 0 0 18px rgb(180 220 255 / 24%);
 }
 
@@ -930,7 +931,7 @@ canvas {
   font-size: clamp(0.72rem, 1.4vw, 0.88rem);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-bright);
+  color: var(--hud-speed-dynamic-color);
   margin-bottom: 3px;
 }
 
@@ -947,8 +948,8 @@ canvas {
   border: none;
   background: linear-gradient(
     180deg,
-    rgba(40, 56, 78, 0.24) 0%,
-    rgb(20 36 60 / 0%) 100%
+    rgb(26 42 64 / 62%) 0%,
+    rgb(8 18 32 / 6%) 100%
   );
   box-shadow:
     0 0 0 1px var(--border-subtle),

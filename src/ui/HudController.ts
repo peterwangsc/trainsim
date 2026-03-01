@@ -27,6 +27,7 @@ export class HudController {
   private readonly comfortGauge: HTMLDivElement;
   private readonly comfortFill: HTMLDivElement;
   private readonly speedValue: HTMLSpanElement;
+  private readonly speedDisplay: HTMLParagraphElement;
   private readonly speedLimitValue: HTMLSpanElement;
   private readonly clockValue: HTMLSpanElement;
   private readonly etaValue: HTMLSpanElement;
@@ -81,6 +82,7 @@ export class HudController {
     // Grab references to elements we need to update
     this.statusBanner = this.root.querySelector(".hud-status-banner") as HTMLDivElement;
     this.speedValue = this.root.querySelector("#hud-speed-value") as HTMLSpanElement;
+    this.speedDisplay = this.root.querySelector(".hud-speed") as HTMLParagraphElement;
     this.speedLimitValue = this.root.querySelector("#hud-speed-limit-value") as HTMLSpanElement;
     this.clockValue = this.root.querySelector("#hud-clock-value") as HTMLSpanElement;
     this.etaValue = this.root.querySelector("#hud-eta-value") as HTMLSpanElement;
@@ -142,6 +144,11 @@ export class HudController {
     this.speedLimitValue.textContent = Math.round(
       metrics.safeSpeed * 3.6,
     ).toString();
+    const relativeSpeed = metrics.safeSpeed > 0.01 ? metrics.speed / metrics.safeSpeed : 0;
+    this.speedDisplay.style.setProperty(
+      "--hud-speed-dynamic-color",
+      this.getSpeedColor(relativeSpeed),
+    );
     const comfortRatio = Math.min(1, Math.max(0, metrics.comfortRatio));
     this.comfortFill.style.width = `${Math.round(comfortRatio * 100)}%`;
     this.comfortGauge.classList.toggle("is-low", comfortRatio < 0.3);
@@ -173,6 +180,27 @@ export class HudController {
     };
     this.clockValue.textContent = formatTime(this.gameState.timeOfDayHours);
     this.etaValue.textContent = formatTime(this.gameState.expectedArrivalHours);
+  }
+
+  private getSpeedColor(relativeSpeed: number): string {
+    const dangerRamp = Math.min(1, Math.max(0, (relativeSpeed - 0.75) / 0.75));
+    const colors =
+      dangerRamp < 0.5
+        ? this.lerpColor([232, 244, 255], [255, 208, 138], dangerRamp * 2)
+        : this.lerpColor([255, 208, 138], [255, 93, 93], (dangerRamp - 0.5) * 2);
+    return `rgb(${colors[0]} ${colors[1]} ${colors[2]})`;
+  }
+
+  private lerpColor(
+    from: [number, number, number],
+    to: [number, number, number],
+    t: number,
+  ): [number, number, number] {
+    return [
+      Math.round(from[0] + (to[0] - from[0]) * t),
+      Math.round(from[1] + (to[1] - from[1]) * t),
+      Math.round(from[2] + (to[2] - from[2]) * t),
+    ];
   }
 
   private setBrakeButtonDown(isDown: boolean): void {
