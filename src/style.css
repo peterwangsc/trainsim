@@ -619,6 +619,76 @@ canvas {
   line-height: 1.5;
 }
 
+.run-end-overlay__actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.run-end-overlay__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 3px;
+  border: 1px solid rgb(200 230 255 / 30%);
+  color: #0e1e2e;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  clip-path: polygon(
+    0 0,
+    calc(100% - 8px) 0,
+    100% 8px,
+    100% 100%,
+    8px 100%,
+    0 calc(100% - 8px)
+  );
+  box-shadow: 0 4px 14px rgb(0 0 0 / 32%);
+  transition:
+    filter 120ms ease,
+    transform 90ms ease;
+}
+
+.run-end-overlay__button--primary {
+  background: linear-gradient(180deg, #cfe0f5 0%, #b0c8e2 100%);
+}
+
+.run-end-overlay__button--secondary {
+  background: linear-gradient(180deg, rgb(53 67 84 / 95%) 0%, rgb(32 44 60 / 96%) 100%);
+  border-color: rgb(143 176 210 / 30%);
+  color: #dbe9f8;
+}
+
+.run-end-overlay__button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.run-end-overlay__button-icon--right {
+  display: none;
+}
+
+.run-end-overlay__button.is-next-level .run-end-overlay__button-icon--right {
+  display: inline-flex;
+}
+
+.run-end-overlay__button:hover {
+  filter: brightness(1.06);
+}
+
+.run-end-overlay__button:active {
+  transform: translateY(1px);
+}
+
 .run-end-overlay__restart,
 .login-screen__logout-button {
   margin-top: 20px;

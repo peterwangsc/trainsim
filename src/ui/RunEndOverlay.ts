@@ -39,11 +39,14 @@ export class RunEndOverlay {
   private readonly recordElement: HTMLDivElement;
 
   private readonly restartButton: HTMLButtonElement;
+  private readonly replayButton: HTMLButtonElement;
+  private readonly primaryLabel: HTMLSpanElement;
   private readonly authSection: HTMLDivElement;
   private readonly loginInput: HTMLInputElement;
   private readonly loginButton: HTMLButtonElement;
 
-  private readonly handleRestartClickBound: () => void;
+  private readonly handlePrimaryActionClickBound: () => void;
+  private readonly handleReplayClickBound: () => void;
   private readonly handleLoginInputBound: () => void;
   private readonly handleLoginClickBound: () => void;
 
@@ -54,12 +57,14 @@ export class RunEndOverlay {
   private currentUsername: string | null = null;
 
   constructor(container: HTMLElement) {
-    this.handleRestartClickBound = this.handleRestartClick.bind(this);
+    this.handlePrimaryActionClickBound = this.handlePrimaryActionClick.bind(this);
+    this.handleReplayClickBound = this.handleReplayClick.bind(this);
     this.handleLoginInputBound = this.updateLoginButtonState.bind(this);
     this.handleLoginClickBound = this.handleLoginClick.bind(this);
 
     this.root = RunEndOverlayComponent({
-      onRestartClick: this.handleRestartClickBound,
+      onPrimaryActionClick: this.handlePrimaryActionClickBound,
+      onReplayClick: this.handleReplayClickBound,
       onLoginInput: this.handleLoginInputBound,
       onLoginClick: this.handleLoginClickBound,
     });
@@ -71,6 +76,8 @@ export class RunEndOverlay {
     this.pbElement = this.root.querySelector("#run-end-overlay-pb") as HTMLDivElement;
     this.recordElement = this.root.querySelector("#run-end-overlay-record") as HTMLDivElement;
     this.restartButton = this.root.querySelector("#run-end-overlay-restart") as HTMLButtonElement;
+    this.replayButton = this.root.querySelector("#run-end-overlay-replay") as HTMLButtonElement;
+    this.primaryLabel = this.root.querySelector("#run-end-overlay-primary-label") as HTMLSpanElement;
     this.authSection = this.root.querySelector("#run-end-overlay-auth") as HTMLDivElement;
     this.loginInput = this.root.querySelector("#run-end-overlay-login-input") as HTMLInputElement;
     this.loginButton = this.root.querySelector("#run-end-overlay-login-button") as HTMLButtonElement;
@@ -104,10 +111,11 @@ export class RunEndOverlay {
     this.renderPb(undefined);
     this.renderRecord(undefined);
 
-    this.restartButton.textContent =
-      options.tone === "won" && this.nextLevelHandler
-        ? "Next Level"
-        : "Restart";
+    const showReplayButton = options.tone === "won" && this.nextLevelHandler !== null;
+    this.replayButton.style.display = showReplayButton ? "inline-flex" : "none";
+    this.restartButton.classList.toggle("is-next-level", showReplayButton);
+    this.primaryLabel.textContent =
+      options.tone === "won" ? (showReplayButton ? "Next Level" : "Replay") : "Restart";
 
     if (!options.username) {
       this.loginInput.value = "";
@@ -225,17 +233,21 @@ export class RunEndOverlay {
     this.loginButton.textContent = "Log In to Save Progress";
     this.loginButton.disabled = false;
     this.statsSection.style.display = "none";
+    this.replayButton.style.display = "none";
+    this.restartButton.classList.remove("is-next-level");
+    this.primaryLabel.textContent = "Restart";
   }
 
-  private handleRestartClick(): void {
-    if (
-      this.restartButton.textContent === "Next Level" &&
-      this.nextLevelHandler
-    ) {
+  private handlePrimaryActionClick(): void {
+    if (this.restartButton.classList.contains("is-next-level") && this.nextLevelHandler) {
       this.nextLevelHandler();
     } else {
       this.restartHandler?.();
     }
+  }
+
+  private handleReplayClick(): void {
+    this.restartHandler?.();
   }
 
   private handleLoginClick(): void {
