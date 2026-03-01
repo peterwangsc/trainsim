@@ -1,4 +1,4 @@
-import { GameState } from "../game/GameState";
+import { GameState, GameStatus } from "../game/GameState";
 import type {
   CurvaturePreviewSample,
   MinimapPathPoint,
@@ -15,9 +15,7 @@ type HudMetrics = {
   safeSpeed: number;
   samples: CurvaturePreviewSample[];
   pathPoints: MinimapPathPoint[];
-  status: "running" | "won" | "failed";
   statusMessage: string;
-  gameState: GameState;
 };
 
 export class HudController {
@@ -257,12 +255,15 @@ export class HudController {
     this.statusBanner.textContent = metrics.statusMessage;
     this.statusBanner.classList.toggle(
       "is-running",
-      metrics.status === "running",
+      this.gameState.status === GameStatus.Running,
     );
-    this.statusBanner.classList.toggle("is-won", metrics.status === "won");
+    this.statusBanner.classList.toggle(
+      "is-won",
+      this.gameState.status === GameStatus.Won,
+    );
     this.statusBanner.classList.toggle(
       "is-failed",
-      metrics.status === "failed",
+      this.gameState.status === GameStatus.Failed,
     );
     this.setBrakeVisual(metrics.brake);
     this.minimapWidget.draw(metrics.pathPoints, metrics.samples, metrics.speed);
@@ -273,10 +274,8 @@ export class HudController {
       const m = Math.floor((hours - h) * 60);
       return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
     };
-    this.clockValue.textContent = formatTime(metrics.gameState.timeOfDayHours);
-    this.etaValue.textContent = formatTime(
-      metrics.gameState.expectedArrivalHours,
-    );
+    this.clockValue.textContent = formatTime(this.gameState.timeOfDayHours);
+    this.etaValue.textContent = formatTime(this.gameState.expectedArrivalHours);
   }
 
   private setBrakeButtonDown(isDown: boolean): void {

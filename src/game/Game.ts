@@ -3,6 +3,7 @@ import { Howler } from "howler";
 import { CONFIG } from "./Config";
 import { GameLoop } from "./GameLoop";
 import { GameStatus, GameState } from "./GameState";
+import { RuleEngine } from "./RuleEngine";
 import { ComfortModel } from "../sim/ComfortModel";
 import { TrackSampler } from "../sim/TrackSampler";
 import { TrainSim } from "../sim/TrainSim";
@@ -33,7 +34,7 @@ import {
   submitTrackTime,
   getFastestTimeForLevel,
   getPersonalBestForLevel,
-} from "../util/Supabase";
+} from "../util/TrackTimes";
 import { LoadingScreenManager } from "../loading/LoadingScreenManager";
 
 export class Game {
@@ -64,6 +65,7 @@ export class Game {
   private settingsScreen!: SettingsScreen;
 
   // simulation
+  private ruleEngine!: RuleEngine;
   private trainSim!: TrainSim;
   private comfortModel!: ComfortModel;
   private trackSampler!: TrackSampler;
@@ -86,7 +88,6 @@ export class Game {
     this.gameState = new GameState(
       getUsernameFromLocalStorage(),
       getOrCreateUserId(),
-      this.config,
     );
     this.loadingScreenManager = new LoadingScreenManager(
       container,
@@ -161,6 +162,7 @@ export class Game {
     });
     if (level !== this.currentLoadedLevel) {
       this.sceneSetup.rebuildScene(this.gameState);
+      this.ruleEngine.setLayout(this.sceneSetup.trackLayer.trackEndSet.getLayout());
       this.currentLoadedLevel = level;
     }
     this.runEndOverlay.reset();
@@ -181,9 +183,6 @@ export class Game {
     this.gameState.update({ expectedDuration });
 
     this.simulate(0);
-    this.gameState.update({
-      sceneSetup: this.sceneSetup,
-    });
     this.loop.start();
   }
 
@@ -192,12 +191,10 @@ export class Game {
     this.initUiControls();
     this.initAudio();
     this.initSimulation();
+    this.ruleEngine.setLayout(this.sceneSetup.trackLayer.trackEndSet.getLayout());
     this.handleResize();
     this.renderer.compile(this.sceneSetup.scene, this.cameraRig.camera);
     this.simulate(0);
-    this.gameState.update({
-      sceneSetup: this.sceneSetup,
-    });
     this.currentLoadedLevel = this.gameState.level;
   }
 
@@ -239,9 +236,15 @@ export class Game {
 
   private simulate(dt: number): void {
     this.applyAudioVolumes();
+    this.updateGameClock(dt);
     const previousStatus = this.gameState.status;
-    const input = this.inputManager.update(dt);
+    this.updateTrainPhysics(dt);
+    this.updateStatusTransitions(previousStatus);
+    this.updateAudioDrivers(dt);
+    this.updateVisuals(dt);
+  }
 
+  private updateGameClock(dt: number): void {
     if (this.gameState.status === GameStatus.Running) {
       this.gameState.elapsedTime += dt;
     }
@@ -263,6 +266,10 @@ export class Game {
             24) %
         24;
     }
+  }
+
+  private updateTrainPhysics(dt: number): void {
+    const input = this.inputManager.update(dt);
 
     if (
       this.gameState.status !== GameStatus.Running &&
@@ -299,13 +306,33 @@ export class Game {
       dt,
     );
 
-    this.gameState.update({
-      distance: train.distance,
-      wrappedDistance,
-      speed: train.speed,
-      comfort: comfort,
-      curvatureSafeSpeed: curvatureSafeSpeed,
-    });
+    this.gameState.distance = train.distance;
+    this.gameState.wrappedDistance = wrappedDistance;
+    this.gameState.speed = train.speed;
+    this.gameState.comfort = comfort;
+    this.gameState.curvatureSafeSpeed = curvatureSafeSpeed;
+    this.gameState.comfortRatio = MathUtils.clamp(
+      comfort / this.config.comfort.max,
+      0,
+      1,
+    );
+    this.gameState.safeSpeed = this.ruleEngine.computeSafeSpeed(
+      train.distance,
+      curvatureSafeSpeed,
+    );
+  }
+
+  private updateStatusTransitions(previousStatus: GameStatus): void {
+    const transition = this.ruleEngine.checkTransition(
+      this.gameState.distance,
+      this.gameState.speed,
+      this.gameState.comfort,
+      this.gameState.status,
+    );
+    if (transition) {
+      this.gameState.status = transition.status;
+      this.gameState.failureReason = transition.failureReason;
+    }
 
     if (
       previousStatus === GameStatus.Running &&
@@ -313,24 +340,33 @@ export class Game {
     ) {
       this.showRunEndOverlay();
     }
+  }
 
+  private updateAudioDrivers(dt: number): void {
     const controls =
       this.gameState.status === GameStatus.Running
         ? this.trainSim.getControls()
         : { throttle: 0, brake: 1 };
 
     const trainSpeedRatio = MathUtils.clamp(
-      train.speed / this.config.train.maxSpeed,
+      this.gameState.speed / this.config.train.maxSpeed,
       0,
       1,
     );
     const brakeLinear = controls.brake * trainSpeedRatio;
     const brakeAudioDrive =
       brakeLinear <= 0 ? 0 : Math.log(1 + 9 * brakeLinear) / Math.log(10);
-    this.trainMovementAudio.update(train.speed, dt);
-    this.brakePressureAudio.update(brakeAudioDrive, dt);
 
-    this.cameraRig.update(wrappedDistance, train.speed, dt);
+    this.trainMovementAudio.update(this.gameState.speed, dt);
+    this.brakePressureAudio.update(brakeAudioDrive, dt);
+  }
+
+  private updateVisuals(dt: number): void {
+    this.cameraRig.update(
+      this.gameState.wrappedDistance,
+      this.gameState.speed,
+      dt,
+    );
     this.sceneSetup.update(dt, this.cameraRig.camera);
 
     const targetExposure = this.sceneSetup.dayNightSky.getRecommendedExposure();
@@ -357,9 +393,7 @@ export class Game {
       pathPoints: this.trackSampler.samplePathAhead(
         this.gameState.wrappedDistance,
       ),
-      status: this.gameState.getHudStatus(),
-      statusMessage: this.gameState.getStatusMessage(),
-      gameState: this.gameState,
+      statusMessage: this.ruleEngine.getStatusMessage(this.gameState),
     });
   }
 
@@ -450,6 +484,7 @@ export class Game {
   }
 
   private initSimulation(): void {
+    this.ruleEngine = new RuleEngine(this.config);
     this.trainSim = new TrainSim(this.config.train);
 
     this.comfortModel = new ComfortModel(this.config.comfort);
@@ -476,88 +511,56 @@ export class Game {
     this.throttleOverlay?.onResize(width, height);
   }
 
-  private showRunEndOverlay(): void {
-    if (this.gameState.status === GameStatus.Won) {
-      const currentLevel = this.gameState.level;
-      const nextLevel = currentLevel + 1;
-      const timeMs = Math.floor(this.gameState.elapsedTime * 1000);
+  private async showRunEndOverlay(): Promise<void> {
+    const { level, userId, username, elapsedTime, maxLevel, failureReason, status } =
+      this.gameState;
+    const won = status === GameStatus.Won;
+    const timeMs = Math.floor(elapsedTime * 1000);
+    const nextLevel = level + 1;
 
-      const finishAndShow = () => {
-        submitTrackTime(this.gameState.userId, currentLevel, timeMs).then(
-          () => {
-            getFastestTimeForLevel(currentLevel).then((record) => {
-              this.runEndOverlay.updateRecord(record);
-            });
-            getPersonalBestForLevel(this.gameState.userId, currentLevel).then(
-              (pb) => {
-                this.runEndOverlay.updatePersonalBest(pb);
-              },
-            );
-          },
-        );
-
-        this.runEndOverlay.show({
-          tone: "won",
-          title: "Station Stop Complete",
-          message: "You stopped before the platform end.",
-          timeMs: timeMs,
-          onRestart: () => this.restart(),
-          onNextLevel: async () => {
-            this.startLevel(
-              nextLevel,
-              this.gameState.userId,
-              this.gameState.username,
-            );
-          },
-          onLogin: async (username) => {
-            const result = await login(username, this.gameState);
-            if (result) {
-              this.startLevel(result.level, result.userId, result.username);
-            }
-          },
-          username: this.gameState.username,
-        });
-      };
-
-      if (nextLevel > this.gameState.maxLevel) {
-        this.gameState.update({ maxLevel: nextLevel });
-        saveProgress(
-          this.gameState.userId,
-          this.gameState.username,
-          nextLevel,
-        ).then(() => {
-          finishAndShow();
-        });
-      } else {
-        finishAndShow();
-      }
-      return;
+    if (won && nextLevel > maxLevel) {
+      this.gameState.update({ maxLevel: nextLevel });
+      await saveProgress(userId, username, nextLevel);
     }
 
-    const isBumperImpact = this.gameState.failureReason === "BUMPER";
-    const currentLevel = this.gameState.level;
+    const onLogin = async (name: string) => {
+      const result = await login(name, this.gameState);
+      if (result) this.startLevel(result.level, result.userId, result.username);
+    };
 
-    getFastestTimeForLevel(currentLevel).then((record) => {
-      this.runEndOverlay.updateRecord(record);
-    });
-    getPersonalBestForLevel(this.gameState.userId, currentLevel).then((pb) => {
-      this.runEndOverlay.updatePersonalBest(pb);
-    });
-
-    this.runEndOverlay.show({
-      tone: "failed",
-      title: isBumperImpact ? "Bumper Impact" : "Run Failed",
-      message: isBumperImpact
-        ? "You hit the terminal bumper."
-        : "Passengers could not tolerate the ride.",
-      onRestart: () => this.restart(),
-      onLogin: async (username) => {
-        const result = await login(username, this.gameState);
-        if (result) {
-          this.startLevel(result.level, result.userId, result.username);
-        }
-      },
-      username: this.gameState.username,
-    });
+    if (won) {
+      this.runEndOverlay.show({
+        tone: "won",
+        title: "Station Stop Complete",
+        message: "You stopped before the platform end.",
+        timeMs,
+        onRestart: () => this.restart(),
+        onNextLevel: () => this.startLevel(nextLevel, userId, username),
+        onLogin,
+        username,
+      });
+      submitTrackTime(userId, level, timeMs).then(() => {
+        getFastestTimeForLevel(level).then((r) => this.runEndOverlay.updateRecord(r));
+        getPersonalBestForLevel(userId, level).then((pb) =>
+          this.runEndOverlay.updatePersonalBest(pb),
+        );
+      });
+    } else {
+      this.runEndOverlay.show({
+        tone: "failed",
+        title: failureReason === "BUMPER" ? "Bumper Impact" : "Run Failed",
+        message:
+          failureReason === "BUMPER"
+            ? "You hit the terminal bumper."
+            : "Passengers could not tolerate the ride.",
+        onRestart: () => this.restart(),
+        onLogin,
+        username,
+      });
+      getFastestTimeForLevel(level).then((r) => this.runEndOverlay.updateRecord(r));
+      getPersonalBestForLevel(userId, level).then((pb) =>
+        this.runEndOverlay.updatePersonalBest(pb),
+      );
+    }
   }
 }

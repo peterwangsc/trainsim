@@ -34,7 +34,7 @@ export class ZooPage {
       height: "100%",
     });
 
-    this.gameState = new GameState(null, "zoo", CONFIG);
+    this.gameState = new GameState(null, "zoo");
     this.gameState.level = 1;
     this.gameState.status = GameStatus.Running;
 

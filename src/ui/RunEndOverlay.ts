@@ -1,5 +1,5 @@
 import { ASSETS_CDN_BASE } from "../game/Config";
-import { TrackTimeRecord } from "../util/Supabase";
+import { TrackTimeRecord } from "../util/TrackTimes";
 
 export type RunEndTone = "won" | "failed";
 
@@ -8,8 +8,6 @@ export type RunEndOverlayOptions = {
   title: string;
   message: string;
   timeMs?: number;
-  recordHolder?: TrackTimeRecord | null;
-  personalBestMs?: number | null;
   onRestart: () => void;
   onNextLevel?: () => void;
   onLogin?: (username: string) => void;
@@ -112,6 +110,8 @@ export class RunEndOverlay {
     this.authSection = document.createElement("div");
     this.authSection.className = "login-screen__login-field";
     this.authSection.style.marginTop = "20px";
+    this.authSection.style.flexDirection = "column";
+    this.authSection.style.gap = "8px";
     this.authSection.style.display = "none";
 
     this.loginInput = document.createElement("input");
@@ -154,62 +154,23 @@ export class RunEndOverlay {
     this.root.classList.toggle("is-failed", options.tone === "failed");
 
     this.statsSection.style.display = "flex";
-
-    if (options.tone === "won" && options.timeMs !== undefined) {
-      this.timeElement.style.display = "flex";
+    this.timeElement.style.display =
+      options.tone === "won" && options.timeMs !== undefined ? "flex" : "none";
+    if (options.timeMs !== undefined) {
       this.timeElement.innerHTML = `
         <span>Your Time:</span>
         <span style="color: #4ade80">${formatTime(options.timeMs)}</span>
       `;
-    } else {
-      this.timeElement.style.display = "none";
     }
-
-    if (options.personalBestMs !== undefined) {
-      if (options.personalBestMs !== null) {
-        this.pbElement.innerHTML = `
-          <span>Personal Best:</span>
-          <span style="color: #60a5fa">${formatTime(options.personalBestMs)}</span>
-        `;
-      } else {
-        this.pbElement.innerHTML = `
-          <span>Personal Best:</span>
-          <span>N/A</span>
-        `;
-      }
-    } else {
-      this.pbElement.innerHTML = `
-        <span>Personal Best:</span>
-        <span>Loading...</span>
-      `;
-    }
-
-    if (options.recordHolder) {
-      const isYou = this.currentUsername && options.recordHolder.username === this.currentUsername;
-      const holderDisplay = isYou ? "You" : options.recordHolder.username;
-      this.recordElement.innerHTML = `
-        <span>World Record by ${holderDisplay}:</span>
-        <span style="color: #fbbf24">${formatTime(options.recordHolder.timeMs)}</span>
-      `;
-    } else {
-      this.recordElement.innerHTML = `
-        <span>World Record:</span>
-        <span>Loading...</span>
-      `;
-    }
+    this.renderPb(undefined);
+    this.renderRecord(undefined);
 
     this.restartButton.textContent =
-      options.tone === "won" && this.nextLevelHandler
-        ? "Next Level"
-        : "Restart";
+      options.tone === "won" && this.nextLevelHandler ? "Next Level" : "Restart";
 
     if (!options.username) {
-      this.loginInput.style.display = "block";
-      this.loginButton.style.display = "block";
       this.loginInput.value = "";
       this.authSection.style.display = "flex";
-      this.authSection.style.flexDirection = "column";
-      this.authSection.style.gap = "8px";
       this.updateLoginButtonState();
     } else {
       this.authSection.style.display = "none";
@@ -218,12 +179,7 @@ export class RunEndOverlay {
     if (this.revealFrameId !== null) {
       window.cancelAnimationFrame(this.revealFrameId);
     }
-
-    this.root.classList.remove(
-      "run-end-overlay--visible",
-      "run-end-overlay--hidden",
-    );
-
+    this.root.classList.remove("run-end-overlay--visible", "run-end-overlay--hidden");
     this.revealFrameId = window.requestAnimationFrame(() => {
       this.revealFrameId = null;
       this.root.classList.add("run-end-overlay--visible");
@@ -232,35 +188,43 @@ export class RunEndOverlay {
 
   public updateRecord(recordHolder: TrackTimeRecord | null): void {
     if (this.statsSection.style.display !== "none") {
-      if (recordHolder) {
-        const isYou = this.currentUsername && recordHolder.username === this.currentUsername;
-        const holderDisplay = isYou ? "You" : recordHolder.username;
-        this.recordElement.innerHTML = `
-          <span>World Record by ${holderDisplay}:</span>
-          <span style="color: #fbbf24">${formatTime(recordHolder.timeMs)}</span>
-        `;
-      } else {
-        this.recordElement.innerHTML = `
-          <span>World Record:</span>
-          <span>N/A</span>
-        `;
-      }
+      this.renderRecord(recordHolder);
     }
   }
 
   public updatePersonalBest(pbMs: number | null): void {
     if (this.statsSection.style.display !== "none") {
-      if (pbMs !== null) {
-        this.pbElement.innerHTML = `
-          <span>Personal Best:</span>
-          <span style="color: #60a5fa">${formatTime(pbMs)}</span>
-        `;
-      } else {
-        this.pbElement.innerHTML = `
-          <span>Personal Best:</span>
-          <span>N/A</span>
-        `;
-      }
+      this.renderPb(pbMs);
+    }
+  }
+
+  private renderRecord(recordHolder: TrackTimeRecord | null | undefined): void {
+    if (recordHolder === undefined) {
+      this.recordElement.innerHTML = `<span>World Record:</span><span>Loading...</span>`;
+    } else if (recordHolder) {
+      const holder =
+        this.currentUsername && recordHolder.username === this.currentUsername
+          ? "You"
+          : recordHolder.username;
+      this.recordElement.innerHTML = `
+        <span>World Record by ${holder}:</span>
+        <span style="color: #fbbf24">${formatTime(recordHolder.timeMs)}</span>
+      `;
+    } else {
+      this.recordElement.innerHTML = `<span>World Record:</span><span>N/A</span>`;
+    }
+  }
+
+  private renderPb(pbMs: number | null | undefined): void {
+    if (pbMs === undefined) {
+      this.pbElement.innerHTML = `<span>Personal Best:</span><span>Loading...</span>`;
+    } else if (pbMs !== null) {
+      this.pbElement.innerHTML = `
+        <span>Personal Best:</span>
+        <span style="color: #60a5fa">${formatTime(pbMs)}</span>
+      `;
+    } else {
+      this.pbElement.innerHTML = `<span>Personal Best:</span><span>N/A</span>`;
     }
   }
 
