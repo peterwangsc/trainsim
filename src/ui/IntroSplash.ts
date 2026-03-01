@@ -1,4 +1,5 @@
 import { ASSETS_CDN_BASE } from "@/game/Config";
+import { IntroSplashComponent } from "@/ui/components/IntroSplash";
 
 const SPLASH_FADE_DURATION_MS = 8_000;
 
@@ -8,18 +9,9 @@ export class IntroSplash {
   private dismissed = false;
 
   constructor(container: HTMLElement) {
-    this.root = document.createElement("div");
-    this.root.className = "intro-splash";
-    this.root.setAttribute("aria-hidden", "true");
-
-    const logo = document.createElement("img");
-    logo.className = "intro-splash__logo";
-    logo.src = `${ASSETS_CDN_BASE}/og.png`;
-    logo.alt = "TrainSim";
-    logo.decoding = "async";
-    logo.loading = "eager";
-
-    this.root.appendChild(logo);
+    this.root = IntroSplashComponent({
+      logoSrc: `${ASSETS_CDN_BASE}/og.png`,
+    });
     container.appendChild(this.root);
   }
 

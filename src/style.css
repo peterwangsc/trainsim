@@ -1530,7 +1530,7 @@ canvas {
 
 .settings-panel {
   flex: 1;
-  background: rgba(20, 20, 25, 0.6);
+  background: rgb(6 14 24 / 80%);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
   padding: 4dvh 3dvw;

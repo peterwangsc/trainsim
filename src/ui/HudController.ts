@@ -4,6 +4,7 @@ import type {
   MinimapPathPoint,
 } from "@/sim/TrackSampler";
 import { MinimapCurvatureWidget } from "@/ui/MinimapCurvatureWidget";
+import { HudComponent } from "@/ui/components/Hud";
 
 const LOCKED_VIEWPORT_CONTENT =
   "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover";
@@ -65,150 +66,49 @@ export class HudController {
     this.handleWindowBlurBound = this.handleWindowBlur.bind(this);
 
     this.gameState = gameState;
+    this.onUsernameClick = onUsernameClick;
+    this.handleUsernameClickBound = this.onUsernameClick.bind(this);
+    this.onSettingsClick = onSettingsClick;
+    this.handleSettingsClickBound = this.onSettingsClick.bind(this);
 
-    this.root = document.createElement("div");
-    this.root.className = "hud";
+    this.root = HudComponent({
+      gameState: this.gameState,
+      onBrakePointerDown: this.handleBrakePointerDownBound,
+      onBrakeTouchStart: this.handleBrakeTouchStartBound,
+      onUsernameClick: this.handleUsernameClickBound,
+      onSettingsClick: this.handleSettingsClickBound,
+    });
 
-    this.statusBanner = document.createElement("div");
-    this.statusBanner.className = "hud-status-banner";
-    this.statusBanner.textContent =
-      "Drive to the terminal station and stop before the platform ends.";
+    // Grab references to elements we need to update
+    this.statusBanner = this.root.querySelector(".hud-status-banner") as HTMLDivElement;
+    this.speedValue = this.root.querySelector("#hud-speed-value") as HTMLSpanElement;
+    this.speedLimitValue = this.root.querySelector("#hud-speed-limit-value") as HTMLSpanElement;
+    this.clockValue = this.root.querySelector("#hud-clock-value") as HTMLSpanElement;
+    this.etaValue = this.root.querySelector("#hud-eta-value") as HTMLSpanElement;
+    this.comfortGauge = this.root.querySelector("#hud-comfort-gauge") as HTMLDivElement;
+    this.comfortFill = this.root.querySelector("#hud-comfort-fill") as HTMLDivElement;
+    this.comfortValue = this.root.querySelector("#hud-comfort-value") as HTMLSpanElement;
+    this.brakeButton = this.root.querySelector("#hud-brake-button") as HTMLButtonElement;
+    this.usernameDisplay = this.root.querySelector("#hud-username-display") as HTMLDivElement;
+    this.settingsButton = this.root.querySelector(".hud-settings-btn") as HTMLButtonElement;
 
-    const speedReadout = document.createElement("p");
-    speedReadout.className = "hud-speed hud-speed-floating";
+    // Attach passive: false to touchstart separately because JSX 'on' handlers can't specify passive
+    this.brakeButton.addEventListener("touchstart", this.handleBrakeTouchStartBound, { passive: false });
 
-    this.speedValue = document.createElement("span");
-    this.speedValue.className = "hud-speed-value";
-    this.speedValue.textContent = "0";
-
-    const speedUnit = document.createElement("span");
-    speedUnit.className = "hud-speed-unit";
-    speedUnit.textContent = "kph";
-
-    speedReadout.append(this.speedValue, speedUnit);
-
-    const previewCluster = document.createElement("div");
-    previewCluster.className = "hud-preview-cluster";
-
-    const minimapCanvas = document.createElement("canvas");
-    minimapCanvas.width = 260;
-    minimapCanvas.height = 118;
-    minimapCanvas.className = "minimap-canvas";
-    previewCluster.appendChild(minimapCanvas);
-    this.minimapWidget = new MinimapCurvatureWidget(minimapCanvas);
-
-    const speedLimitSign = document.createElement("div");
-    speedLimitSign.className = "speed-limit-sign";
-
-    const speedLimitLabel = document.createElement("span");
-    speedLimitLabel.className = "speed-limit-label";
-    speedLimitLabel.textContent = "Speed Limit";
-
-    this.speedLimitValue = document.createElement("span");
-    this.speedLimitValue.className = "speed-limit-value";
-    this.speedLimitValue.textContent = "0";
-
-    const speedLimitUnit = document.createElement("span");
-    speedLimitUnit.className = "speed-limit-unit";
-    speedLimitUnit.textContent = "kph";
-
-    speedLimitSign.append(
-      speedLimitLabel,
-      this.speedLimitValue,
-      speedLimitUnit,
-    );
-    previewCluster.appendChild(speedReadout);
-
-    const timeCluster = document.createElement("div");
-    timeCluster.className = "hud-time-cluster";
-
-    const clockLabel = document.createElement("span");
-    clockLabel.className = "hud-time-label";
-    clockLabel.textContent = "Time";
-
-    this.clockValue = document.createElement("span");
-    this.clockValue.className = "hud-time-value";
-
-    const etaLabel = document.createElement("span");
-    etaLabel.className = "hud-time-label hud-time-label--eta";
-    etaLabel.textContent = "ETA";
-
-    this.etaValue = document.createElement("span");
-    this.etaValue.className = "hud-time-value hud-time-value--eta";
-
-    timeCluster.append(clockLabel, this.clockValue, etaLabel, this.etaValue);
-
-    this.comfortGauge = document.createElement("div");
-    this.comfortGauge.className = "comfort-gauge";
-
-    const comfortLabel = document.createElement("span");
-    comfortLabel.className = "comfort-gauge-label";
-    comfortLabel.textContent = "Comfort";
-
-    const comfortTrack = document.createElement("div");
-    comfortTrack.className = "comfort-gauge-track";
-
-    this.comfortFill = document.createElement("div");
-    this.comfortFill.className = "comfort-gauge-fill";
-    comfortTrack.appendChild(this.comfortFill);
-
-    this.comfortValue = document.createElement("span");
-    this.comfortValue.className = "comfort-gauge-value";
-    this.comfortValue.textContent = "100%";
-
-    this.comfortGauge.append(comfortLabel, comfortTrack, this.comfortValue);
-
-    this.brakeButton = document.createElement("button");
-    this.brakeButton.type = "button";
-    this.brakeButton.className = "brake-button";
-    this.brakeButton.textContent = "STOP";
-    this.brakeButton.addEventListener(
-      "pointerdown",
-      this.handleBrakePointerDownBound,
-    );
-    this.brakeButton.addEventListener(
-      "touchstart",
-      this.handleBrakeTouchStartBound,
-      {
-        passive: false,
-      },
-    );
     window.addEventListener("pointerup", this.handleBrakePointerUpBound);
     window.addEventListener("pointercancel", this.handleBrakePointerUpBound);
     window.addEventListener("touchend", this.handleBrakeTouchEndBound);
     window.addEventListener("touchcancel", this.handleBrakeTouchEndBound);
     window.addEventListener("blur", this.handleWindowBlurBound);
 
-    this.onUsernameClick = onUsernameClick;
-    this.handleUsernameClickBound = this.onUsernameClick.bind(this);
+    // Mount canvas inside the placeholder
+    const minimapCanvas = document.createElement("canvas");
+    minimapCanvas.width = 260;
+    minimapCanvas.height = 118;
+    minimapCanvas.className = "minimap-canvas";
+    this.root.querySelector("#minimap-container")!.appendChild(minimapCanvas);
+    this.minimapWidget = new MinimapCurvatureWidget(minimapCanvas);
 
-    this.onSettingsClick = onSettingsClick;
-    this.handleSettingsClickBound = this.onSettingsClick.bind(this);
-
-    this.usernameDisplay = document.createElement("div");
-    this.usernameDisplay.className = "username-display";
-    this.usernameDisplay.textContent = this.gameState.username ?? "Login";
-    this.usernameDisplay.addEventListener(
-      "click",
-      this.handleUsernameClickBound,
-    );
-
-    this.settingsButton = document.createElement("button");
-    this.settingsButton.className = "hud-settings-btn";
-    this.settingsButton.type = "button";
-    this.settingsButton.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
-    this.settingsButton.addEventListener("click", this.handleSettingsClickBound);
-
-    this.root.append(
-      this.statusBanner,
-      previewCluster,
-      speedLimitSign,
-      timeCluster,
-      this.comfortGauge,
-      this.brakeButton,
-      this.usernameDisplay,
-      this.settingsButton,
-    );
     container.appendChild(this.root);
   }
 

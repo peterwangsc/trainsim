@@ -1,3 +1,4 @@
+import { RunEndOverlayComponent } from "@/ui/components/RunEndOverlay";
 import { TrackTimeRecord } from "@/util/TrackTimes";
 
 export type RunEndTone = "won" | "failed";
@@ -42,6 +43,10 @@ export class RunEndOverlay {
   private readonly loginInput: HTMLInputElement;
   private readonly loginButton: HTMLButtonElement;
 
+  private readonly handleRestartClickBound: () => void;
+  private readonly handleLoginInputBound: () => void;
+  private readonly handleLoginClickBound: () => void;
+
   private restartHandler: (() => void) | null = null;
   private nextLevelHandler: (() => void) | null = null;
   private loginHandler: ((username: string) => void) | null = null;
@@ -49,95 +54,27 @@ export class RunEndOverlay {
   private currentUsername: string | null = null;
 
   constructor(container: HTMLElement) {
-    this.root = document.createElement("div");
-    this.root.className = "run-end-overlay run-end-overlay--hidden";
+    this.handleRestartClickBound = this.handleRestartClick.bind(this);
+    this.handleLoginInputBound = this.updateLoginButtonState.bind(this);
+    this.handleLoginClickBound = this.handleLoginClick.bind(this);
 
-    const card = document.createElement("div");
-    card.className = "run-end-overlay__card";
+    this.root = RunEndOverlayComponent({
+      onRestartClick: this.handleRestartClickBound,
+      onLoginInput: this.handleLoginInputBound,
+      onLoginClick: this.handleLoginClickBound,
+    });
 
-    this.title = document.createElement("h2");
-    this.title.className = "run-end-overlay__title";
+    this.title = this.root.querySelector("#run-end-overlay-title") as HTMLHeadingElement;
+    this.message = this.root.querySelector("#run-end-overlay-message") as HTMLParagraphElement;
+    this.statsSection = this.root.querySelector("#run-end-overlay-stats") as HTMLDivElement;
+    this.timeElement = this.root.querySelector("#run-end-overlay-time") as HTMLDivElement;
+    this.pbElement = this.root.querySelector("#run-end-overlay-pb") as HTMLDivElement;
+    this.recordElement = this.root.querySelector("#run-end-overlay-record") as HTMLDivElement;
+    this.restartButton = this.root.querySelector("#run-end-overlay-restart") as HTMLButtonElement;
+    this.authSection = this.root.querySelector("#run-end-overlay-auth") as HTMLDivElement;
+    this.loginInput = this.root.querySelector("#run-end-overlay-login-input") as HTMLInputElement;
+    this.loginButton = this.root.querySelector("#run-end-overlay-login-button") as HTMLButtonElement;
 
-    this.message = document.createElement("p");
-    this.message.className = "run-end-overlay__message";
-
-    this.statsSection = document.createElement("div");
-    this.statsSection.className = "run-end-overlay__stats";
-    this.statsSection.style.display = "none";
-    this.statsSection.style.flexDirection = "column";
-    this.statsSection.style.gap = "8px";
-    this.statsSection.style.marginTop = "16px";
-    this.statsSection.style.marginBottom = "16px";
-    this.statsSection.style.padding = "16px";
-    this.statsSection.style.background = "rgba(0, 0, 0, 0.4)";
-    this.statsSection.style.borderRadius = "8px";
-    this.statsSection.style.border = "1px solid rgba(255, 255, 255, 0.1)";
-    this.statsSection.style.width = "100%";
-
-    this.timeElement = document.createElement("div");
-    this.timeElement.style.display = "flex";
-    this.timeElement.style.justifyContent = "space-between";
-    this.timeElement.style.fontSize = "16px";
-    this.timeElement.style.fontWeight = "bold";
-
-    this.pbElement = document.createElement("div");
-    this.pbElement.style.display = "flex";
-    this.pbElement.style.justifyContent = "space-between";
-    this.pbElement.style.fontSize = "14px";
-    this.pbElement.style.color = "#aaa";
-
-    this.recordElement = document.createElement("div");
-    this.recordElement.style.display = "flex";
-    this.recordElement.style.justifyContent = "space-between";
-    this.recordElement.style.fontSize = "14px";
-    this.recordElement.style.color = "#aaa";
-
-    this.statsSection.append(
-      this.timeElement,
-      this.pbElement,
-      this.recordElement,
-    );
-
-    this.restartButton = document.createElement("button");
-    this.restartButton.type = "button";
-    this.restartButton.className = "run-end-overlay__restart";
-    this.restartButton.textContent = "Restart";
-    this.restartButton.addEventListener("click", () =>
-      this.handleRestartClick(),
-    );
-
-    this.authSection = document.createElement("div");
-    this.authSection.className = "login-screen__login-field";
-    this.authSection.style.marginTop = "20px";
-    this.authSection.style.flexDirection = "column";
-    this.authSection.style.gap = "8px";
-    this.authSection.style.display = "none";
-
-    this.loginInput = document.createElement("input");
-    this.loginInput.type = "text";
-    this.loginInput.placeholder = "Username (Optional)";
-    this.loginInput.className = "login-screen__username-input";
-    this.loginInput.addEventListener("input", () =>
-      this.updateLoginButtonState(),
-    );
-
-    this.loginButton = document.createElement("button");
-    this.loginButton.type = "button";
-    this.loginButton.textContent = "Log In to Save Progress";
-    this.loginButton.className =
-      "login-screen__login-button login-screen__login-button--disabled";
-    this.loginButton.addEventListener("click", () => this.handleLoginClick());
-
-    this.authSection.append(this.loginInput, this.loginButton);
-
-    card.append(
-      this.title,
-      this.message,
-      this.statsSection,
-      this.restartButton,
-      this.authSection,
-    );
-    this.root.appendChild(card);
     container.appendChild(this.root);
   }
 
@@ -156,11 +93,14 @@ export class RunEndOverlay {
     this.timeElement.style.display =
       options.tone === "won" && options.timeMs !== undefined ? "flex" : "none";
     if (options.timeMs !== undefined) {
-      this.timeElement.innerHTML = `
-        <span>Your Time:</span>
-        <span style="color: #4ade80">${formatTime(options.timeMs)}</span>
-      `;
+      this.renderStatRow(
+        this.timeElement,
+        "Your Time:",
+        formatTime(options.timeMs),
+        "#4ade80",
+      );
     }
+
     this.renderPb(undefined);
     this.renderRecord(undefined);
 
@@ -204,32 +144,65 @@ export class RunEndOverlay {
 
   private renderRecord(recordHolder: TrackTimeRecord | null | undefined): void {
     if (recordHolder === undefined) {
-      this.recordElement.innerHTML = `<span>World Record:</span><span>Loading...</span>`;
-    } else if (recordHolder) {
-      const holder =
-        this.currentUsername && recordHolder.username === this.currentUsername
-          ? "You"
-          : recordHolder.username;
-      this.recordElement.innerHTML = `
-        <span>World Record by ${holder}:</span>
-        <span style="color: #fbbf24">${formatTime(recordHolder.timeMs)}</span>
-      `;
-    } else {
-      this.recordElement.innerHTML = `<span>World Record:</span><span>N/A</span>`;
+      this.renderStatRow(this.recordElement, "World Record:", "Loading...");
+      return;
     }
+
+    if (!recordHolder) {
+      this.renderStatRow(this.recordElement, "World Record:", "N/A");
+      return;
+    }
+
+    const holder =
+      this.currentUsername && recordHolder.username === this.currentUsername
+        ? "You"
+        : recordHolder.username;
+
+    this.renderStatRow(
+      this.recordElement,
+      `World Record by ${holder}:`,
+      formatTime(recordHolder.timeMs),
+      "#fbbf24",
+    );
   }
 
   private renderPb(pbMs: number | null | undefined): void {
     if (pbMs === undefined) {
-      this.pbElement.innerHTML = `<span>Personal Best:</span><span>Loading...</span>`;
-    } else if (pbMs !== null) {
-      this.pbElement.innerHTML = `
-        <span>Personal Best:</span>
-        <span style="color: #60a5fa">${formatTime(pbMs)}</span>
-      `;
-    } else {
-      this.pbElement.innerHTML = `<span>Personal Best:</span><span>N/A</span>`;
+      this.renderStatRow(this.pbElement, "Personal Best:", "Loading...");
+      return;
     }
+
+    if (pbMs === null) {
+      this.renderStatRow(this.pbElement, "Personal Best:", "N/A");
+      return;
+    }
+
+    this.renderStatRow(
+      this.pbElement,
+      "Personal Best:",
+      formatTime(pbMs),
+      "#60a5fa",
+    );
+  }
+
+  private renderStatRow(
+    target: HTMLDivElement,
+    label: string,
+    value: string,
+    valueColor?: string,
+  ): void {
+    target.replaceChildren();
+
+    const labelEl = document.createElement("span");
+    labelEl.textContent = label;
+
+    const valueEl = document.createElement("span");
+    valueEl.textContent = value;
+    if (valueColor) {
+      valueEl.style.color = valueColor;
+    }
+
+    target.append(labelEl, valueEl);
   }
 
   public dispose(): void {

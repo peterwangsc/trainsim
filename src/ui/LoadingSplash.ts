@@ -1,5 +1,11 @@
 import { ASSETS_CDN_BASE } from "@/game/Config";
 import { GameState } from "@/game/GameState";
+import {
+  LeaderboardSectionComponent,
+  LeaderboardSkeletonComponent,
+  LoadingSplashComponent,
+  type LeaderboardRow,
+} from "@/ui/components/LoadingSplash";
 import { saveSoundSettings } from "@/util/Username";
 import { getMaxLevelWithTimes, getTopTimesForLevels } from "@/util/TrackTimes";
 
@@ -35,20 +41,39 @@ export class LoadingSplash {
   private readonly progressTrack: HTMLDivElement;
   private readonly progressFill: HTMLDivElement;
   private readonly cta: HTMLButtonElement;
-  private readonly progressContainer: HTMLDivElement;
-  private readonly usernameInput: HTMLInputElement | null = null;
+  private readonly usernameInput: HTMLInputElement | null;
+
+  private readonly creditsBtn: HTMLButtonElement;
+  private readonly settingsBtn: HTMLButtonElement;
+  private readonly settingsIconGear: HTMLSpanElement;
+  private readonly settingsIconClose: HTMLSpanElement;
+  private readonly settingsPage: HTMLDivElement;
+  private readonly creditsPage: HTMLDivElement;
+  private readonly leaderboardsContainer: HTMLDivElement;
+  private readonly loadLeaderboardsBtn: HTMLButtonElement;
+  private readonly creditsLink: HTMLAnchorElement;
+  private readonly shareBtn: HTMLButtonElement;
+
+  private readonly masterSlider: HTMLInputElement;
+  private readonly musicSlider: HTMLInputElement;
+  private readonly sfxSlider: HTMLInputElement;
+
+  private readonly handleTapBound: () => void;
+  private readonly handleCreditsClickBound: () => void;
+  private readonly handleSettingsClickBound: () => void;
+  private readonly handleShareClickBound: () => void;
+  private readonly handleLoadLeaderboardsBound: () => void;
+  private readonly handleCreditsLinkEnterBound: () => void;
+  private readonly handleCreditsLinkLeaveBound: () => void;
+  private readonly handleShareBtnEnterBound: () => void;
+  private readonly handleShareBtnLeaveBound: () => void;
+
   private dismissed = false;
   private isReady = false;
   private isStarting = false;
-
-  private creditsBtn!: HTMLButtonElement;
-  private settingsBtn!: HTMLButtonElement;
-  private settingsPage!: HTMLDivElement;
-  private creditsPage!: HTMLDivElement;
   private activePage: "none" | "settings" | "credits" = "none";
-  private masterSlider!: HTMLInputElement;
-  private musicSlider!: HTMLInputElement;
-  private sfxSlider!: HTMLInputElement;
+  private leaderboardsLoaded = false;
+  private currentLoadMaxLevel: number | null = null;
 
   constructor(
     container: HTMLElement,
@@ -58,325 +83,94 @@ export class LoadingSplash {
     ) => Promise<void> | void,
   ) {
     this.gameState = gameState;
-    this.root = document.createElement("div");
-    this.root.className = "loading-splash";
-    this.root.setAttribute("role", "dialog");
-    this.root.setAttribute("aria-live", "polite");
 
-    const card = document.createElement("div");
-    card.className = "loading-splash__card";
+    this.handleTapBound = this.onTap.bind(this);
+    this.handleCreditsClickBound = this.handleCreditsClick.bind(this);
+    this.handleSettingsClickBound = this.handleSettingsClick.bind(this);
+    this.handleShareClickBound = this.handleShareClick.bind(this);
+    this.handleLoadLeaderboardsBound = this.handleLoadLeaderboards.bind(this);
+    this.handleCreditsLinkEnterBound = () => {
+      this.creditsLink.style.color = "#fff";
+    };
+    this.handleCreditsLinkLeaveBound = () => {
+      this.creditsLink.style.color = "rgba(255, 255, 255, 0.7)";
+    };
+    this.handleShareBtnEnterBound = () => {
+      this.shareBtn.style.color = "#fff";
+    };
+    this.handleShareBtnLeaveBound = () => {
+      this.shareBtn.style.color = "rgba(255, 255, 255, 0.7)";
+    };
 
-    const logo = document.createElement("img");
-    logo.className = "loading-splash__logo";
-    logo.src = `${ASSETS_CDN_BASE}/og.png`;
-    logo.alt = "TrainSim";
-    logo.decoding = "async";
-    logo.loading = "eager";
-    logo.draggable = false;
+    this.root = LoadingSplashComponent({
+      logoSrc: `${ASSETS_CDN_BASE}/og.png`,
+      showUsernameInput: !this.gameState.username,
+      onStartClick: this.handleTapBound,
+      onCreditsClick: this.handleCreditsClickBound,
+      onSettingsClick: this.handleSettingsClickBound,
+      onShareClick: this.handleShareClickBound,
+    });
 
-    const hint = document.createElement("p");
-    hint.className = "loading-splash__hint";
-    hint.innerHTML =
-      "Navigate your train to the terminal station.<br/>Stop before the platform ends.";
+    this.progressLabel = this.root.querySelector(
+      "#loading-progress-label",
+    ) as HTMLParagraphElement;
+    this.progressTrack = this.root.querySelector(
+      "#loading-progress-track",
+    ) as HTMLDivElement;
+    this.progressFill = this.root.querySelector(
+      "#loading-progress-fill",
+    ) as HTMLDivElement;
+    this.cta = this.root.querySelector("#loading-cta") as HTMLButtonElement;
+    this.usernameInput = this.root.querySelector(
+      "#loading-username-input",
+    ) as HTMLInputElement | null;
 
-    this.progressLabel = document.createElement("p");
-    this.progressLabel.className = "loading-splash__progress-label";
-    this.progressLabel.textContent = "Loading 0%";
+    this.creditsBtn = this.root.querySelector(
+      "#loading-credits-btn",
+    ) as HTMLButtonElement;
+    this.settingsBtn = this.root.querySelector(
+      "#loading-settings-btn",
+    ) as HTMLButtonElement;
+    this.settingsIconGear = this.root.querySelector(
+      "#loading-settings-icon-gear",
+    ) as HTMLSpanElement;
+    this.settingsIconClose = this.root.querySelector(
+      "#loading-settings-icon-close",
+    ) as HTMLSpanElement;
+    this.settingsPage = this.root.querySelector(
+      "#loading-settings-page",
+    ) as HTMLDivElement;
+    this.creditsPage = this.root.querySelector(
+      "#loading-credits-page",
+    ) as HTMLDivElement;
+    this.leaderboardsContainer = this.root.querySelector(
+      "#loading-leaderboards-container",
+    ) as HTMLDivElement;
+    this.loadLeaderboardsBtn = this.root.querySelector(
+      "#loading-load-leaderboards-btn",
+    ) as HTMLButtonElement;
+    this.creditsLink = this.root.querySelector(
+      "#loading-credits-link",
+    ) as HTMLAnchorElement;
+    this.shareBtn = this.root.querySelector(
+      "#loading-share-btn",
+    ) as HTMLButtonElement;
 
-    this.progressTrack = document.createElement("div");
-    this.progressTrack.className = "loading-splash__progress-track";
+    this.masterSlider = this.root.querySelector(
+      "#master-volume",
+    ) as HTMLInputElement;
+    this.musicSlider = this.root.querySelector(
+      "#music-volume",
+    ) as HTMLInputElement;
+    this.sfxSlider = this.root.querySelector("#sfx-volume") as HTMLInputElement;
 
-    this.progressFill = document.createElement("div");
-    this.progressFill.className = "loading-splash__progress-fill";
-    this.progressTrack.appendChild(this.progressFill);
-
-    this.cta = document.createElement("button");
-    this.cta.className = "loading-splash__cta loading-splash__cta--hidden";
-    this.cta.type = "button";
-    this.cta.textContent = `Push to Start`;
-    this.cta.addEventListener("click", () => this.onTap());
-
-    this.progressContainer = document.createElement("div");
-    this.progressContainer.className = "loading-splash__progress-container";
-    this.progressContainer.appendChild(hint);
-
-    const ctaContainer = document.createElement("div");
-    ctaContainer.className = "loading-splash__cta-container";
-    ctaContainer.appendChild(this.progressLabel);
-    ctaContainer.appendChild(this.progressTrack);
-
-    if (!this.gameState.username) {
-      this.usernameInput = document.createElement("input");
-      this.usernameInput.type = "text";
-      this.usernameInput.placeholder = "Username (Optional)";
-      this.usernameInput.className = "loading-splash__username-input";
-      this.usernameInput.style.display = "none";
-      ctaContainer.appendChild(this.usernameInput);
-    }
-
-    ctaContainer.appendChild(this.cta);
-    this.progressContainer.appendChild(ctaContainer);
-
-    card.append(logo, this.progressContainer);
-    this.root.appendChild(card);
-
-    this.buildOverlays();
+    this.setupVolumeControls();
+    this.setupCreditsControls();
 
     container.appendChild(this.root);
   }
 
-  private buildOverlays(): void {
-    const header = document.createElement("div");
-    header.className = "loading-splash__header";
-
-    let leaderboardsLoaded = false;
-    let currentLoadMaxLevel: number | null = null;
-    const leaderboardsContainer = document.createElement("div");
-    leaderboardsContainer.className = "leaderboards-container";
-    leaderboardsContainer.style.width = "100%";
-    leaderboardsContainer.style.maxWidth = "600px";
-    leaderboardsContainer.style.margin = "0 auto";
-
-    const loadLeaderboardsBtn = document.createElement("button");
-    loadLeaderboardsBtn.className = "loading-splash__cta";
-    loadLeaderboardsBtn.style.marginTop = "16px";
-    loadLeaderboardsBtn.style.marginBottom = "24px";
-    loadLeaderboardsBtn.style.fontSize = "14px";
-    loadLeaderboardsBtn.style.padding = "8px 16px";
-    loadLeaderboardsBtn.style.display = "none";
-    loadLeaderboardsBtn.textContent = "Loading Leaderboards...";
-
-    const createSkeleton = () => {
-      const lbSection = document.createElement("div");
-      lbSection.className = "lb-skeleton";
-      lbSection.style.marginBottom = "16px";
-      lbSection.style.background = "rgba(255,255,255,0.05)";
-      lbSection.style.padding = "12px";
-      lbSection.style.borderRadius = "8px";
-      lbSection.style.border = "1px solid rgba(255,255,255,0.05)";
-      lbSection.style.opacity = "0.6";
-
-      const title = document.createElement("div");
-      title.style.height = "16px";
-      title.style.width = "80px";
-      title.style.background = "rgba(255,255,255,0.1)";
-      title.style.marginBottom = "12px";
-      title.style.borderRadius = "4px";
-      lbSection.appendChild(title);
-
-      for (let i = 0; i < 3; i++) {
-        const row = document.createElement("div");
-        row.style.display = "flex";
-        row.style.justifyContent = "space-between";
-        row.style.marginBottom = "8px";
-
-        const name = document.createElement("div");
-        name.style.height = "12px";
-        name.style.width = "100px";
-        name.style.background = "rgba(255,255,255,0.08)";
-        name.style.borderRadius = "3px";
-
-        const time = document.createElement("div");
-        time.style.height = "12px";
-        time.style.width = "60px";
-        time.style.background = "rgba(255,255,255,0.08)";
-        time.style.borderRadius = "3px";
-
-        row.append(name, time);
-        lbSection.appendChild(row);
-      }
-      return lbSection;
-    };
-
-    const renderLeaderboards = async (startMaxLevel: number | null) => {
-      loadLeaderboardsBtn.style.display = "none";
-
-      const skeletons = [createSkeleton(), createSkeleton()];
-      skeletons.forEach((s) => leaderboardsContainer.appendChild(s));
-
-      let maxToLoad = startMaxLevel;
-      if (maxToLoad === null) {
-        maxToLoad = await getMaxLevelWithTimes();
-      }
-
-      const minToLoad = Math.max(1, maxToLoad - 10);
-      const leaderboards = await getTopTimesForLevels(maxToLoad, minToLoad);
-
-      skeletons.forEach((s) => s.remove());
-
-      for (const lb of leaderboards) {
-        const lbSection = document.createElement("div");
-        lbSection.style.marginBottom = "16px";
-        lbSection.style.background = "rgba(0,0,0,0.3)";
-        lbSection.style.padding = "12px";
-        lbSection.style.borderRadius = "8px";
-        lbSection.style.border = "1px solid rgba(255,255,255,0.1)";
-
-        const title = document.createElement("h3");
-        title.textContent = `Level ${lb.level}`;
-        title.style.marginTop = "0";
-        title.style.marginBottom = "8px";
-        title.style.fontSize = "16px";
-        title.style.color = "#fff";
-        title.style.borderBottom = "1px solid rgba(255,255,255,0.1)";
-        title.style.paddingBottom = "4px";
-        lbSection.appendChild(title);
-
-        const table = document.createElement("table");
-        table.style.width = "100%";
-        table.style.borderCollapse = "collapse";
-
-        lb.records.slice(0, 3).forEach((record, idx) => {
-          const tr = document.createElement("tr");
-
-          const tdRank = document.createElement("td");
-          tdRank.textContent = `#${idx + 1}`;
-          tdRank.style.color =
-            idx === 0 ? "#fbbf24" : idx === 1 ? "#9ca3af" : "#b45309";
-          tdRank.style.width = "40px";
-          tdRank.style.padding = "4px 0";
-
-          const tdName = document.createElement("td");
-          tdName.textContent = record.username;
-          tdName.style.padding = "4px 0";
-          tdName.style.overflow = "hidden";
-          tdName.style.textOverflow = "ellipsis";
-          tdName.style.whiteSpace = "nowrap";
-          tdName.style.maxWidth = "120px";
-
-          const tdTime = document.createElement("td");
-          tdTime.textContent = formatTime(record.timeMs);
-          tdTime.style.textAlign = "right";
-          tdTime.style.fontFamily = "monospace";
-          tdTime.style.padding = "4px 0";
-          tdTime.style.color = "#4ade80";
-
-          tr.append(tdRank, tdName, tdTime);
-          table.appendChild(tr);
-        });
-
-        lbSection.appendChild(table);
-        leaderboardsContainer.appendChild(lbSection);
-      }
-
-      currentLoadMaxLevel = minToLoad - 1;
-
-      if (currentLoadMaxLevel >= 1) {
-        loadLeaderboardsBtn.textContent = "Show More";
-        loadLeaderboardsBtn.disabled = false;
-        loadLeaderboardsBtn.style.display = "inline-block";
-      } else {
-        loadLeaderboardsBtn.style.display = "none";
-      }
-    };
-
-    loadLeaderboardsBtn.addEventListener("click", () =>
-      renderLeaderboards(currentLoadMaxLevel),
-    );
-
-    this.creditsBtn = document.createElement("button");
-    this.creditsBtn.className = "loading-splash__credits-btn";
-    this.creditsBtn.textContent = "Credits";
-    this.creditsBtn.addEventListener("click", () => {
-      if (this.activePage === "credits") {
-        this.openPage("none");
-      } else {
-        this.openPage("credits");
-        if (!leaderboardsLoaded) {
-          leaderboardsLoaded = true;
-          renderLeaderboards(null);
-        }
-      }
-    });
-
-    this.settingsBtn = document.createElement("button");
-    this.settingsBtn.className = "loading-splash__settings-btn";
-    this.settingsBtn.innerHTML = this.getSettingsIcon();
-    this.settingsBtn.addEventListener("click", () => {
-      if (this.activePage === "settings") {
-        this.openPage("none");
-      } else {
-        this.openPage("settings");
-      }
-    });
-
-    header.appendChild(this.creditsBtn);
-    header.appendChild(this.settingsBtn);
-
-    const createSlider = (
-      label: string,
-      id: string,
-    ): [HTMLDivElement, HTMLInputElement] => {
-      const container = document.createElement("div");
-      container.className = "throttle-slider-container";
-
-      const wrapper = document.createElement("div");
-      wrapper.className = "throttle-slider-wrapper";
-
-      const slider = document.createElement("input");
-      slider.type = "range";
-      slider.id = id;
-      slider.min = "0";
-      slider.max = "1";
-      slider.step = "0.01";
-      slider.className = "throttle-slider";
-
-      wrapper.appendChild(slider);
-
-      const labelEl = document.createElement("label");
-      labelEl.htmlFor = id;
-      labelEl.textContent = label;
-      labelEl.className = "throttle-slider-label";
-
-      container.appendChild(wrapper);
-      container.appendChild(labelEl);
-
-      return [container, slider];
-    };
-
-    const settingsLayout = document.createElement("div");
-    settingsLayout.className = "settings-layout";
-
-    const tutorialPanel = document.createElement("div");
-    tutorialPanel.className = "settings-panel";
-
-    const tutorialTitle = document.createElement("h3");
-    tutorialTitle.textContent = "How to Play";
-    tutorialPanel.appendChild(tutorialTitle);
-
-    const tutorialText = document.createElement("div");
-    tutorialText.className = "tutorial-content";
-    tutorialText.innerHTML = `
-      <p><strong>Controls:</strong> Push up on the slider to apply throttle. Using the <strong>Up/Down</strong> or <strong>W/S</strong> keys on a keyboard also works. Hold the <strong>Spacebar</strong> or <strong>STOP</strong> button to apply the brakes.</p>
-      <p><strong>Comfort:</strong> Going too fast, braking too hard, or taking too long will severely reduce passenger comfort. If comfort reaches 0%, you're not doing it right.</p>
-    `;
-    tutorialPanel.append(tutorialText);
-
-    const slidersPanel = document.createElement("div");
-    slidersPanel.className = "settings-panel";
-
-    const slidersTitle = document.createElement("h3");
-    slidersTitle.textContent = "Audio Mix";
-
-    const slidersContainer = document.createElement("div");
-    slidersContainer.className = "throttle-sliders";
-
-    const [masterContainer, masterSlider] = createSlider(
-      "Master",
-      "master-volume",
-    );
-    const [musicContainer, musicSlider] = createSlider("Music", "music-volume");
-    const [sfxContainer, sfxSlider] = createSlider("SFX", "sfx-volume");
-
-    this.masterSlider = masterSlider;
-    this.musicSlider = musicSlider;
-    this.sfxSlider = sfxSlider;
-
-    slidersContainer.append(masterContainer, musicContainer, sfxContainer);
-    slidersPanel.append(slidersTitle, slidersContainer);
-
-    settingsLayout.append(tutorialPanel, slidersPanel);
-
+  private setupVolumeControls(): void {
     const handleVolumeChange = debounce(() => {
       const master = parseFloat(this.masterSlider.value);
       const music = parseFloat(this.musicSlider.value);
@@ -394,140 +188,134 @@ export class LoadingSplash {
     this.masterSlider.addEventListener("input", handleVolumeChange);
     this.musicSlider.addEventListener("input", handleVolumeChange);
     this.sfxSlider.addEventListener("input", handleVolumeChange);
-
-    this.settingsPage = this.createPage(settingsLayout);
-
-    const creditsContent = document.createElement("div");
-    creditsContent.style.padding = "16px";
-
-    creditsContent.append(leaderboardsContainer, loadLeaderboardsBtn);
-
-    const oldCreditsContainer = document.createElement("div");
-    oldCreditsContainer.style.textAlign = "center";
-    oldCreditsContainer.style.marginTop = "24px";
-    oldCreditsContainer.style.borderTop = "1px solid rgba(255,255,255,0.1)";
-    oldCreditsContainer.style.paddingTop = "16px";
-
-    const link = document.createElement("a");
-    link.href = "https://trainsim.io";
-    link.target = "_blank";
-    link.textContent = "trainsim.io";
-    link.style.color = "rgba(255, 255, 255, 0.7)";
-    link.style.textDecoration = "none";
-    link.style.display = "block";
-    link.style.marginBottom = "12px";
-    link.style.transition = "color 0.2s ease";
-    link.addEventListener("mouseenter", () => (link.style.color = "#fff"));
-    link.addEventListener(
-      "mouseleave",
-      () => (link.style.color = "rgba(255, 255, 255, 0.7)"),
-    );
-
-    const shareLink = document.createElement("button");
-    shareLink.style.background = "none";
-    shareLink.style.border = "none";
-    shareLink.style.color = "rgba(255, 255, 255, 0.7)";
-    shareLink.style.textDecoration = "none";
-    shareLink.style.cursor = "pointer";
-    shareLink.style.padding = "0";
-    shareLink.style.font = "inherit";
-    shareLink.style.display = "flex";
-    shareLink.style.alignItems = "center";
-    shareLink.style.justifyContent = "center";
-    shareLink.style.gap = "6px";
-    shareLink.style.margin = "0 auto 12px auto";
-    shareLink.style.transition = "color 0.2s ease";
-
-    shareLink.innerHTML = `
-      <span>Share</span>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-        <polyline points="16 6 12 2 8 6"></polyline>
-        <line x1="12" y1="2" x2="12" y2="15"></line>
-      </svg>
-    `;
-
-    shareLink.addEventListener(
-      "mouseenter",
-      () => (shareLink.style.color = "#fff"),
-    );
-    shareLink.addEventListener(
-      "mouseleave",
-      () => (shareLink.style.color = "rgba(255, 255, 255, 0.7)"),
-    );
-
-    shareLink.addEventListener("click", () => {
-      const shareData = {
-        title: "TrainSim",
-        text: "Drive trains in 3D in your browser!",
-        url: "https://trainsim.io/",
-      };
-
-      if (
-        navigator.share &&
-        navigator.canShare &&
-        navigator.canShare(shareData)
-      ) {
-        navigator.share(shareData).catch(() => {});
-      } else {
-        navigator.clipboard.writeText(shareData.url);
-        alert("Link copied to clipboard!");
-      }
-    });
-
-    oldCreditsContainer.append(link, shareLink);
-    creditsContent.appendChild(oldCreditsContainer);
-
-    this.creditsPage = this.createPage(creditsContent);
-
-    this.root.appendChild(header);
-    this.root.appendChild(this.settingsPage);
-    this.root.appendChild(this.creditsPage);
   }
 
-  private createPage(contentNode: HTMLElement): HTMLDivElement {
-    const page = document.createElement("div");
-    page.className = "loading-splash__page";
+  private setupCreditsControls(): void {
+    this.loadLeaderboardsBtn.addEventListener(
+      "click",
+      this.handleLoadLeaderboardsBound,
+    );
+    this.creditsLink.addEventListener("mouseenter", this.handleCreditsLinkEnterBound);
+    this.creditsLink.addEventListener("mouseleave", this.handleCreditsLinkLeaveBound);
+    this.shareBtn.addEventListener("mouseenter", this.handleShareBtnEnterBound);
+    this.shareBtn.addEventListener("mouseleave", this.handleShareBtnLeaveBound);
+  }
 
-    const content = document.createElement("div");
-    content.className = "loading-splash__page-content";
+  private handleCreditsClick(): void {
+    if (this.activePage === "credits") {
+      this.openPage("none");
+      return;
+    }
 
-    content.appendChild(contentNode);
-    page.appendChild(content);
+    this.openPage("credits");
+    if (!this.leaderboardsLoaded) {
+      this.leaderboardsLoaded = true;
+      void this.renderLeaderboards(null);
+    }
+  }
 
-    return page;
+  private handleSettingsClick(): void {
+    if (this.activePage === "settings") {
+      this.openPage("none");
+      return;
+    }
+
+    this.openPage("settings");
+  }
+
+  private handleLoadLeaderboards(): void {
+    void this.renderLeaderboards(this.currentLoadMaxLevel);
+  }
+
+  private async renderLeaderboards(startMaxLevel: number | null): Promise<void> {
+    this.loadLeaderboardsBtn.style.display = "none";
+
+    const skeletons = [
+      LeaderboardSkeletonComponent(),
+      LeaderboardSkeletonComponent(),
+    ];
+    skeletons.forEach((skeleton) =>
+      this.leaderboardsContainer.appendChild(skeleton),
+    );
+
+    let maxToLoad = startMaxLevel;
+    if (maxToLoad === null) {
+      maxToLoad = await getMaxLevelWithTimes();
+    }
+
+    const minToLoad = Math.max(1, maxToLoad - 10);
+    const leaderboards = await getTopTimesForLevels(maxToLoad, minToLoad);
+
+    skeletons.forEach((skeleton) => skeleton.remove());
+
+    for (const leaderboard of leaderboards) {
+      const rows: LeaderboardRow[] = leaderboard.records
+        .slice(0, 3)
+        .map((record, idx) => ({
+          rank: idx + 1,
+          username: record.username,
+          timeText: formatTime(record.timeMs),
+          rankColor:
+            idx === 0 ? "#fbbf24" : idx === 1 ? "#9ca3af" : "#b45309",
+        }));
+
+      this.leaderboardsContainer.appendChild(
+        LeaderboardSectionComponent({
+          level: leaderboard.level,
+          rows,
+        }),
+      );
+    }
+
+    this.currentLoadMaxLevel = minToLoad - 1;
+
+    if (this.currentLoadMaxLevel >= 1) {
+      this.loadLeaderboardsBtn.textContent = "Show More";
+      this.loadLeaderboardsBtn.disabled = false;
+      this.loadLeaderboardsBtn.style.display = "inline-block";
+    } else {
+      this.loadLeaderboardsBtn.style.display = "none";
+    }
+  }
+
+  private handleShareClick(): void {
+    const shareData = {
+      title: "TrainSim",
+      text: "Drive trains in 3D in your browser!",
+      url: "https://trainsim.io/",
+    };
+
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      navigator.share(shareData).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareData.url);
+      alert("Link copied to clipboard!");
+    }
   }
 
   public setSoundSettings(master: number, music: number, sfx: number): void {
-    if (this.masterSlider) this.masterSlider.value = master.toString();
-    if (this.musicSlider) this.musicSlider.value = music.toString();
-    if (this.sfxSlider) this.sfxSlider.value = sfx.toString();
+    this.masterSlider.value = master.toString();
+    this.musicSlider.value = music.toString();
+    this.sfxSlider.value = sfx.toString();
   }
 
   private openPage(pageName: "none" | "settings" | "credits"): void {
     this.activePage = pageName;
 
-    // Reset both
     this.settingsPage.classList.remove("loading-splash__page--visible");
     this.creditsPage.classList.remove("loading-splash__page--visible");
     this.creditsBtn.textContent = "Credits";
-    this.settingsBtn.innerHTML = this.getSettingsIcon();
+    this.settingsIconGear.style.display = "inline-flex";
+    this.settingsIconClose.style.display = "none";
 
     if (pageName === "settings") {
       this.settingsPage.classList.add("loading-splash__page--visible");
-      this.settingsBtn.innerHTML = this.getCloseIcon();
+      this.settingsIconGear.style.display = "none";
+      this.settingsIconClose.style.display = "inline-flex";
     } else if (pageName === "credits") {
       this.creditsPage.classList.add("loading-splash__page--visible");
       this.creditsBtn.textContent = "< Back";
     }
-  }
-
-  private getSettingsIcon(): string {
-    return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
-  }
-
-  private getCloseIcon(): string {
-    return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
   }
 
   dispose(): void {
@@ -604,6 +392,6 @@ export class LoadingSplash {
     this.dismissed = true;
     const remove = (): void => this.root.remove();
     this.root.addEventListener("transitionend", remove, { once: true });
-    window.setTimeout(remove, 4000); // Fallback
+    window.setTimeout(remove, 4000);
   }
 }

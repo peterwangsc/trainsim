@@ -12,9 +12,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": join(process.cwd(), "src"),
+      "~lib": join(process.cwd(), "lib"),
     },
   },
-  base: './',
+  base: "./",
   server: {
     host: true,
     port: 5173,
@@ -39,26 +40,38 @@ export default defineConfig({
       },
     },
   },
+  esbuild: {
+    jsxFactory: "h",
+    jsxFragment: "Fragment",
+    jsxInject: 'import { h, Fragment } from "~lib/jsx-runtime"',
+  },
   plugins: [
     {
       name: "assets-cdn-env",
       transformIndexHtml(html) {
         return html.replace(
           new RegExp(ASSETS_CDN_PLACEHOLDER.replace(/%/g, "\\%"), "g"),
-          getAssetsBase()
+          getAssetsBase(),
         );
       },
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
-          if (req.url !== "/site.webmanifest" && req.url !== "/site.webmanifest/") {
+          if (
+            req.url !== "/site.webmanifest" &&
+            req.url !== "/site.webmanifest/"
+          ) {
             next();
             return;
           }
-          const manifestPath = join(process.cwd(), "public", "site.webmanifest");
+          const manifestPath = join(
+            process.cwd(),
+            "public",
+            "site.webmanifest",
+          );
           let manifest = readFileSync(manifestPath, "utf-8");
           manifest = manifest.replace(
             new RegExp(ASSETS_CDN_PLACEHOLDER.replace(/%/g, "\\%"), "g"),
-            getAssetsBase()
+            getAssetsBase(),
           );
           res.setHeader("Content-Type", "application/manifest+json");
           res.end(manifest);
@@ -70,7 +83,7 @@ export default defineConfig({
         let manifest = readFileSync(manifestPath, "utf-8");
         manifest = manifest.replace(
           new RegExp(ASSETS_CDN_PLACEHOLDER.replace(/%/g, "\\%"), "g"),
-          getAssetsBase()
+          getAssetsBase(),
         );
         writeFileSync(outPath, manifest);
       },

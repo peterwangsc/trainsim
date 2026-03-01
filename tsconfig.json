@@ -2,7 +2,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "~lib/*": ["lib/*"]
     },
     "target": "ES2022",
     "module": "ESNext",
@@ -13,7 +14,11 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "jsx": "react",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "Fragment"
   },
-  "include": ["src", "test"]
+  "include": ["src", "test", "lib", "global.d.ts"],
+  "exclude": ["node_modules", "dist"]
 }

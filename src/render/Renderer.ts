@@ -11,13 +11,17 @@ export class Renderer {
   private readonly renderer: WebGLRenderer;
 
   constructor(private readonly container: HTMLElement) {
-    this.renderer = new WebGLRenderer({ antialias: true });
+    const isMobile =
+      navigator.maxTouchPoints > 0 ||
+      (window.innerWidth < 650 && window.innerHeight > window.innerWidth);
+
+    this.renderer = new WebGLRenderer({ antialias: !isMobile });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.outputColorSpace = SRGBColorSpace;
     this.renderer.toneMapping = ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.enabled = !isMobile;
     this.renderer.shadowMap.type = PCFSoftShadowMap;
     this.container.appendChild(this.renderer.domElement);
   }
