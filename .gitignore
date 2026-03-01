@@ -11,3 +11,10 @@ mcp-*/
 .gemini/
 shader.*
 glsl-literal/*
+release/
+android/
+capacitor.config.ts
+build/
+electron/
+package.build.json
+tsconfig.build.json
