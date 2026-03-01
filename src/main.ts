@@ -8,10 +8,18 @@ inject();
 const app = document.getElementById("app");
 if (!app) throw new Error("Missing #app root element");
 
-if (window.location.pathname === "/zoo") {
+const { pathname } = window.location;
+
+if (pathname === "/zoo") {
   const { ZooPage } = await import("@/zoo/ZooPage");
   const zoo = new ZooPage(app);
   void zoo.init();
+} else if (pathname === "/policy") {
+  const { PolicyPage } = await import("@/legal/PolicyPage");
+  new PolicyPage(app);
+} else if (pathname === "/terms") {
+  const { TermsPage } = await import("@/legal/TermsPage");
+  new TermsPage(app);
 } else {
   const { Game } = await import("@/game/Game");
   initSupabase();
