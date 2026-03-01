@@ -23,9 +23,47 @@
   --accent-green: #52cc7e;
   --accent-red: #d94848;
 
+  --chrome-roof-height: clamp(34px, 6.8dvh, 84px);
+  --chrome-pillar-width: clamp(10px, 2vw, 24px);
+  --chrome-sill-height: clamp(30px, 5.6dvh, 74px);
+  --ui-window-safe-top: max(
+    calc(var(--chrome-roof-height) + 8px),
+    calc(env(safe-area-inset-top) + 8px)
+  );
+  --ui-window-safe-left: max(
+    calc(var(--chrome-pillar-width) + 8px),
+    calc(env(safe-area-inset-left) + 8px)
+  );
+  --ui-window-safe-right: max(
+    calc(var(--chrome-pillar-width) + 8px),
+    calc(env(safe-area-inset-right) + 8px)
+  );
+  --ui-window-safe-bottom: max(
+    calc(var(--chrome-sill-height) + 8px),
+    calc(env(safe-area-inset-bottom) + 8px)
+  );
+  --ui-control-corner-inset: 10px;
+  --ui-control-safe-left: calc(
+    var(--ui-window-safe-left) + var(--ui-control-corner-inset)
+  );
+  --ui-control-safe-right: calc(
+    var(--ui-window-safe-right) + var(--ui-control-corner-inset)
+  );
+  --ui-control-safe-bottom: calc(
+    var(--ui-window-safe-bottom) + var(--ui-control-corner-inset)
+  );
+
   font-family: var(--font-ui);
   color: var(--text-primary);
   background: var(--bg-dark);
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --chrome-roof-height: clamp(30px, 5.6dvh, 62px);
+    --chrome-pillar-width: clamp(8px, 1.8vw, 16px);
+    --chrome-sill-height: clamp(28px, 5.2dvh, 62px);
+  }
 }
 
 * {
@@ -653,7 +691,7 @@ canvas {
   top: 0;
   left: 0;
   right: 0;
-  height: clamp(34px, 6.8dvh, 84px);
+  height: var(--chrome-roof-height);
   background:
     linear-gradient(180deg, #48525d 0%, #2e363f 48%, #161c22 100%),
     repeating-linear-gradient(
@@ -685,8 +723,8 @@ canvas {
 .cabin-chrome__pillar {
   position: absolute;
   top: 0;
-  bottom: clamp(30px, 5.6dvh, 74px);
-  width: clamp(10px, 2vw, 24px);
+  bottom: var(--chrome-sill-height);
+  width: var(--chrome-pillar-width);
   background:
     linear-gradient(180deg, #4a545f 0%, #283039 44%, #12171d 100%),
     repeating-linear-gradient(
@@ -715,7 +753,7 @@ canvas {
   left: 0;
   right: 0;
   bottom: 0;
-  height: clamp(30px, 5.6dvh, 74px);
+  height: var(--chrome-sill-height);
   background:
     linear-gradient(180deg, #39434e 0%, #202730 54%, #10141a 100%),
     repeating-linear-gradient(
@@ -774,16 +812,30 @@ canvas {
   inset: 0;
   width: 100%;
   height: 100%;
+  --hud-side-offset-left: var(--ui-window-safe-left);
+  --hud-side-offset-right: var(--ui-window-safe-right);
+  --hud-top-align-offset: var(--ui-window-safe-top);
+  --hud-minimap-width: min(260px, 33vw);
   pointer-events: none;
   z-index: 5;
 }
 
+.hud-bottom-center {
+  position: absolute;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(92vw, 720px);
+}
+
 /* Status banner — angular instrument style */
 .hud-status-banner {
-  position: absolute;
-  top: 200px;
-  left: 32px;
-  max-width: min(74vw, 720px);
+  width: 100%;
+  max-width: min(92vw, 720px);
   padding: 7px 18px 7px 20px;
   border: 1px solid var(--border-subtle);
   border-left: 3px solid var(--accent-blue);
@@ -830,13 +882,20 @@ canvas {
 }
 
 /* Preview cluster (minimap region) */
-.hud-preview-cluster {
+.hud-top-row {
   position: absolute;
-  top: 64px;
-  left: 32px;
+  top: var(--hud-top-align-offset);
+  left: var(--hud-side-offset-left);
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.hud-preview-cluster {
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: 10px;
 }
 
@@ -876,8 +935,13 @@ canvas {
 }
 
 /* Minimap */
+#minimap-container {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .minimap-canvas {
-  width: min(260px, 33vw);
+  width: var(--hud-minimap-width);
   height: 118px;
   border-radius: 3px;
   border: none;
@@ -891,10 +955,18 @@ canvas {
     0 4px 12px rgb(0 0 0 / 22%);
 }
 
+.hud-top-actions {
+  position: fixed;
+  top: var(--hud-top-align-offset);
+  right: var(--hud-side-offset-right);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
 .username-display,
 .hud-settings-btn {
-  position: fixed;
-  top: 14px;
   background: rgba(15, 25, 40, 0.85);
   border-radius: 4px;
   border: 1px solid var(--border-subtle);
@@ -908,11 +980,9 @@ canvas {
   transition:
     color 0.2s,
     background 0.2s;
-  z-index: 10;
 }
 
 .username-display {
-  left: 32px;
   padding: 6px 12px;
   font-size: 0.84rem;
   font-weight: 500;
@@ -924,9 +994,8 @@ canvas {
 }
 
 .hud-settings-btn {
-  right: 32px;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1001,9 +1070,6 @@ canvas {
 
 /* Speed-limit sign */
 .speed-limit-sign {
-  position: absolute;
-  top: 72px;
-  right: 32px;
   align-self: flex-start;
   width: clamp(42px, 8.5vw, 68px);
   min-height: 76px;
@@ -1051,12 +1117,9 @@ canvas {
 
 /* Time cluster */
 .hud-time-cluster {
-  position: absolute;
-  top: 72px;
-  right: 110px;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 2px;
   background: rgb(9 18 30 / 72%);
   border: 1px solid var(--border-subtle);
@@ -1100,33 +1163,42 @@ canvas {
 
 /* Comfort gauge */
 .comfort-gauge {
-  position: fixed;
-  top: 50dvh;
-  right: 18px;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  width: 62px;
-  color: var(--text-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  position: relative;
+  align-self: flex-end;
+  width: var(--hud-minimap-width);
+  color: var(--text-bright);
 }
 
-.comfort-gauge-label {
-  font-family: var(--font-ui);
-  font-size: 0.5rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--text-muted);
+.comfort-gauge-icon {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translate(calc(100% + 8px), -50%);
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  color: #6bcf84;
+  font-size: 0.72rem;
+  border: 1px solid rgb(107 207 132 / 65%);
+  border-radius: 999px;
+  background: rgb(8 22 14 / 85%);
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgb(107 207 132 / 45%));
+}
+
+.comfort-gauge-icon-glyph {
+  display: block;
+  line-height: 1;
+  transform: translateY(1px);
 }
 
 .comfort-gauge-track {
   position: relative;
-  width: 22px;
-  height: 122px;
-  border-radius: 2px;
+  width: 100%;
+  height: 14px;
+  border-radius: 3px;
   background: rgb(5 12 20 / 80%);
   border: 1px solid var(--border-subtle);
   overflow: hidden;
@@ -1141,11 +1213,11 @@ canvas {
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(
-    to top,
-    rgb(255 255 255 / 0%) 0 9px,
-    rgb(255 255 255 / 20%) 9px 10px,
-    rgb(255 255 255 / 0%) 10px 19px,
-    rgb(255 255 255 / 8%) 19px 20px
+    to right,
+    rgb(255 255 255 / 0%) 0 10px,
+    rgb(255 255 255 / 20%) 10px 11px,
+    rgb(255 255 255 / 0%) 11px 21px,
+    rgb(255 255 255 / 8%) 21px 22px
   );
   pointer-events: none;
   z-index: 1;
@@ -1153,34 +1225,28 @@ canvas {
 
 .comfort-gauge-fill {
   position: absolute;
-  left: 0;
-  right: 0;
+  top: 0;
   bottom: 0;
-  height: 100%;
+  left: 0;
+  width: 100%;
   background: linear-gradient(
-    180deg,
-    #52cc7e 0%,
+    90deg,
+    #cc4848 0%,
+    #e09640 26%,
     #a8d456 55%,
-    #e09640 78%,
-    #cc4848 100%
+    #52cc7e 100%
   );
-  transition: height 180ms linear;
+  transition: width 180ms linear;
 }
 
-.comfort-gauge-value {
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
-}
-
-.comfort-gauge.is-warning .comfort-gauge-value {
+.comfort-gauge.is-warning .comfort-gauge-icon {
   color: #f5c84a;
+  filter: drop-shadow(0 0 6px rgb(245 200 74 / 45%));
 }
 
-.comfort-gauge.is-low .comfort-gauge-value {
+.comfort-gauge.is-low .comfort-gauge-icon {
   color: #f08080;
+  filter: drop-shadow(0 0 6px rgb(240 128 128 / 45%));
 }
 
 /* ─── Throttle overlay ───────────────────────────────────────────────────────── */
@@ -1194,8 +1260,8 @@ canvas {
 
 .brake-button {
   position: absolute;
-  right: max(18px, env(safe-area-inset-right));
-  bottom: max(18px, env(safe-area-inset-bottom));
+  right: var(--ui-control-safe-right);
+  bottom: var(--ui-control-safe-bottom);
   width: 122px;
   height: 122px;
   border-radius: 999px;
@@ -1252,17 +1318,8 @@ canvas {
 /* ─── Responsive — tablet ────────────────────────────────────────────────────── */
 
 @media (max-width: 1023px) {
-  .cabin-chrome__roof {
-    height: clamp(30px, 5.6dvh, 62px);
-  }
-
-  .cabin-chrome__pillar {
-    bottom: clamp(28px, 5.2dvh, 62px);
-    width: clamp(8px, 1.8vw, 16px);
-  }
-
-  .cabin-chrome__sill {
-    height: clamp(28px, 5.2dvh, 62px);
+  .hud {
+    --hud-minimap-width: min(218px, 30vw);
   }
 
   .cabin-chrome__sill::before {
@@ -1277,17 +1334,22 @@ canvas {
     bottom: clamp(28px, 5.2dvh, 64px);
   }
 
+  .hud-bottom-center {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    gap: 7px;
+    width: min(92vw, 620px);
+  }
+
   .hud-status-banner {
-    top: 152px;
-    left: 12px;
-    max-width: min(80vw, 620px);
     padding: 6px 14px 6px 16px;
     font-size: clamp(0.64rem, 1.25vw, 0.8rem);
   }
 
+  .hud-top-row {
+    gap: 10px;
+  }
+
   .hud-preview-cluster {
-    top: 48px;
-    left: 12px;
     gap: 8px;
   }
 
@@ -1305,15 +1367,14 @@ canvas {
   }
 
   .minimap-canvas {
-    width: min(218px, 30vw);
     height: 98px;
   }
 
+  .hud-top-actions {
+    gap: 6px;
+  }
+
   .username-display {
-    position: fixed;
-    top: 12px;
-    left: 12px;
-    right: auto;
     font-size: 0.84rem;
     font-weight: 500;
     color: var(--text-muted);
@@ -1325,13 +1386,11 @@ canvas {
   }
 
   .hud-settings-btn {
-    top: 8px;
-    right: 12px;
+    width: 30px;
+    height: 30px;
   }
 
   .speed-limit-sign {
-    top: 84px;
-    right: 12px;
     width: clamp(38px, 7.3vw, 56px);
     min-height: 62px;
     border-width: 3px;
@@ -1354,8 +1413,6 @@ canvas {
   }
 
   .hud-time-cluster {
-    top: 84px;
-    right: 80px;
     padding: 6px 10px;
   }
 
@@ -1368,25 +1425,17 @@ canvas {
     margin-bottom: 4px;
   }
 
-  .comfort-gauge {
-    top: 50dvh;
-    right: 12px;
-    width: 50px;
-    gap: 4px;
+  .comfort-gauge-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 0.62rem;
   }
 
   .comfort-gauge-track {
-    width: 18px;
-    height: 92px;
-  }
-
-  .comfort-gauge-value {
-    font-size: 0.52rem;
+    height: 12px;
   }
 
   .brake-button {
-    right: max(12px, env(safe-area-inset-right));
-    bottom: max(12px, env(safe-area-inset-bottom));
     width: min(20vw, 92px);
     height: min(20vw, 92px);
     min-width: 72px;
@@ -1399,39 +1448,47 @@ canvas {
 /* ─── Responsive — mobile ────────────────────────────────────────────────────── */
 
 @media (max-width: 720px) {
+  .hud {
+    --hud-minimap-width: min(108px, 32vw);
+  }
+
+  .hud-bottom-center {
+    bottom: max(8px, env(safe-area-inset-bottom));
+    gap: 6px;
+    width: min(96vw, 620px);
+  }
+
   .hud-status-banner {
-    top: 128px;
-    left: 8px;
-    max-width: min(94vw, 620px);
     padding: 5px 10px 5px 12px;
     font-size: clamp(0.58rem, 2.2vw, 0.72rem);
   }
 
+  .hud-top-row {
+    gap: 6px;
+  }
+
   .hud-preview-cluster {
-    top: 36px;
-    left: 8px;
     gap: 6px;
   }
 
   .hud-speed-floating {
-    top: 32px;
-    right: 8px;
+    top: 6px;
+    right: 6px;
   }
 
   .minimap-canvas {
-    width: min(178px, 50vw);
-    height: 82px;
+    height: 60px;
   }
 
   .loading-splash__cta-container {
     bottom: -72px;
   }
 
+  .hud-top-actions {
+    gap: 5px;
+  }
+
   .username-display {
-    position: fixed;
-    top: 10px;
-    left: 8px;
-    right: auto;
     font-size: 0.84rem;
     font-weight: 500;
     color: var(--text-muted);
@@ -1443,67 +1500,127 @@ canvas {
   }
 
   .hud-settings-btn {
-    top: 10px;
-    right: 8px;
+    width: 30px;
+    height: 30px;
   }
 
   .speed-limit-sign {
-    top: 62px;
-    right: 8px;
-    width: 56px;
-    min-height: 72px;
+    width: 44px;
+    min-height: 56px;
     border-width: 3px;
     padding: 6px 4px;
   }
 
   .speed-limit-label {
-    font-size: 0.4rem;
+    font-size: 0.34rem;
   }
 
   .speed-limit-value {
     margin-top: 4px;
-    font-size: clamp(0.95rem, 4vw, 1.25rem);
+    font-size: clamp(0.78rem, 3vw, 0.95rem);
   }
 
   .speed-limit-unit {
     margin-top: 2px;
-    font-size: 0.42rem;
+    font-size: 0.34rem;
   }
 
   .hud-time-cluster {
-    top: 62px;
-    right: 70px;
-    padding: 5px 8px;
+    padding: 4px 6px;
   }
 
   .hud-time-label {
-    font-size: 0.45rem;
+    font-size: 0.38rem;
   }
 
   .hud-time-value {
-    font-size: 0.85rem;
-    margin-bottom: 3px;
+    font-size: 0.7rem;
+    margin-bottom: 2px;
   }
 
-  .comfort-gauge {
-    top: 50dvh;
-    right: 8px;
-    width: 46px;
+  .comfort-gauge-icon {
+    width: 14px;
+    height: 14px;
+    font-size: 0.55rem;
   }
 
   .comfort-gauge-track {
-    width: 16px;
-    height: 80px;
+    height: 10px;
   }
 
   .brake-button {
-    right: max(8px, env(safe-area-inset-right));
-    bottom: max(8px, env(safe-area-inset-bottom));
     width: min(10vw, 72px);
     height: min(10vw, 72px);
     min-width: 64px;
     min-height: 64px;
     font-size: clamp(0.6rem, 2.4vw, 0.72rem);
+  }
+}
+
+@media (max-width: 720px) and (orientation: portrait) {
+  .hud {
+    --hud-minimap-width: min(156px, 46vw);
+  }
+
+  .minimap-canvas {
+    height: 72px;
+  }
+
+  .hud-top-row {
+    gap: 8px;
+  }
+
+  .hud-preview-cluster {
+    gap: 8px;
+  }
+
+  .hud-speed-floating {
+    top: 7px;
+    right: 7px;
+  }
+
+  .hud-speed-value {
+    font-size: clamp(1.05rem, 5vw, 1.4rem);
+  }
+
+  .hud-speed-unit {
+    font-size: clamp(0.52rem, 2.2vw, 0.66rem);
+  }
+
+  .speed-limit-sign {
+    width: 52px;
+    min-height: 64px;
+    padding: 7px 5px;
+  }
+
+  .speed-limit-label {
+    font-size: 0.38rem;
+  }
+
+  .speed-limit-value {
+    font-size: clamp(0.95rem, 4.2vw, 1.2rem);
+  }
+
+  .speed-limit-unit {
+    font-size: 0.38rem;
+  }
+
+  .comfort-gauge-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 0.62rem;
+  }
+
+  .comfort-gauge-track {
+    height: 12px;
+  }
+
+  .brake-button {
+    width: clamp(78px, 22vw, 104px);
+    height: clamp(78px, 22vw, 104px);
+    min-width: 78px;
+    min-height: 78px;
+    font-size: clamp(0.68rem, 2.9vw, 0.82rem);
   }
 }
 

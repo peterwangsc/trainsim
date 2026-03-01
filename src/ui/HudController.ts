@@ -26,7 +26,6 @@ export class HudController {
   private readonly statusBanner: HTMLDivElement;
   private readonly comfortGauge: HTMLDivElement;
   private readonly comfortFill: HTMLDivElement;
-  private readonly comfortValue: HTMLSpanElement;
   private readonly speedValue: HTMLSpanElement;
   private readonly speedLimitValue: HTMLSpanElement;
   private readonly clockValue: HTMLSpanElement;
@@ -87,7 +86,6 @@ export class HudController {
     this.etaValue = this.root.querySelector("#hud-eta-value") as HTMLSpanElement;
     this.comfortGauge = this.root.querySelector("#hud-comfort-gauge") as HTMLDivElement;
     this.comfortFill = this.root.querySelector("#hud-comfort-fill") as HTMLDivElement;
-    this.comfortValue = this.root.querySelector("#hud-comfort-value") as HTMLSpanElement;
     this.brakeButton = this.root.querySelector("#hud-brake-button") as HTMLButtonElement;
     this.usernameDisplay = this.root.querySelector("#hud-username-display") as HTMLDivElement;
     this.settingsButton = this.root.querySelector(".hud-settings-btn") as HTMLButtonElement;
@@ -145,8 +143,7 @@ export class HudController {
       metrics.safeSpeed * 3.6,
     ).toString();
     const comfortRatio = Math.min(1, Math.max(0, metrics.comfortRatio));
-    this.comfortFill.style.height = `${Math.round(comfortRatio * 100)}%`;
-    this.comfortValue.textContent = `${Math.round(comfortRatio * 100)}%`;
+    this.comfortFill.style.width = `${Math.round(comfortRatio * 100)}%`;
     this.comfortGauge.classList.toggle("is-low", comfortRatio < 0.3);
     this.comfortGauge.classList.toggle(
       "is-warning",
