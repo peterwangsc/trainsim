@@ -1,6 +1,6 @@
-import { Scene, Group } from "three";
+import { Scene } from "three";
 import { CONFIG } from "../game/Config";
-import { DayNightSky } from "./DayNightSky";
+import { SkyLayer } from "../world/Sky/SkyLayer";
 import { TerrainLayer } from "../world/Terrain/TerrainLayer";
 import { ForestLayer } from "../world/Foliage/ForestLayer";
 import { GrassLayer } from "../world/Foliage/GrassLayer";
@@ -12,7 +12,7 @@ import { GameState } from "../game/GameState";
 
 export class SceneSetup {
   public readonly scene: Scene;
-  public dayNightSky!: DayNightSky;
+  public skyLayer!: SkyLayer;
   public terrainLayer!: TerrainLayer;
   public forestLayer!: ForestLayer;
   public grassLayer!: GrassLayer;
@@ -38,7 +38,7 @@ export class SceneSetup {
     this.gameState = gameState;
     this.buildTrack();
     this.buildTerrain();
-    this.dayNightSky.setTerrainHeightSampler(
+    this.skyLayer.setTerrainHeightSampler(
       this.terrainLayer.getHeightAt.bind(this.terrainLayer),
     );
     this.buildForest();
@@ -46,8 +46,8 @@ export class SceneSetup {
   }
 
   update(dt: number, camera: PerspectiveCamera): void {
-    this.dayNightSky.update(dt, camera);
-    this.birdFlock.update(dt, camera, this.dayNightSky.getNightFactor());
+    this.skyLayer.update(dt, camera);
+    this.birdFlock.update(dt, camera, this.skyLayer.getNightFactor());
     this.grassLayer.update(dt);
   }
 
@@ -56,7 +56,7 @@ export class SceneSetup {
     this.birdFlock.dispose();
     this.forestLayer.dispose();
     this.terrainLayer.dispose();
-    this.dayNightSky.dispose();
+    this.skyLayer.dispose();
     this.trackLayer.dispose();
   }
 
@@ -64,19 +64,17 @@ export class SceneSetup {
     this.buildSky();
     this.buildTrack();
     this.buildTerrain();
-    this.dayNightSky.setTerrainHeightSampler(
+    this.skyLayer.setTerrainHeightSampler(
       this.terrainLayer.getHeightAt.bind(this.terrainLayer),
     );
     this.buildForest();
     this.buildGrass();
     this.buildBirdFlock();
-    this.dayNightSky.enableDirectionalFog();
+    this.skyLayer.enableDirectionalFog();
   }
 
   private buildSky(): void {
-    this.dayNightSky = new DayNightSky(this.scene, {
-      cloudTexture: this.preloadedAssets.cloudTexture,
-    });
+    this.skyLayer = new SkyLayer(this.scene, this.config, this.preloadedAssets);
   }
 
   private buildTrack(): void {

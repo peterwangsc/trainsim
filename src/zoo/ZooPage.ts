@@ -60,7 +60,7 @@ export class ZooPage {
         this.positionCameraAtStation();
       },
       onTimeChange: (t) => {
-        this.sceneSetup.dayNightSky.setTimeOverride(t);
+        this.sceneSetup.skyLayer.setTimeOverride(t);
       },
       onHeadlightToggle: (on) => {
         this.headlight.isEnabled = on;
@@ -107,11 +107,11 @@ export class ZooPage {
     this.sceneSetup.update(dt, this.freeCam.camera);
 
     // Keep the panel time slider in sync when time is free-running
-    this.panel.setTimeDisplay(this.sceneSetup.dayNightSky.getElapsedFraction());
+    this.panel.setTimeDisplay(this.sceneSetup.skyLayer.getElapsedFraction());
 
     this.renderer.setToneMappingExposure(
       MathUtils.clamp(
-        this.sceneSetup.dayNightSky.getRecommendedExposure(),
+        this.sceneSetup.skyLayer.getRecommendedExposure(),
         0.3,
         1.5,
       ),

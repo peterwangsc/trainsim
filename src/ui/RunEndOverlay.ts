@@ -1,4 +1,3 @@
-import { ASSETS_CDN_BASE } from "../game/Config";
 import { TrackTimeRecord } from "../util/TrackTimes";
 
 export type RunEndTone = "won" | "failed";
@@ -166,7 +165,9 @@ export class RunEndOverlay {
     this.renderRecord(undefined);
 
     this.restartButton.textContent =
-      options.tone === "won" && this.nextLevelHandler ? "Next Level" : "Restart";
+      options.tone === "won" && this.nextLevelHandler
+        ? "Next Level"
+        : "Restart";
 
     if (!options.username) {
       this.loginInput.value = "";
@@ -179,7 +180,10 @@ export class RunEndOverlay {
     if (this.revealFrameId !== null) {
       window.cancelAnimationFrame(this.revealFrameId);
     }
-    this.root.classList.remove("run-end-overlay--visible", "run-end-overlay--hidden");
+    this.root.classList.remove(
+      "run-end-overlay--visible",
+      "run-end-overlay--hidden",
+    );
     this.revealFrameId = window.requestAnimationFrame(() => {
       this.revealFrameId = null;
       this.root.classList.add("run-end-overlay--visible");

@@ -249,7 +249,7 @@ export class Game {
       this.gameState.elapsedTime += dt;
     }
 
-    const timeOfDayHours = this.sceneSetup.dayNightSky.getTimeOfDayHours();
+    const timeOfDayHours = this.sceneSetup.skyLayer.getTimeOfDayHours();
     this.gameState.timeOfDayHours = timeOfDayHours;
 
     if (
@@ -262,7 +262,7 @@ export class Game {
             0,
             this.gameState.expectedDuration - this.gameState.elapsedTime,
           ) /
-            this.sceneSetup.dayNightSky.getDayCycleDurationSeconds()) *
+            this.sceneSetup.skyLayer.getDayCycleDurationSeconds()) *
             24) %
         24;
     }
@@ -369,7 +369,7 @@ export class Game {
     );
     this.sceneSetup.update(dt, this.cameraRig.camera);
 
-    const targetExposure = this.sceneSetup.dayNightSky.getRecommendedExposure();
+    const targetExposure = this.sceneSetup.skyLayer.getRecommendedExposure();
     this.toneMappingExposure = MathUtils.damp(
       this.toneMappingExposure,
       targetExposure,
@@ -378,7 +378,7 @@ export class Game {
     );
     this.renderer.setToneMappingExposure(this.toneMappingExposure);
 
-    this.headlight.update(this.sceneSetup.dayNightSky.getNightFactor());
+    this.headlight.update(this.sceneSetup.skyLayer.getNightFactor());
   }
 
   private render(): void {
