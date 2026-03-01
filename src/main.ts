@@ -10,14 +10,14 @@ if (!app) throw new Error("Missing #app root element");
 
 const { pathname } = window.location;
 
-if (pathname === "/zoo") {
+if (pathname.startsWith("/zoo")) {
   const { ZooPage } = await import("@/zoo/ZooPage");
   const zoo = new ZooPage(app);
   void zoo.init();
-} else if (pathname === "/policy") {
+} else if (pathname.startsWith("/policy")) {
   const { PolicyPage } = await import("@/legal/PolicyPage");
   new PolicyPage(app);
-} else if (pathname === "/terms") {
+} else if (pathname.startsWith("/terms")) {
   const { TermsPage } = await import("@/legal/TermsPage");
   new TermsPage(app);
 } else {
