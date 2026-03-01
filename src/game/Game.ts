@@ -29,7 +29,11 @@ import {
   saveProgress,
   getUsernameFromLocalStorage,
 } from "../util/Username";
-import { submitTrackTime, getFastestTimeForLevel, getPersonalBestForLevel } from "../util/Supabase";
+import {
+  submitTrackTime,
+  getFastestTimeForLevel,
+  getPersonalBestForLevel,
+} from "../util/Supabase";
 import { LoadingScreenManager } from "../loading/LoadingScreenManager";
 
 export class Game {
@@ -88,6 +92,12 @@ export class Game {
       container,
       this.gameState,
       () => {
+        const el = document.documentElement;
+        if (el.requestFullscreen) {
+          el.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+        } else if ((el as any).webkitRequestFullscreen) {
+          (el as any).webkitRequestFullscreen();
+        }
         this.start();
         this.startLevel(
           this.gameState.level,
@@ -100,6 +110,16 @@ export class Game {
     window.addEventListener("resize", this.handleResizeBound);
     window.visualViewport?.addEventListener("resize", this.handleResizeBound);
     window.visualViewport?.addEventListener("scroll", this.handleResizeBound);
+    window.addEventListener("orientationchange", () => {
+      if (
+        screen.orientation?.type.startsWith("landscape") &&
+        !document.fullscreenElement
+      ) {
+        document.documentElement
+          .requestFullscreen({ navigationUI: "hide" })
+          .catch(() => {});
+      }
+    });
   }
 
   public async preload(): Promise<void> {
@@ -158,8 +178,8 @@ export class Game {
       this.currentLoadedLevel = level;
     }
     this.runEndOverlay.reset();
-    this.cameraRig.updateSpline(this.sceneSetup.trackSpline);
-    this.trackSampler.updateSpline(this.sceneSetup.trackSpline);
+    this.cameraRig.updateSpline(this.sceneSetup.trackLayer.trackSpline);
+    this.trackSampler.updateSpline(this.sceneSetup.trackLayer.trackSpline);
     this.trainSim.reset();
     this.inputManager.reset();
     this.throttleOverlay.reset();
@@ -169,7 +189,7 @@ export class Game {
     this.settingsScreen.reset();
 
     const expectedDuration = this.trackSampler.computeExpectedDuration(
-      this.sceneSetup.trackSpline.getLength(),
+      this.sceneSetup.trackLayer.trackSpline.getLength(),
       this.config.terminal.parTimeBaseSpeed,
     );
     this.gameState.update({ expectedDuration });
@@ -270,7 +290,7 @@ export class Game {
     this.trainSim.update(dt);
 
     const train = this.trainSim.getState(dt);
-    const trackSpline = this.sceneSetup.trackSpline;
+    const trackSpline = this.sceneSetup.trackLayer.trackSpline;
     const trackLength = trackSpline.getLength();
     const wrappedDistance = trackSpline.isClosed()
       ? train.distance % trackLength
@@ -365,7 +385,7 @@ export class Game {
     );
 
     this.cameraRig = new CameraRig(
-      this.sceneSetup.trackSpline,
+      this.sceneSetup.trackLayer.trackSpline,
       this.config.camera,
       this.container.clientWidth / this.container.clientHeight,
     );
@@ -397,7 +417,8 @@ export class Game {
     this.settingsScreen = new SettingsScreen(
       this.container,
       this.gameState,
-      (level) => this.startLevel(level, this.gameState.userId, this.gameState.username),
+      (level) =>
+        this.startLevel(level, this.gameState.userId, this.gameState.username),
     );
     this.hud = new HudController(
       this.container,
@@ -447,7 +468,7 @@ export class Game {
 
     this.comfortModel = new ComfortModel(this.config.comfort);
     this.trackSampler = new TrackSampler(
-      this.sceneSetup.trackSpline,
+      this.sceneSetup.trackLayer.trackSpline,
       this.config.minimap,
     );
 
@@ -459,6 +480,8 @@ export class Game {
   }
 
   private handleResize(): void {
+    (screen.orientation as any).lock("landscape").catch(() => {});
+
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
 
@@ -476,14 +499,18 @@ export class Game {
       const timeMs = Math.floor(this.gameState.elapsedTime * 1000);
 
       const finishAndShow = () => {
-        submitTrackTime(this.gameState.userId, currentLevel, timeMs).then(() => {
-          getFastestTimeForLevel(currentLevel).then((record) => {
-            this.runEndOverlay.updateRecord(record);
-          });
-          getPersonalBestForLevel(this.gameState.userId, currentLevel).then((pb) => {
-            this.runEndOverlay.updatePersonalBest(pb);
-          });
-        });
+        submitTrackTime(this.gameState.userId, currentLevel, timeMs).then(
+          () => {
+            getFastestTimeForLevel(currentLevel).then((record) => {
+              this.runEndOverlay.updateRecord(record);
+            });
+            getPersonalBestForLevel(this.gameState.userId, currentLevel).then(
+              (pb) => {
+                this.runEndOverlay.updatePersonalBest(pb);
+              },
+            );
+          },
+        );
 
         this.runEndOverlay.show({
           tone: "won",
@@ -510,7 +537,11 @@ export class Game {
 
       if (nextLevel > this.gameState.maxLevel) {
         this.gameState.update({ maxLevel: nextLevel });
-        saveProgress(this.gameState.userId, this.gameState.username, nextLevel).then(() => {
+        saveProgress(
+          this.gameState.userId,
+          this.gameState.username,
+          nextLevel,
+        ).then(() => {
           finishAndShow();
         });
       } else {
@@ -521,7 +552,7 @@ export class Game {
 
     const isBumperImpact = this.gameState.failureReason === "BUMPER";
     const currentLevel = this.gameState.level;
-    
+
     getFastestTimeForLevel(currentLevel).then((record) => {
       this.runEndOverlay.updateRecord(record);
     });

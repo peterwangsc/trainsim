@@ -71,8 +71,10 @@ export class GameState {
     );
 
     if (this.status === GameStatus.Running) {
-      const trackEndLayout = this.sceneSetup?.trackEndSet.getLayout();
-      const hasHitBumper = trackEndLayout && this.distance >= trackEndLayout.bumperDistance;
+      const trackEndLayout =
+        this.sceneSetup?.trackLayer?.trackEndSet?.getLayout();
+      const hasHitBumper =
+        trackEndLayout && this.distance >= trackEndLayout.bumperDistance;
 
       if (hasHitBumper) {
         this.status = GameStatus.Failed;
@@ -87,7 +89,8 @@ export class GameState {
   }
 
   private computeTerminalGuidanceSafeSpeed(distance: number): number {
-    const trackEndLayout = this.sceneSetup?.trackEndSet.getLayout();
+    const trackEndLayout =
+      this.sceneSetup?.trackLayer?.trackEndSet?.getLayout();
     if (!trackEndLayout) {
       return 0;
     }
@@ -105,7 +108,8 @@ export class GameState {
   }
 
   private isStoppedInStation(distance: number, speed: number): boolean {
-    const trackEndLayout = this.sceneSetup?.trackEndSet.getLayout();
+    const trackEndLayout =
+      this.sceneSetup?.trackLayer?.trackEndSet?.getLayout();
     if (!trackEndLayout) {
       return false;
     }
@@ -141,7 +145,8 @@ export class GameState {
       return "Ride comfort collapsed. You lose.";
     }
 
-    const trackEndLayout = this.sceneSetup?.trackEndSet.getLayout();
+    const trackEndLayout =
+      this.sceneSetup?.trackLayer?.trackEndSet?.getLayout();
     const distanceToStationEnd = trackEndLayout
       ? trackEndLayout.stationEndDistance - this.distance
       : Infinity;

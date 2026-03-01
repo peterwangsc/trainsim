@@ -5,10 +5,7 @@ import { TerrainLayer } from "../world/Terrain/TerrainLayer";
 import { ForestLayer } from "../world/Foliage/ForestLayer";
 import { GrassLayer } from "../world/Foliage/GrassLayer";
 import { BirdFlock } from "../world/Fauna/BirdFlock";
-import { TrackGenerator } from "../world/Track/TrackGenerator";
-import { TrackSpline } from "../world/Track/TrackSpline";
-import { TrackMeshBuilder } from "../world/Track/TrackMeshBuilder";
-import { TrackEndSet } from "../world/Track/TrackEndSet";
+import { TrackLayer } from "../world/Track/TrackLayer";
 import type { CriticalPreloadedAssets } from "../loading/CriticalAssetPreloader";
 import type { PerspectiveCamera } from "three";
 import { GameState } from "../game/GameState";
@@ -20,9 +17,7 @@ export class SceneSetup {
   public forestLayer!: ForestLayer;
   public grassLayer!: GrassLayer;
   public birdFlock!: BirdFlock;
-  public trackEndSet!: TrackEndSet;
-  public trackSpline!: TrackSpline;
-  public trackGroup!: Group;
+  public trackLayer!: TrackLayer;
   private gameState!: GameState;
 
   constructor(
@@ -39,8 +34,7 @@ export class SceneSetup {
     this.grassLayer.dispose();
     this.forestLayer.dispose();
     this.terrainLayer.dispose();
-    this.trackEndSet.dispose();
-    this.scene.remove(this.trackGroup);
+    this.trackLayer.dispose();
     this.gameState = gameState;
     this.buildTrack();
     this.buildTerrain();
@@ -63,8 +57,7 @@ export class SceneSetup {
     this.forestLayer.dispose();
     this.terrainLayer.dispose();
     this.dayNightSky.dispose();
-    this.trackEndSet.dispose();
-    this.scene.remove(this.trackGroup);
+    this.trackLayer.dispose();
   }
 
   private buildScene(): void {
@@ -87,47 +80,18 @@ export class SceneSetup {
   }
 
   private buildTrack(): void {
-    const trackConfig = {
-      ...this.config.track,
-      segmentCount:
-        this.config.track.segmentCount + (this.gameState.level - 1) * 50,
-      baseCurvaturePerMeter:
-        this.config.track.baseCurvaturePerMeter *
-        (1 + (this.gameState.level - 1) * 0.05),
-      detailCurvaturePerMeter:
-        this.config.track.detailCurvaturePerMeter *
-        (1 + (this.gameState.level - 1) * 0.05),
-    };
-
-    const trackPoints = new TrackGenerator(
-      trackConfig,
-      this.config.seed,
+    this.trackLayer = new TrackLayer(
+      this.scene,
+      this.config,
+      this.preloadedAssets,
       this.gameState,
-    ).generate();
-    this.trackSpline = new TrackSpline(trackPoints, { closed: false });
-
-    this.trackGroup = new TrackMeshBuilder(
-      this.trackSpline,
-      trackConfig,
-      this.preloadedAssets,
-    ).build();
-    this.scene.add(this.trackGroup);
-
-    this.trackEndSet = new TrackEndSet(
-      this.trackSpline,
-      {
-        ...this.config.terminal,
-        railGauge: this.config.track.railGauge,
-      },
-      this.preloadedAssets,
     );
-    this.scene.add(this.trackEndSet.root);
   }
 
   private buildTerrain(): void {
     this.terrainLayer = new TerrainLayer(
       this.scene,
-      this.trackSpline,
+      this.trackLayer.trackSpline,
       this.config.seed,
       this.config.terrain,
       this.preloadedAssets,
@@ -137,7 +101,7 @@ export class SceneSetup {
   private buildForest(): void {
     this.forestLayer = new ForestLayer(
       this.scene,
-      this.trackSpline,
+      this.trackLayer.trackSpline,
       this.config.seed,
       this.config.forest,
       this.preloadedAssets,
@@ -149,7 +113,7 @@ export class SceneSetup {
   private buildGrass(): void {
     this.grassLayer = new GrassLayer(
       this.scene,
-      this.trackSpline,
+      this.trackLayer.trackSpline,
       this.config.seed,
       this.config.grass,
       this.preloadedAssets,

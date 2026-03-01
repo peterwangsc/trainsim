@@ -306,4 +306,10 @@ export class TrackMeshBuilder {
     buffer[offset + 1] = value.y;
     buffer[offset + 2] = value.z;
   }
+
+  dispose(): void {
+    this.dirtPathTexture.dispose();
+    this.woodenPlankTexture.dispose();
+    this.railTexture.dispose();
+  }
 }

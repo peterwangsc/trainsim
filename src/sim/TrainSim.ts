@@ -28,6 +28,7 @@ export class TrainSim {
   private distance = 0;
   private accel = 0;
   private prevAccel = 0;
+  private jerk = 0;
 
   constructor(private readonly config: TrainSimConfig) {}
 
@@ -37,6 +38,8 @@ export class TrainSim {
   }
 
   update(dt: number): void {
+    this.jerk = dt !== 0 ? (this.accel - this.prevAccel) / dt : 0;
+    this.prevAccel = this.accel;
     const tractionFactor =
       1 - Math.min(this.speed / (this.config.maxSpeed * 1.15), 0.95);
     const traction =
@@ -53,14 +56,11 @@ export class TrainSim {
   }
 
   getState(dt: number): TrainState {
-    const jerk = dt !== 0 ? (this.accel - this.prevAccel) / dt : 0;
-    this.prevAccel = this.accel;
-
     return {
       speed: this.speed,
       distance: this.distance,
       accel: this.accel,
-      jerk,
+      jerk: this.jerk,
     };
   }
 
