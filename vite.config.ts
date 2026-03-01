@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from "fs";
-import { join } from "path";
+import { join, resolve } from "path";
 import { defineConfig } from "vite";
 
 const ASSETS_CDN_PLACEHOLDER = "%VITE_ASSETS_CDN_BASE%";
@@ -23,6 +23,11 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 550,
     rollupOptions: {
+      input: {
+        main: resolve(process.cwd(), "index.html"),
+        policy: resolve(process.cwd(), "policy.html"),
+        terms: resolve(process.cwd(), "terms.html"),
+      },
       output: {
         manualChunks(id) {
           const normalizedId = id.split("\\").join("/");
