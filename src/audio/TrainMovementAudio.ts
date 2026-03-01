@@ -62,7 +62,6 @@ export class TrainMovementAudio {
 
   setVolumeScale(scale: number): void {
     this.volumeScale = scale;
-    // singleCurrentVolume or baseVolume will just update naturally in the next update() tick.
   }
 
   private getActiveCount(): number {
@@ -71,7 +70,7 @@ export class TrainMovementAudio {
 
   private getPlayingTrackIndices(): Set<number> {
     return new Set(
-      this.layers.filter((l) => l.phase !== "done").map((l) => l.trackIdx)
+      this.layers.filter((l) => l.phase !== "done").map((l) => l.trackIdx),
     );
   }
 
@@ -92,7 +91,10 @@ export class TrainMovementAudio {
 
     const soundId = howl.play();
     if (soundId === undefined) return;
-    howl.volume(this.baseVolume > 0 ? this.baseVolume / (this.getActiveCount() + 1) : 0, soundId);
+    howl.volume(
+      this.baseVolume > 0 ? this.baseVolume / (this.getActiveCount() + 1) : 0,
+      soundId,
+    );
 
     const layer: Layer = {
       trackIdx,
@@ -111,13 +113,14 @@ export class TrainMovementAudio {
       const l = this.layers.find((x) => x === layer);
       if (!l) return;
       l.loopsDone++;
-              if (l.loopsDone < l.targetLoops) {
-                const nextId = howl.play();
-                if (nextId !== undefined) {
-                  l.soundId = nextId;
-                  const vol = this.getLayerVolume(l);
-                  howl.volume(vol, nextId);
-                  howl.once("end", onEnd);        }
+      if (l.loopsDone < l.targetLoops) {
+        const nextId = howl.play();
+        if (nextId !== undefined) {
+          l.soundId = nextId;
+          const vol = this.getLayerVolume(l);
+          howl.volume(vol, nextId);
+          howl.once("end", onEnd);
+        }
       } else {
         l.phase = "fade_out";
         l.phaseProgress = 0;
@@ -125,7 +128,6 @@ export class TrainMovementAudio {
     };
     howl.once("end", onEnd);
   }
-
 
   private getLayerVolume(layer: Layer): number {
     const activeCount = this.getActiveCount();
@@ -154,7 +156,7 @@ export class TrainMovementAudio {
             this.singleCurrentVolume = clamp(
               this.singleCurrentVolume - dt / releaseFadeSeconds,
               0,
-              0.5
+              0.5,
             );
             howl.volume(this.singleCurrentVolume, this.singleSoundId);
             if (this.singleCurrentVolume <= 0.001) {
@@ -170,12 +172,15 @@ export class TrainMovementAudio {
         }
         return;
       }
+      console.log(this.config.maxTrainSpeed);
+      console.log(speed);
       const speedRatio = clamp(speed / this.config.maxTrainSpeed, 0, 1);
       this.singleCurrentVolume = clamp(
         (this.config.minVolume +
-          (this.config.maxVolume - this.config.minVolume) * speedRatio) * this.volumeScale,
+          (this.config.maxVolume - this.config.minVolume) * speedRatio) *
+          this.volumeScale,
         0,
-        1
+        1,
       );
       if (this.singleSoundId === null) {
         this.singleSoundId = howl.play();
@@ -193,7 +198,7 @@ export class TrainMovementAudio {
       if (releaseFadeSeconds > 0) {
         this.baseVolume = Math.max(
           0,
-          this.baseVolume - dt / releaseFadeSeconds
+          this.baseVolume - dt / releaseFadeSeconds,
         );
       } else {
         this.baseVolume = 0;
@@ -220,9 +225,10 @@ export class TrainMovementAudio {
     const speedRatio = clamp(speed / this.config.maxTrainSpeed, 0, 1);
     this.baseVolume = clamp(
       (this.config.minVolume +
-        (this.config.maxVolume - this.config.minVolume) * speedRatio) * this.volumeScale,
+        (this.config.maxVolume - this.config.minVolume) * speedRatio) *
+        this.volumeScale,
       0,
-      1
+      1,
     );
 
     this.accumulatedTime += dt;

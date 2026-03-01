@@ -77,7 +77,6 @@ export class CameraRig {
     const backOffset = this.spline.isClosed()
       ? this.config.eyeBackOffset
       : Math.min(this.config.eyeBackOffset, Math.max(0, distance));
-    console.log(speed);
     // 0→1 as speed approaches maxSpeed
     const speedFactor = Math.min(speed / this.config.maxSpeed, 1);
 

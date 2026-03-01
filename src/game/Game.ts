@@ -162,7 +162,9 @@ export class Game {
     });
     if (level !== this.currentLoadedLevel) {
       this.sceneSetup.rebuildScene(this.gameState);
-      this.ruleEngine.setLayout(this.sceneSetup.trackLayer.trackEndSet.getLayout());
+      this.ruleEngine.setLayout(
+        this.sceneSetup.trackLayer.trackEndSet.getLayout(),
+      );
       this.currentLoadedLevel = level;
     }
     this.runEndOverlay.reset();
@@ -191,7 +193,9 @@ export class Game {
     this.initUiControls();
     this.initAudio();
     this.initSimulation();
-    this.ruleEngine.setLayout(this.sceneSetup.trackLayer.trackEndSet.getLayout());
+    this.ruleEngine.setLayout(
+      this.sceneSetup.trackLayer.trackEndSet.getLayout(),
+    );
     this.handleResize();
     this.renderer.compile(this.sceneSetup.scene, this.cameraRig.camera);
     this.simulate(0);
@@ -454,7 +458,7 @@ export class Game {
   private initAudio(): void {
     this.trainMovementAudio = new TrainMovementAudio({
       srcs: this.config.audio.movementTrackSrcs,
-      maxTrainSpeed: this.config.train.maxSpeed,
+      maxTrainSpeed: this.config.train.maxSpeed / 3.0,
       movementThreshold: this.config.audio.movementThreshold,
       minVolume: this.config.audio.minVolume,
       maxVolume: this.config.audio.maxVolume,
@@ -463,7 +467,7 @@ export class Game {
     });
     this.brakePressureAudio = new TrainMovementAudio({
       srcs: this.config.audio.brakeTrackSrcs,
-      maxTrainSpeed: 1,
+      maxTrainSpeed: 1.0,
       movementThreshold: this.config.audio.brakePressureThreshold,
       minVolume: this.config.audio.brakeMinVolume,
       maxVolume: this.config.audio.brakeMaxVolume,
@@ -514,8 +518,15 @@ export class Game {
   }
 
   private async showRunEndOverlay(): Promise<void> {
-    const { level, userId, username, elapsedTime, maxLevel, failureReason, status } =
-      this.gameState;
+    const {
+      level,
+      userId,
+      username,
+      elapsedTime,
+      maxLevel,
+      failureReason,
+      status,
+    } = this.gameState;
     const won = status === GameStatus.Won;
     const timeMs = Math.floor(elapsedTime * 1000);
     const nextLevel = level + 1;
@@ -542,7 +553,9 @@ export class Game {
         username,
       });
       submitTrackTime(userId, level, timeMs).then(() => {
-        getFastestTimeForLevel(level).then((r) => this.runEndOverlay.updateRecord(r));
+        getFastestTimeForLevel(level).then((r) =>
+          this.runEndOverlay.updateRecord(r),
+        );
         getPersonalBestForLevel(userId, level).then((pb) =>
           this.runEndOverlay.updatePersonalBest(pb),
         );
@@ -559,7 +572,9 @@ export class Game {
         onLogin,
         username,
       });
-      getFastestTimeForLevel(level).then((r) => this.runEndOverlay.updateRecord(r));
+      getFastestTimeForLevel(level).then((r) =>
+        this.runEndOverlay.updateRecord(r),
+      );
       getPersonalBestForLevel(userId, level).then((pb) =>
         this.runEndOverlay.updatePersonalBest(pb),
       );
