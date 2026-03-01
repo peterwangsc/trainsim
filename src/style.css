@@ -36,7 +36,7 @@ html,
 body,
 #app {
   width: 100%;
-  height: var(--app-dynamic-height, 100dvh);
+  height: var(--app-dynamic-height, 100vh);
   min-height: var(--app-dynamic-height, 100dvh);
   margin: 0;
   overflow: hidden;

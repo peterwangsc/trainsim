@@ -92,12 +92,6 @@ export class Game {
       container,
       this.gameState,
       () => {
-        const el = document.documentElement;
-        if (el.requestFullscreen) {
-          el.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
-        } else if ((el as any).webkitRequestFullscreen) {
-          (el as any).webkitRequestFullscreen();
-        }
         this.start();
         this.startLevel(
           this.gameState.level,
@@ -110,16 +104,7 @@ export class Game {
     window.addEventListener("resize", this.handleResizeBound);
     window.visualViewport?.addEventListener("resize", this.handleResizeBound);
     window.visualViewport?.addEventListener("scroll", this.handleResizeBound);
-    window.addEventListener("orientationchange", () => {
-      if (
-        screen.orientation?.type.startsWith("landscape") &&
-        !document.fullscreenElement
-      ) {
-        document.documentElement
-          .requestFullscreen({ navigationUI: "hide" })
-          .catch(() => {});
-      }
-    });
+    window.addEventListener("orientationchange", this.handleResizeBound);
   }
 
   public async preload(): Promise<void> {
@@ -147,6 +132,7 @@ export class Game {
       "scroll",
       this.handleResizeBound,
     );
+    window.removeEventListener("orientationchange", this.handleResizeBound);
   }
 
   public restart(): void {
@@ -480,8 +466,6 @@ export class Game {
   }
 
   private handleResize(): void {
-    (screen.orientation as any).lock("landscape").catch(() => {});
-
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
 
