@@ -1,5 +1,5 @@
-import { GameState } from "../game/GameState";
-import { login, logout } from "../util/Username";
+import { GameState } from "@/game/GameState";
+import { login, logout } from "@/util/Username";
 
 export class LoginScreen {
   private readonly root: HTMLDivElement;

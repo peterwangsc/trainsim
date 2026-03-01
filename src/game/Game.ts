@@ -1,41 +1,41 @@
 import { MathUtils } from "three";
 import { Howler } from "howler";
-import { CONFIG } from "./Config";
-import { GameLoop } from "./GameLoop";
-import { GameStatus, GameState } from "./GameState";
-import { RuleEngine } from "./RuleEngine";
-import { ComfortModel } from "../sim/ComfortModel";
-import { TrackSampler } from "../sim/TrackSampler";
-import { TrainSim } from "../sim/TrainSim";
-import { DesktopControls } from "../input/DesktopControls";
-import { InputManager } from "../input/InputManager";
-import { CameraRig } from "../render/CameraRig";
-import { Renderer } from "../render/Renderer";
-import { TrainHeadlight } from "../render/TrainHeadlight";
-import { SceneSetup } from "../render/SceneSetup";
-import { CabinChrome } from "../ui/CabinChrome";
-import { HudController } from "../ui/HudController";
-import { IntroSplash } from "../ui/IntroSplash";
-import { RunEndOverlay } from "../ui/RunEndOverlay";
-import { LoginScreen } from "../ui/LoginScreen";
-import { SettingsScreen } from "../ui/SettingsScreen";
-import { ThrottleOverlayCanvas } from "../ui/ThrottleOverlayCanvas";
-import { TrainMovementAudio } from "../audio/TrainMovementAudio";
-import { RandomAmbientAudio } from "../audio/RandomAmbientAudio";
-import { GameMusic } from "../audio/GameMusic";
-import type { CriticalPreloadedAssets } from "../loading/CriticalAssetPreloader";
+import { CONFIG } from "@/game/Config";
+import { GameLoop } from "@/game/GameLoop";
+import { GameStatus, GameState } from "@/game/GameState";
+import { RuleEngine } from "@/game/RuleEngine";
+import { ComfortModel } from "@/sim/ComfortModel";
+import { TrackSampler } from "@/sim/TrackSampler";
+import { TrainSim } from "@/sim/TrainSim";
+import { DesktopControls } from "@/input/DesktopControls";
+import { InputManager } from "@/input/InputManager";
+import { CameraRig } from "@/render/CameraRig";
+import { Renderer } from "@/render/Renderer";
+import { TrainHeadlight } from "@/render/TrainHeadlight";
+import { SceneSetup } from "@/render/SceneSetup";
+import { CabinChrome } from "@/ui/CabinChrome";
+import { HudController } from "@/ui/HudController";
+import { IntroSplash } from "@/ui/IntroSplash";
+import { RunEndOverlay } from "@/ui/RunEndOverlay";
+import { LoginScreen } from "@/ui/LoginScreen";
+import { SettingsScreen } from "@/ui/SettingsScreen";
+import { ThrottleOverlayCanvas } from "@/ui/ThrottleOverlayCanvas";
+import { TrainMovementAudio } from "@/audio/TrainMovementAudio";
+import { RandomAmbientAudio } from "@/audio/RandomAmbientAudio";
+import { GameMusic } from "@/audio/GameMusic";
+import type { CriticalPreloadedAssets } from "@/loading/CriticalAssetPreloader";
 import {
   getOrCreateUserId,
   login,
   saveProgress,
   getUsernameFromLocalStorage,
-} from "../util/Username";
+} from "@/util/Username";
 import {
   submitTrackTime,
   getFastestTimeForLevel,
   getPersonalBestForLevel,
-} from "../util/TrackTimes";
-import { LoadingScreenManager } from "../loading/LoadingScreenManager";
+} from "@/util/TrackTimes";
+import { LoadingScreenManager } from "@/loading/LoadingScreenManager";
 
 export class Game {
   private readonly config: typeof CONFIG;

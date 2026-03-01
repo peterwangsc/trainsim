@@ -20,7 +20,7 @@ import {
   canopyVertexCommon,
   trunkFragmentCommon,
   trunkLightsFragmentBegin,
-} from "./shaders/singleTreeShader";
+} from "@/world/Foliage/shaders/singleTreeShader";
 
 type SingleTreeProps = {
   position: readonly [number, number, number];

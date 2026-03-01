@@ -15,8 +15,8 @@ import {
   Vector3,
   type IUniform
 } from 'three';
-import { stepBoidsCPU } from './boidStep';
-import { birdFragment, birdVertex } from './shaders/birdFlockShader';
+import { stepBoidsCPU } from '@/world/Fauna/boidStep';
+import { birdFragment, birdVertex } from '@/world/Fauna/shaders/birdFlockShader';
 
 type BirdState = {
   pos: Vector3;

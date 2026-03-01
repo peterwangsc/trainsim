@@ -18,14 +18,14 @@ import {
   WebGLRenderer,
   type Material,
 } from "three";
-import { clamp, lerp } from "../util/Math";
+import { clamp, lerp } from "@/util/Math";
 import {
   throttleFragmentCommon,
   throttleMapFragment,
   throttleVertexBegin,
   throttleVertexCommon,
-} from "./shaders/throttleShader";
-import { ASSETS_CDN_BASE } from "../game/Config";
+} from "@/ui/shaders/throttleShader";
+import { ASSETS_CDN_BASE } from "@/game/Config";
 
 const OVERLAY_WIDTH_RATIO = 0.22;
 const OVERLAY_WIDTH_RATIO_COMPACT = 0.19;

@@ -13,14 +13,14 @@ import {
 import {
   directionalFogFragment,
   directionalFogPars,
-} from "./shaders/dayNightSkyShader";
-import type { CONFIG } from "../../game/Config";
-import type { CriticalPreloadedAssets } from "../../loading/CriticalAssetPreloader";
-import { SkyMesh } from "./SkyMesh";
-import { Starfield } from "./Starfield";
-import { SunLight } from "./SunLight";
-import { Moon } from "./Moon";
-import { CloudLayer, type TerrainHeightSampler } from "./CloudLayer";
+} from "@/world/Sky/shaders/dayNightSkyShader";
+import type { CONFIG } from "@/game/Config";
+import type { CriticalPreloadedAssets } from "@/loading/CriticalAssetPreloader";
+import { SkyMesh } from "@/world/Sky/SkyMesh";
+import { Starfield } from "@/world/Sky/Starfield";
+import { SunLight } from "@/world/Sky/SunLight";
+import { Moon } from "@/world/Sky/Moon";
+import { CloudLayer, type TerrainHeightSampler } from "@/world/Sky/CloudLayer";
 
 export class SkyLayer {
   public readonly ambientLight: AmbientLight;

@@ -1,10 +1,10 @@
-import { GameState } from "../game/GameState";
+import { GameState } from "@/game/GameState";
 import {
   CriticalPreloadedAssets,
   preloadCriticalAssets,
-} from "../loading/CriticalAssetPreloader";
-import { LoadingSplash } from "../ui/LoadingSplash";
-import { fetchUserPresetContents, login } from "../util/Username";
+} from "@/loading/CriticalAssetPreloader";
+import { LoadingSplash } from "@/ui/LoadingSplash";
+import { fetchUserPresetContents, login } from "@/util/Username";
 
 export class LoadingScreenManager {
   private container: HTMLElement;
@@ -46,11 +46,11 @@ export class LoadingScreenManager {
       masterVolume: presetContents.masterVolume ?? 0.5,
       musicVolume: presetContents.musicVolume ?? 0.5,
       sfxVolume: presetContents.sfxVolume ?? 0.5,
-    });    // Let the splash screen know the initial sound settings for the sliders
+    });
     this.loadingSplash.setSoundSettings(
       this.gameState.masterVolume,
       this.gameState.musicVolume,
-      this.gameState.sfxVolume
+      this.gameState.sfxVolume,
     );
     this.loadingSplash.setReady();
     return { assets };

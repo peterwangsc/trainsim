@@ -1,8 +1,8 @@
-import { clamp } from "../util/Math";
+import { clamp } from "@/util/Math";
 import type {
   CurvaturePreviewSample,
   MinimapPathPoint,
-} from "../sim/TrackSampler";
+} from "@/sim/TrackSampler";
 
 export class MinimapCurvatureWidget {
   private readonly canvas: HTMLCanvasElement;

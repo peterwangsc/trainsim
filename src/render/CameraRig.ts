@@ -1,5 +1,5 @@
 import { PerspectiveCamera, Vector3 } from "three";
-import { TrackSpline } from "../world/Track/TrackSpline";
+import { TrackSpline } from "@/world/Track/TrackSpline";
 
 export type CameraRigConfig = {
   fov: number;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculateTheoreticalMinimumTimeMs } from "../src/util/minTime";
+import { calculateTheoreticalMinimumTimeMs } from "@/util/minTime";
 
 describe("calculateTheoreticalMinimumTimeMs", () => {
   it("returns a positive finite number for level 1", () => {

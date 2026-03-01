@@ -6,15 +6,15 @@ import {
   Texture,
   Vector3,
 } from "three";
-import { SeededRandom } from "../../util/SeededRandom";
-import { TrackSpline } from "../Track/TrackSpline";
+import { SeededRandom } from "@/util/SeededRandom";
+import { TrackSpline } from "@/world/Track/TrackSpline";
 import {
   getSingleTreeFootprintRadius,
   SingleTreeFactory,
   SingleTreeSpecies,
   SingleTreeTrunkCollider,
-} from "./SingleTree";
-import { CriticalPreloadedAssets } from "../../loading/CriticalAssetPreloader";
+} from "@/world/Foliage/SingleTree";
+import { CriticalPreloadedAssets } from "@/loading/CriticalAssetPreloader";
 
 export type ForestConfig = {
   treeSpacing: number;

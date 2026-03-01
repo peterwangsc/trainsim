@@ -1,14 +1,14 @@
 import { Scene } from "three";
-import { CONFIG } from "../game/Config";
-import { SkyLayer } from "../world/Sky/SkyLayer";
-import { TerrainLayer } from "../world/Terrain/TerrainLayer";
-import { ForestLayer } from "../world/Foliage/ForestLayer";
-import { GrassLayer } from "../world/Foliage/GrassLayer";
-import { BirdFlock } from "../world/Fauna/BirdFlock";
-import { TrackLayer } from "../world/Track/TrackLayer";
-import type { CriticalPreloadedAssets } from "../loading/CriticalAssetPreloader";
+import { CONFIG } from "@/game/Config";
+import { SkyLayer } from "@/world/Sky/SkyLayer";
+import { TerrainLayer } from "@/world/Terrain/TerrainLayer";
+import { ForestLayer } from "@/world/Foliage/ForestLayer";
+import { GrassLayer } from "@/world/Foliage/GrassLayer";
+import { BirdFlock } from "@/world/Fauna/BirdFlock";
+import { TrackLayer } from "@/world/Track/TrackLayer";
+import type { CriticalPreloadedAssets } from "@/loading/CriticalAssetPreloader";
 import type { PerspectiveCamera } from "three";
-import { GameState } from "../game/GameState";
+import { GameState } from "@/game/GameState";
 
 export class SceneSetup {
   public readonly scene: Scene;

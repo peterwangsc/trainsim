@@ -4,8 +4,8 @@ import {
   skyCloudColorReplace,
   skyNoiseFunctions,
   skyUniformsHeader,
-} from "./shaders/dayNightSkyShader";
-import type { CONFIG } from "../../game/Config";
+} from "@/world/Sky/shaders/dayNightSkyShader";
+import type { CONFIG } from "@/game/Config";
 
 export type SkyUniforms = {
   turbidity: { value: number };

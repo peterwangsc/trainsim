@@ -14,15 +14,15 @@ import {
   Vector3,
 } from "three";
 import { ImprovedNoise } from "three/examples/jsm/math/ImprovedNoise.js";
-import { TrackSpline } from "../Track/TrackSpline";
+import { TrackSpline } from "@/world/Track/TrackSpline";
 import {
   terrainFogFragment,
   terrainFragment,
   terrainMapFragment,
   terrainVertex,
   terrainWorldPosVertex,
-} from "./shaders/terrainShader";
-import { CriticalPreloadedAssets } from "../../loading/CriticalAssetPreloader";
+} from "@/world/Terrain/shaders/terrainShader";
+import { CriticalPreloadedAssets } from "@/loading/CriticalAssetPreloader";
 
 export type TerrainConfig = {
   worldSize: number;

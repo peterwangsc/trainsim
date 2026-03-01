@@ -9,6 +9,11 @@ function getAssetsBase(): string {
 }
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": join(process.cwd(), "src"),
+    },
+  },
   base: './',
   server: {
     host: true,

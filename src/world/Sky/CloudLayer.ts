@@ -21,8 +21,8 @@ import {
   spriteCloudOpaqueFragment,
   spriteCloudOutputFragment,
   spriteCloudVertexBase,
-} from "./shaders/dayNightSkyShader";
-import type { CONFIG } from "../../game/Config";
+} from "@/world/Sky/shaders/dayNightSkyShader";
+import type { CONFIG } from "@/game/Config";
 
 export type TerrainHeightSampler = (worldX: number, worldZ: number) => number;
 

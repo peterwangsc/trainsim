@@ -5,14 +5,14 @@ vi.mock("../src/util/Supabase", () => ({
   supabase: { from: vi.fn() },
 }));
 
-import { supabase } from "../src/util/Supabase";
+import { supabase } from "@/util/Supabase";
 import {
   submitTrackTime,
   getPersonalBestForLevel,
   getFastestTimeForLevel,
   getMaxLevelWithTimes,
   getTopTimesForLevels,
-} from "../src/util/TrackTimes";
+} from "@/util/TrackTimes";
 
 // Builds a fluent Supabase query chain whose terminal methods resolve to `result`.
 function makeChain(result: { data?: any; error?: any } = {}) {

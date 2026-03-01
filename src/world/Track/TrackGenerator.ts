@@ -1,7 +1,7 @@
 import { Vector3 } from "three";
-import { CONFIG } from "../../game/Config";
-import { clamp } from "../../util/Math";
-import { GameState } from "../../game/GameState";
+import { CONFIG } from "@/game/Config";
+import { clamp } from "@/util/Math";
+import { GameState } from "@/game/GameState";
 
 export type TrackGeneratorConfig = {
   segmentCount: number;

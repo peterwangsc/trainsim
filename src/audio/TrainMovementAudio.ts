@@ -1,5 +1,5 @@
 import { Howl } from "howler";
-import { clamp } from "../util/Math";
+import { clamp } from "@/util/Math";
 
 export type TrainMovementAudioConfig = {
   srcs: string[];

@@ -18,15 +18,15 @@ import {
   Vector3,
   type IUniform,
 } from "three";
-import { SeededRandom } from "../../util/SeededRandom";
-import { TrackSpline } from "../Track/TrackSpline";
+import { SeededRandom } from "@/util/SeededRandom";
+import { TrackSpline } from "@/world/Track/TrackSpline";
 import {
   grassFragmentCommon,
   grassFragmentMain,
   grassVertexCommon,
   grassVertexMain,
-} from "./shaders/grassShader";
-import { CriticalPreloadedAssets } from "../../loading/CriticalAssetPreloader";
+} from "@/world/Foliage/shaders/grassShader";
+import { CriticalPreloadedAssets } from "@/loading/CriticalAssetPreloader";
 
 export type TerrainHeightSampler = (x: number, z: number) => number;
 export type TrackDistanceSampler = (x: number, z: number) => number;

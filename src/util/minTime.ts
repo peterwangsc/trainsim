@@ -1,8 +1,8 @@
-import { CONFIG } from "../game/Config";
-import { GameState } from "../game/GameState";
-import { TrackGenerator } from "../world/Track/TrackGenerator";
-import { TrackSpline } from "../world/Track/TrackSpline";
-import { TrainSim } from "../sim/TrainSim";
+import { CONFIG } from "@/game/Config";
+import { GameState } from "@/game/GameState";
+import { TrackGenerator } from "@/world/Track/TrackGenerator";
+import { TrackSpline } from "@/world/Track/TrackSpline";
+import { TrainSim } from "@/sim/TrainSim";
 
 /**
  * Computes the theoretical minimum completion time for a given level by

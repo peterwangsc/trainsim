@@ -17,8 +17,8 @@ import {
   Texture,
   Vector3,
 } from "three";
-import { TrackSpline } from "./TrackSpline";
-import { CriticalPreloadedAssets } from "../../loading/CriticalAssetPreloader";
+import { TrackSpline } from "@/world/Track/TrackSpline";
+import { CriticalPreloadedAssets } from "@/loading/CriticalAssetPreloader";
 
 export type TrackEndSetConfig = {
   bumperOffsetFromTrackEnd: number;

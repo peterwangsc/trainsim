@@ -11,7 +11,7 @@ import {
   SRGBColorSpace,
   Vector3,
 } from "three";
-import type { CONFIG } from "../../game/Config";
+import type { CONFIG } from "@/game/Config";
 
 export class Moon {
   public readonly light: DirectionalLight;

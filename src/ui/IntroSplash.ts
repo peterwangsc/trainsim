@@ -1,4 +1,4 @@
-import { ASSETS_CDN_BASE } from "../game/Config";
+import { ASSETS_CDN_BASE } from "@/game/Config";
 
 const SPLASH_FADE_DURATION_MS = 8_000;
 

@@ -1,5 +1,5 @@
-import { GameState } from "../game/GameState";
-import { saveSoundSettings } from "../util/Username";
+import { GameState } from "@/game/GameState";
+import { saveSoundSettings } from "@/util/Username";
 
 function debounce<T extends (...args: any[]) => void>(
   func: T,

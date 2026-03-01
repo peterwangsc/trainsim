@@ -1,7 +1,7 @@
 import { MathUtils } from "three";
-import { CONFIG } from "./Config";
-import { GameState, GameStatus, FailureReason } from "./GameState";
-import { TrackEndLayout } from "../world/Track/TrackEndSet";
+import { CONFIG } from "@/game/Config";
+import { GameState, GameStatus, FailureReason } from "@/game/GameState";
+import { TrackEndLayout } from "@/world/Track/TrackEndSet";
 
 export class RuleEngine {
   private layout: TrackEndLayout | null = null;

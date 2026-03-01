@@ -1,11 +1,11 @@
 import { Group, Scene } from "three";
-import { CONFIG } from "../../game/Config";
-import { GameState } from "../../game/GameState";
-import { CriticalPreloadedAssets } from "../../loading/CriticalAssetPreloader";
-import { TrackGenerator } from "./TrackGenerator";
-import { TrackMeshBuilder } from "./TrackMeshBuilder";
-import { TrackSpline } from "./TrackSpline";
-import { TrackEndSet } from "./TrackEndSet";
+import { CONFIG } from "@/game/Config";
+import { GameState } from "@/game/GameState";
+import { CriticalPreloadedAssets } from "@/loading/CriticalAssetPreloader";
+import { TrackGenerator } from "@/world/Track/TrackGenerator";
+import { TrackMeshBuilder } from "@/world/Track/TrackMeshBuilder";
+import { TrackSpline } from "@/world/Track/TrackSpline";
+import { TrackEndSet } from "@/world/Track/TrackEndSet";
 
 export class TrackLayer {
   public readonly trackSpline!: TrackSpline;

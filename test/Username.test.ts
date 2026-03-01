@@ -4,15 +4,15 @@ vi.mock("../src/util/Supabase", () => ({
   supabase: { from: vi.fn() },
 }));
 
-import { supabase } from "../src/util/Supabase";
+import { supabase } from "@/util/Supabase";
 import {
   login,
   logout,
   saveProgress,
   saveSoundSettings,
   fetchUserPresetContents,
-} from "../src/util/Username";
-import { GameState } from "../src/game/GameState";
+} from "@/util/Username";
+import { GameState } from "@/game/GameState";
 
 // ---------------------------------------------------------------------------
 // localStorage stub

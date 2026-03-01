@@ -11,7 +11,7 @@ import {
   Color,
   Texture,
 } from "three";
-import { TrackSpline } from "./TrackSpline";
+import { TrackSpline } from "@/world/Track/TrackSpline";
 import {
   ballastFragment,
   ballastMapFragment,
@@ -25,8 +25,8 @@ import {
   sleeperMapFragment,
   sleeperVertex,
   sleeperWorldPosVertex,
-} from "./shaders/trackShader";
-import { CriticalPreloadedAssets } from "../../loading/CriticalAssetPreloader";
+} from "@/world/Track/shaders/trackShader";
+import { CriticalPreloadedAssets } from "@/loading/CriticalAssetPreloader";
 
 export type TrackMeshConfig = {
   sampleCountForMesh: number;

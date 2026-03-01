@@ -1,4 +1,4 @@
-import { DesktopControls, type InputState } from "./DesktopControls";
+import { DesktopControls, type InputState } from "@/input/DesktopControls";
 
 export class InputManager {
   private readonly desktopControls: DesktopControls;

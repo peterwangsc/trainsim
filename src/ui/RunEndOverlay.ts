@@ -1,4 +1,4 @@
-import { TrackTimeRecord } from "../util/TrackTimes";
+import { TrackTimeRecord } from "@/util/TrackTimes";
 
 export type RunEndTone = "won" | "failed";
 

@@ -1,5 +1,5 @@
 import { DirectionalLight, MathUtils, Object3D, OrthographicCamera, Color, Vector3 } from "three";
-import type { CONFIG } from "../../game/Config";
+import type { CONFIG } from "@/game/Config";
 
 export class SunLight {
   public readonly light: DirectionalLight;

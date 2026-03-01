@@ -1,4 +1,4 @@
-import { supabase } from "./Supabase";
+import { supabase } from "@/util/Supabase";
 
 export type TrackTimeRecord = {
   username: string;

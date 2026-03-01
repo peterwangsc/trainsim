@@ -1,5 +1,5 @@
-import { GameState } from "../game/GameState";
-import { supabase } from "./Supabase";
+import { GameState } from "@/game/GameState";
+import { supabase } from "@/util/Supabase";
 
 export type LoginResult = {
   userId: string;

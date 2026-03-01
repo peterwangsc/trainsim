@@ -1,7 +1,7 @@
-import { ASSETS_CDN_BASE } from "../game/Config";
-import { GameState } from "../game/GameState";
-import { saveSoundSettings } from "../util/Username";
-import { getMaxLevelWithTimes, getTopTimesForLevels } from "../util/TrackTimes";
+import { ASSETS_CDN_BASE } from "@/game/Config";
+import { GameState } from "@/game/GameState";
+import { saveSoundSettings } from "@/util/Username";
+import { getMaxLevelWithTimes, getTopTimesForLevels } from "@/util/TrackTimes";
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);

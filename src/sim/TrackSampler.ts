@@ -1,7 +1,7 @@
 import { Vector3 } from "three";
-import { clamp } from "../util/Math";
-import { curvatureAtDistance } from "../world/Track/Curvature";
-import { TrackSpline } from "../world/Track/TrackSpline";
+import { clamp } from "@/util/Math";
+import { curvatureAtDistance } from "@/world/Track/Curvature";
+import { TrackSpline } from "@/world/Track/TrackSpline";
 
 const UP = new Vector3(0, 1, 0);
 

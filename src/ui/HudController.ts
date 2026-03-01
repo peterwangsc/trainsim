@@ -1,9 +1,9 @@
-import { GameState, GameStatus } from "../game/GameState";
+import { GameState, GameStatus } from "@/game/GameState";
 import type {
   CurvaturePreviewSample,
   MinimapPathPoint,
-} from "../sim/TrackSampler";
-import { MinimapCurvatureWidget } from "./MinimapCurvatureWidget";
+} from "@/sim/TrackSampler";
+import { MinimapCurvatureWidget } from "@/ui/MinimapCurvatureWidget";
 
 const LOCKED_VIEWPORT_CONTENT =
   "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover";

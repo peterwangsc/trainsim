@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { TrackSpline } from './TrackSpline';
+import { TrackSpline } from '@/world/Track/TrackSpline';
 
 const CURVATURE_SAMPLE_SPAN = 4;
 

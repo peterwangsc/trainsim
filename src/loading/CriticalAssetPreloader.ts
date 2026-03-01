@@ -1,6 +1,6 @@
 import { Howl } from "howler";
 import { RepeatWrapping, SRGBColorSpace, Texture, TextureLoader } from "three";
-import { ASSETS_CDN_BASE, CONFIG } from "../game/Config";
+import { ASSETS_CDN_BASE, CONFIG } from "@/game/Config";
 
 export type CriticalPreloadedAssets = {
   movementHowls: Howl[];
@@ -38,25 +38,7 @@ export async function preloadCriticalAssets(
     throw new Error("Missing first music track source for critical preload.");
   }
 
-  const textureSrcs = [
-    "/textures/simplex-noise.png",
-    "/textures/cloud.png",
-    "/textures/grassleaf.png",
-    "/textures/accentleaf.png",
-    "/textures/dirt_path.png",
-    "/textures/tree_bark.png",
-    "/textures/pine_tree_canopy_foliage.png",
-    "/textures/hilly_grass.png",
-    "/textures/rocky_mountain.png",
-    "/textures/wooden_plank.png",
-    "/textures/brushed_steel_rail.png",
-    "/textures/dark_brushed_metal.png",
-    "/textures/knurled_metal.png",
-    "/textures/concrete_platform.png",
-    "/textures/corrugated_metal_roof.png",
-    "/textures/red_painted_metal.png",
-    "/textures/brick_station_wall.png",
-  ];
+  const textureSrcs = CONFIG.textures;
 
   const totalAssets =
     CONFIG.audio.movementTrackSrcs.length +
@@ -93,8 +75,14 @@ export async function preloadCriticalAssets(
     CONFIG.audio.ambientTrackSrcs.map((src) => track(loadHowl(src))),
   );
 
+  const [musicTrack1Howl, ...loadedTextures] = await Promise.all([
+    track(loadHowl(firstMusicTrackSrc)),
+    ...textureSrcs.map((src) => track(loadTexture(src))),
+  ]);
+
+  loadedTextures.forEach(wrapTexture);
+
   const [
-    musicTrack1Howl,
     simplexNoiseTexture,
     cloudTexture,
     grassLeafTexture,
@@ -112,55 +100,7 @@ export async function preloadCriticalAssets(
     corrugatedMetalRoofTexture,
     redPaintedMetalTexture,
     brickStationWallTexture,
-  ] = await Promise.all([
-    track(loadHowl(firstMusicTrackSrc)),
-    ...textureSrcs.map((src) => track(loadTexture(src))),
-  ]);
-
-  simplexNoiseTexture.wrapS = RepeatWrapping;
-  simplexNoiseTexture.wrapT = RepeatWrapping;
-  cloudTexture.colorSpace = SRGBColorSpace;
-  grassLeafTexture.colorSpace = SRGBColorSpace;
-  grassAccentTexture.colorSpace = SRGBColorSpace;
-  dirtPathTexture.colorSpace = SRGBColorSpace;
-  dirtPathTexture.wrapS = RepeatWrapping;
-  dirtPathTexture.wrapT = RepeatWrapping;
-  treeBarkTexture.colorSpace = SRGBColorSpace;
-  treeBarkTexture.wrapS = RepeatWrapping;
-  treeBarkTexture.wrapT = RepeatWrapping;
-  pineFoliageTexture.colorSpace = SRGBColorSpace;
-  pineFoliageTexture.wrapS = RepeatWrapping;
-  pineFoliageTexture.wrapT = RepeatWrapping;
-  hillyGrassTexture.colorSpace = SRGBColorSpace;
-  hillyGrassTexture.wrapS = RepeatWrapping;
-  hillyGrassTexture.wrapT = RepeatWrapping;
-  rockyMountainTexture.colorSpace = SRGBColorSpace;
-  rockyMountainTexture.wrapS = RepeatWrapping;
-  rockyMountainTexture.wrapT = RepeatWrapping;
-  woodenPlankTexture.colorSpace = SRGBColorSpace;
-  woodenPlankTexture.wrapS = RepeatWrapping;
-  woodenPlankTexture.wrapT = RepeatWrapping;
-  railTexture.colorSpace = SRGBColorSpace;
-  railTexture.wrapS = RepeatWrapping;
-  railTexture.wrapT = RepeatWrapping;
-  darkBrushedMetalTexture.colorSpace = SRGBColorSpace;
-  darkBrushedMetalTexture.wrapS = RepeatWrapping;
-  darkBrushedMetalTexture.wrapT = RepeatWrapping;
-  knurledMetalTexture.colorSpace = SRGBColorSpace;
-  knurledMetalTexture.wrapS = RepeatWrapping;
-  knurledMetalTexture.wrapT = RepeatWrapping;
-  concretePlatformTexture.colorSpace = SRGBColorSpace;
-  concretePlatformTexture.wrapS = RepeatWrapping;
-  concretePlatformTexture.wrapT = RepeatWrapping;
-  corrugatedMetalRoofTexture.colorSpace = SRGBColorSpace;
-  corrugatedMetalRoofTexture.wrapS = RepeatWrapping;
-  corrugatedMetalRoofTexture.wrapT = RepeatWrapping;
-  redPaintedMetalTexture.colorSpace = SRGBColorSpace;
-  redPaintedMetalTexture.wrapS = RepeatWrapping;
-  redPaintedMetalTexture.wrapT = RepeatWrapping;
-  brickStationWallTexture.colorSpace = SRGBColorSpace;
-  brickStationWallTexture.wrapS = RepeatWrapping;
-  brickStationWallTexture.wrapT = RepeatWrapping;
+  ] = loadedTextures;
 
   return {
     movementHowls,
@@ -185,6 +125,13 @@ export async function preloadCriticalAssets(
     redPaintedMetalTexture,
     brickStationWallTexture,
   };
+}
+
+function wrapTexture(texture: Texture): Texture {
+  texture.wrapS = RepeatWrapping;
+  texture.wrapT = RepeatWrapping;
+  texture.colorSpace = SRGBColorSpace;
+  return texture;
 }
 
 function loadTexture(src: string): Promise<Texture> {

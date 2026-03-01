@@ -1,12 +1,12 @@
 import { MathUtils, Vector3 } from "three";
-import { CONFIG } from "../game/Config";
-import { GameState, GameStatus } from "../game/GameState";
-import { preloadCriticalAssets } from "../loading/CriticalAssetPreloader";
-import { Renderer } from "../render/Renderer";
-import { SceneSetup } from "../render/SceneSetup";
-import { TrainHeadlight } from "../render/TrainHeadlight";
-import { FreeCameraController } from "./FreeCameraController";
-import { ZooPanel } from "./ZooPanel";
+import { CONFIG } from "@/game/Config";
+import { GameState, GameStatus } from "@/game/GameState";
+import { preloadCriticalAssets } from "@/loading/CriticalAssetPreloader";
+import { Renderer } from "@/render/Renderer";
+import { SceneSetup } from "@/render/SceneSetup";
+import { TrainHeadlight } from "@/render/TrainHeadlight";
+import { FreeCameraController } from "@/zoo/FreeCameraController";
+import { ZooPanel } from "@/zoo/ZooPanel";
 
 export class ZooPage {
   private renderer!: Renderer;

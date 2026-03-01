@@ -13,8 +13,8 @@ import {
 import {
   starfieldFragment,
   starfieldVertex,
-} from "./shaders/dayNightSkyShader";
-import type { CONFIG } from "../../game/Config";
+} from "@/world/Sky/shaders/dayNightSkyShader";
+import type { CONFIG } from "@/game/Config";
 
 type StarfieldUniforms = {
   time: { value: number };
