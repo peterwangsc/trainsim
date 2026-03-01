@@ -51,7 +51,7 @@ export const CONFIG = {
     ),
     movementThreshold: 0.0,
     minVolume: 0.05,
-    maxVolume: 0.4,
+    maxVolume: 0.38,
     movementReleaseFadeSeconds: 0.5,
     brakeTrackSrcs: Array.from(
       { length: 4 },
@@ -59,7 +59,7 @@ export const CONFIG = {
     ),
     brakePressureThreshold: 0.02,
     brakeMinVolume: 0,
-    brakeMaxVolume: 0.15,
+    brakeMaxVolume: 0.25,
     brakeReleaseFadeSeconds: 0.35,
     ambientTrackSrcs: [
       `${ASSETS_CDN_BASE}/music/ambient1.mp3`,
@@ -67,7 +67,7 @@ export const CONFIG = {
       `${ASSETS_CDN_BASE}/music/ambient3.mp3`,
       `${ASSETS_CDN_BASE}/music/ambient4.mp3`,
     ],
-    ambientVolume: 0.05,
+    ambientVolume: 0.15,
     ambientMinGapMs: 10_000,
     ambientMaxGapMs: 20_000,
     musicTrackSrcs: [

@@ -12,6 +12,8 @@ export type RandomAmbientAudioConfig = {
 
 // Fade duration at the start and end of each play, in milliseconds.
 const FADE_MS = 500;
+const MIN_LOOPS_PER_PLAY = 2;
+const MAX_LOOPS_PER_PLAY = 4;
 
 export class RandomAmbientAudio {
   private currentHowl: Howl | null = null;
@@ -33,7 +35,7 @@ export class RandomAmbientAudio {
       );
     }
 
-    this.volume = clamp(config.volume, 0, 0.2);
+    this.volume = clamp(config.volume, 0, 1.0);
     this.tracks = config.tracks;
     this.preloadedHowls = config.preloadedHowls;
     this.minGapMs = config.minGapMs;
@@ -47,7 +49,10 @@ export class RandomAmbientAudio {
   setVolumeScale(scale: number): void {
     const wasVolume = this.effectiveVolume;
     this.volumeScale = scale;
-    if (this.currentHowl && Math.abs(wasVolume - this.effectiveVolume) > 0.001) {
+    if (
+      this.currentHowl &&
+      Math.abs(wasVolume - this.effectiveVolume) > 0.001
+    ) {
       this.currentHowl.volume(this.effectiveVolume);
     }
   }
@@ -114,17 +119,20 @@ export class RandomAmbientAudio {
         return;
       }
       howl.volume(0, soundId);
+      howl.loop(true, soundId);
       howl.fade(0, this.effectiveVolume, FADE_MS, soundId);
-      this.scheduleFadeOut(howl, soundId);
+      const loopsToPlay = this.pickLoopCount();
+      this.scheduleFadeOut(howl, soundId, loopsToPlay);
     });
 
     howl.play();
   }
 
-  private scheduleFadeOut(howl: Howl, soundId: number): void {
+  private scheduleFadeOut(howl: Howl, soundId: number, loopsToPlay: number): void {
     const durationSec = howl.duration();
     const elapsedMs = (howl.seek() as number) * 1000;
-    const delay = durationSec * 1000 - elapsedMs - FADE_MS;
+    const totalPlayTimeMs = durationSec * 1000 * loopsToPlay;
+    const delay = totalPlayTimeMs - elapsedMs - FADE_MS;
     if (delay <= 0) {
       this.beginFadeOut(howl, soundId);
       return;
@@ -147,8 +155,14 @@ export class RandomAmbientAudio {
 
   private resetHowl(howl: Howl): void {
     howl.off();
+    howl.loop(false);
     howl.stop();
     howl.seek(0);
+  }
+
+  private pickLoopCount(): number {
+    const loopRange = MAX_LOOPS_PER_PLAY - MIN_LOOPS_PER_PLAY + 1;
+    return MIN_LOOPS_PER_PLAY + Math.floor(Math.random() * loopRange);
   }
 
   private pickNextTrackIndex(): number {
