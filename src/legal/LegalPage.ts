@@ -1,8 +1,17 @@
 export class LegalPage {
   constructor(container: HTMLElement, title: string, sections: LegalSection[]) {
-    // Allow text selection on legal pages
+    // Undo game CSS that locks the viewport
+    const docEl = document.documentElement;
+    docEl.style.height = "auto";
+    docEl.style.overflowY = "auto";
+    document.body.style.height = "auto";
+    document.body.style.overflowY = "auto";
     document.body.style.userSelect = "text";
     document.body.style.webkitUserSelect = "text";
+    // #app is position:fixed in the game; make it a normal block for legal pages
+    container.style.position = "static";
+    container.style.width = "100%";
+    container.style.height = "auto";
     document.title = `${title} — TrainSim`;
 
     const root = document.createElement("div");
