@@ -33,12 +33,13 @@
 }
 
 html,
-body,
-#app {
+body {
   margin: 0;
   padding: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -48,6 +49,8 @@ body,
 #app {
   position: fixed;
   inset: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -58,7 +61,7 @@ canvas {
 /* ─── Loading splash ─────────────────────────────────────────────────────────── */
 
 .loading-splash {
-  position: fixed;
+  position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
@@ -308,6 +311,94 @@ canvas {
   }
 }
 
+/* Loading Splash Additions */
+.loading-splash__header {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.loading-splash__credits-btn {
+  pointer-events: auto;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: color 0.2s;
+  padding: 8px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.loading-splash__credits-btn:hover {
+  color: white;
+}
+
+.loading-splash__settings-btn {
+  pointer-events: auto;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.5));
+}
+
+.loading-splash__settings-btn:hover {
+  color: white;
+}
+
+.loading-splash__page {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 10, 15, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: white;
+  z-index: 35;
+  overflow: hidden;
+  padding: 20dvh 4dvw 4dvw 4dvw;
+  flex-direction: column;
+}
+
+.loading-splash__page--visible {
+  display: flex;
+}
+
+.loading-splash__page-title {
+  margin: 0 0 4dvh 0;
+  font-size: clamp(24px, 5dvh, 32px);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.loading-splash__page-content {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
 /* ─── Intro splash ───────────────────────────────────────────────────────────── */
 
 .intro-splash {
@@ -346,7 +437,7 @@ canvas {
 /* ─── Run-end overlay ────────────────────────────────────────────────────────── */
 
 .run-end-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
@@ -536,6 +627,8 @@ canvas {
 .cabin-chrome {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
   z-index: 3;
   overflow: hidden;
@@ -682,6 +775,8 @@ canvas {
 .hud {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
   z-index: 5;
 }
@@ -1412,93 +1507,6 @@ canvas {
     min-height: 64px;
     font-size: clamp(0.6rem, 2.4vw, 0.72rem);
   }
-}
-
-/* Loading Splash Additions */
-.loading-splash__header {
-  position: absolute;
-  top: 24px;
-  left: 24px;
-  right: 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  z-index: 10;
-  pointer-events: none;
-}
-
-.loading-splash__credits-btn {
-  pointer-events: auto;
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.7);
-  font-family: inherit;
-  font-size: 14px;
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  transition: color 0.2s;
-  padding: 8px;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-}
-
-.loading-splash__credits-btn:hover {
-  color: white;
-}
-
-.loading-splash__settings-btn {
-  pointer-events: auto;
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  transition: color 0.2s;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.5));
-}
-
-.loading-splash__settings-btn:hover {
-  color: white;
-}
-
-.loading-splash__page {
-  display: none;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(10, 10, 15, 0.95);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: white;
-  z-index: 5;
-  overflow: hidden;
-  padding: 20dvh 4dvw 4dvw 4dvw;
-  flex-direction: column;
-}
-
-.loading-splash__page--visible {
-  display: flex;
-}
-
-.loading-splash__page-title {
-  margin: 0 0 4dvh 0;
-  font-size: clamp(24px, 5dvh, 32px);
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-}
-
-.loading-splash__page-content {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 /* Settings Page Layout */
