@@ -82,11 +82,12 @@ export class ZooPage {
   }
 
   private positionCameraAtStation(): void {
-    const { stationStartDistance } = this.sceneSetup.trackEndSet.getLayout();
-    const pos = this.sceneSetup.trackSpline.getPositionAtDistance(
+    const { stationStartDistance } =
+      this.sceneSetup.trackLayer.trackEndSet.getLayout();
+    const pos = this.sceneSetup.trackLayer.trackSpline.getPositionAtDistance(
       stationStartDistance - 20,
     );
-    const tangent = this.sceneSetup.trackSpline.getTangentAtDistance(
+    const tangent = this.sceneSetup.trackLayer.trackSpline.getTangentAtDistance(
       stationStartDistance - 20,
     );
     this.freeCam.camera.position.set(pos.x, pos.y + 4, pos.z);
