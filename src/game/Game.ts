@@ -365,6 +365,8 @@ export class Game {
     this.cameraRig.update(
       this.gameState.wrappedDistance,
       this.gameState.speed,
+      this.trainSim.getState(dt).accel,
+      this.trainSim.getControls().brake > 0.01,
       dt,
     );
     this.sceneSetup.update(dt, this.cameraRig.camera);
