@@ -1,0 +1,326 @@
+/* ─── Responsive — tablet ────────────────────────────────────────────────────── */
+
+@media (max-width: 1023px) {
+  .hud {
+    --hud-minimap-width: min(218px, 30vw);
+  }
+
+  .cabin-chrome__sill::before {
+    width: clamp(108px, 30vw, 300px);
+    height: clamp(12px, 2.5dvh, 28px);
+  }
+
+  .cabin-chrome__glass-sheen {
+    top: clamp(34px, 5.8dvh, 74px);
+    left: clamp(10px, 2.1vw, 22px);
+    right: clamp(10px, 2.1vw, 22px);
+    bottom: clamp(28px, 5.2dvh, 64px);
+  }
+
+  .hud-bottom-center {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    gap: 7px;
+    width: min(92vw, 620px);
+  }
+
+  .hud-status-banner {
+    padding: 6px 14px 6px 16px;
+    font-size: clamp(0.64rem, 1.25vw, 0.8rem);
+  }
+
+  .hud-top-row {
+    gap: 10px;
+  }
+
+  .hud-preview-cluster {
+    gap: 8px;
+  }
+
+  .hud-speed-floating {
+    top: 7px;
+    right: 7px;
+  }
+
+  .hud-speed-value {
+    font-size: clamp(1.35rem, 2.9vw, 1.95rem);
+  }
+
+  .hud-speed-unit {
+    font-size: clamp(0.66rem, 1.35vw, 0.82rem);
+  }
+
+  .minimap-canvas {
+    height: 98px;
+  }
+
+  .hud-top-actions {
+    gap: 6px;
+  }
+
+  .username-display {
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .username-display:hover {
+    color: var(--text-bright);
+  }
+
+  .hud-settings-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  .speed-limit-sign {
+    width: clamp(38px, 7.3vw, 56px);
+    min-height: 62px;
+    border-width: 3px;
+    padding: 6px 5px;
+    border-radius: 3px;
+  }
+
+  .speed-limit-label {
+    font-size: 0.42rem;
+  }
+
+  .speed-limit-value {
+    margin-top: 4px;
+    font-size: clamp(1.05rem, 2.5vw, 1.45rem);
+  }
+
+  .speed-limit-unit {
+    margin-top: 2px;
+    font-size: 0.44rem;
+  }
+
+  .hud-time-cluster {
+    padding: 6px 10px;
+  }
+
+  .hud-time-label {
+    font-size: 0.5rem;
+  }
+
+  .hud-time-value {
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+  }
+
+  .comfort-gauge-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 0.62rem;
+  }
+
+  .comfort-gauge-track {
+    height: 12px;
+  }
+
+  .brake-button {
+    width: min(20vw, 92px);
+    height: min(20vw, 92px);
+    min-width: 72px;
+    min-height: 72px;
+    font-size: clamp(0.66rem, 1.8vw, 0.78rem);
+    letter-spacing: 0.1em;
+  }
+}
+
+/* ─── Responsive — mobile ────────────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .hud {
+    --hud-minimap-width: min(108px, 32vw);
+  }
+
+  .hud-bottom-center {
+    bottom: max(8px, env(safe-area-inset-bottom));
+    gap: 6px;
+    width: min(96vw, 620px);
+  }
+
+  .hud-status-banner {
+    padding: 5px 10px 5px 12px;
+    font-size: clamp(0.58rem, 2.2vw, 0.72rem);
+  }
+
+  .hud-top-row {
+    gap: 6px;
+  }
+
+  .hud-preview-cluster {
+    gap: 6px;
+  }
+
+  .hud-speed-floating {
+    top: 6px;
+    right: 6px;
+  }
+
+  .minimap-canvas {
+    height: 60px;
+  }
+
+  .loading-splash__cta-container {
+    bottom: -72px;
+  }
+
+  .hud-top-actions {
+    gap: 5px;
+  }
+
+  .username-display {
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .username-display:hover {
+    color: var(--text-bright);
+  }
+
+  .hud-settings-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  .speed-limit-sign {
+    width: 44px;
+    min-height: 56px;
+    border-width: 3px;
+    padding: 6px 4px;
+  }
+
+  .speed-limit-label {
+    font-size: 0.34rem;
+  }
+
+  .speed-limit-value {
+    margin-top: 4px;
+    font-size: clamp(0.78rem, 3vw, 0.95rem);
+  }
+
+  .speed-limit-unit {
+    margin-top: 2px;
+    font-size: 0.34rem;
+  }
+
+  .hud-time-cluster {
+    padding: 4px 6px;
+  }
+
+  .hud-time-label {
+    font-size: 0.38rem;
+  }
+
+  .hud-time-value {
+    font-size: 0.7rem;
+    margin-bottom: 2px;
+  }
+
+  .comfort-gauge-icon {
+    width: 14px;
+    height: 14px;
+    font-size: 0.55rem;
+  }
+
+  .comfort-gauge-track {
+    height: 10px;
+  }
+
+  .brake-button {
+    width: min(10vw, 72px);
+    height: min(10vw, 72px);
+    min-width: 64px;
+    min-height: 64px;
+    font-size: clamp(0.6rem, 2.4vw, 0.72rem);
+  }
+}
+
+@media (max-width: 720px) and (orientation: portrait) {
+  .hud {
+    --hud-minimap-width: min(156px, 46vw);
+  }
+
+  .minimap-canvas {
+    height: 72px;
+  }
+
+  .hud-top-row {
+    gap: 8px;
+  }
+
+  .hud-preview-cluster {
+    gap: 8px;
+  }
+
+  .hud-speed-floating {
+    top: 7px;
+    right: 7px;
+  }
+
+  .hud-speed-value {
+    font-size: clamp(1.05rem, 5vw, 1.4rem);
+  }
+
+  .hud-speed-unit {
+    font-size: clamp(0.52rem, 2.2vw, 0.66rem);
+  }
+
+  .speed-limit-sign {
+    width: 52px;
+    min-height: 64px;
+    padding: 7px 5px;
+  }
+
+  .speed-limit-label {
+    font-size: 0.38rem;
+  }
+
+  .speed-limit-value {
+    font-size: clamp(0.95rem, 4.2vw, 1.2rem);
+  }
+
+  .speed-limit-unit {
+    font-size: 0.38rem;
+  }
+
+  .comfort-gauge-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 0.62rem;
+  }
+
+  .comfort-gauge-track {
+    height: 12px;
+  }
+
+  .brake-button {
+    width: clamp(78px, 22vw, 104px);
+    height: clamp(78px, 22vw, 104px);
+    min-width: 78px;
+    min-height: 78px;
+    font-size: clamp(0.68rem, 2.9vw, 0.82rem);
+  }
+}
+
+@media (max-width: 768px) {
+  .settings-layout {
+    flex-direction: column;
+    gap: 2dvh;
+  }
+
+  .loading-splash__page {
+    padding-top: 10dvh;
+  }
+}
+
+@media (max-width: 650px) and (orientation: portrait) {
+  .settings-panel__content {
+    flex-direction: column;
+    gap: 24px;
+  }
+}

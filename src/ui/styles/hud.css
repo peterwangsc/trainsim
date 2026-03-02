@@ -1,0 +1,454 @@
+/* ─── HUD ────────────────────────────────────────────────────────────────────── */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  --hud-side-offset-left: var(--ui-window-safe-left);
+  --hud-side-offset-right: var(--ui-window-safe-right);
+  --hud-top-align-offset: var(--ui-window-safe-top);
+  --hud-minimap-width: min(260px, 33vw);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.hud-bottom-center {
+  position: absolute;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(92vw, 720px);
+}
+
+/* Status banner — angular instrument style */
+.hud-status-banner {
+  width: 100%;
+  max-width: min(92vw, 720px);
+  padding: 7px 18px 7px 20px;
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--accent-blue);
+  border-radius: 2px;
+  background: rgb(9 18 30 / 72%);
+  color: var(--text-primary);
+  text-align: center;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: clamp(0.72rem, 1.2vw, 0.88rem);
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 4px rgb(0 0 0 / 40%);
+  box-shadow:
+    0 8px 20px rgb(0 0 0 / 28%),
+    inset 0 1px 0 rgb(160 210 255 / 8%);
+  backdrop-filter: blur(3px);
+}
+
+.hud-status-banner.is-running {
+  border-left-color: var(--accent-blue);
+  background: rgb(9 20 34 / 72%);
+}
+
+.hud-status-banner.is-won {
+  border-left-color: var(--accent-green);
+  border-color: rgb(82 204 126 / 28%);
+  background: rgb(6 28 18 / 78%);
+  color: rgb(180 248 208 / 98%);
+  box-shadow:
+    0 8px 20px rgb(0 0 0 / 28%),
+    0 0 20px rgb(52 180 100 / 12%);
+}
+
+.hud-status-banner.is-failed {
+  border-left-color: var(--accent-red);
+  border-color: rgb(217 72 72 / 28%);
+  background: rgb(38 8 8 / 78%);
+  color: rgb(255 216 216 / 99%);
+  box-shadow:
+    0 8px 20px rgb(0 0 0 / 28%),
+    0 0 20px rgb(180 40 40 / 12%);
+}
+
+/* Preview cluster (minimap region) */
+.hud-top-row {
+  position: absolute;
+  top: var(--hud-top-align-offset);
+  left: var(--hud-side-offset-left);
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.hud-preview-cluster {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+/* Speed display */
+.hud-speed {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  --hud-speed-dynamic-color: var(--text-bright);
+  color: var(--text-bright);
+  line-height: 1;
+}
+
+.hud-speed-floating {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.hud-speed-value {
+  font-family: var(--font-ui);
+  font-size: clamp(1.7rem, 3.2vw, 2.4rem);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--hud-speed-dynamic-color);
+  text-shadow: 0 0 18px rgb(180 220 255 / 24%);
+}
+
+.hud-speed-unit {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: clamp(0.72rem, 1.4vw, 0.88rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hud-speed-dynamic-color);
+  margin-bottom: 3px;
+}
+
+/* Minimap */
+#minimap-container {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.minimap-canvas {
+  width: var(--hud-minimap-width);
+  height: 118px;
+  border-radius: 3px;
+  border: none;
+  background: linear-gradient(
+    180deg,
+    rgb(26 42 64 / 62%) 0%,
+    rgb(8 18 32 / 6%) 100%
+  );
+  box-shadow:
+    0 0 0 1px var(--border-subtle),
+    0 4px 12px rgb(0 0 0 / 22%);
+}
+
+.hud-top-actions {
+  position: fixed;
+  top: var(--hud-top-align-offset);
+  right: var(--hud-side-offset-right);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+.username-display,
+.hud-settings-btn {
+  background: rgba(15, 25, 40, 0.85);
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: none;
+  box-shadow:
+    0 0 0 1px var(--border-subtle),
+    0 4px 12px rgb(0 0 0 / 22%);
+  transition:
+    color 0.2s,
+    background 0.2s;
+}
+
+.username-display {
+  padding: 6px 12px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hud-settings-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.username-display:hover,
+.hud-settings-btn:hover {
+  color: var(--text-bright);
+  background: rgba(25, 40, 65, 0.95);
+}
+
+.username-display::before {
+  display: none;
+}
+
+/* Speed-limit sign */
+.speed-limit-sign {
+  align-self: flex-start;
+  width: clamp(42px, 8.5vw, 68px);
+  min-height: 76px;
+  border-radius: 4px;
+  padding: 8px 7px 8px;
+  background: #f8faff;
+  color: #0d0d0d;
+  border: 4px solid #111;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow:
+    0 8px 18px rgb(0 0 0 / 36%),
+    inset 0 1px 0 rgb(255 255 255 / 60%);
+}
+
+.speed-limit-label {
+  font-family: var(--font-ui);
+  font-size: 0.48rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+}
+
+.speed-limit-value {
+  margin-top: 5px;
+  font-family: var(--font-ui);
+  font-size: clamp(1.45rem, 3vw, 1.9rem);
+  font-weight: 400;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.speed-limit-unit {
+  margin-top: 4px;
+  font-family: var(--font-ui);
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Time cluster */
+.hud-time-cluster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: rgb(9 18 30 / 72%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 8px 12px;
+  box-shadow:
+    0 8px 18px rgb(0 0 0 / 36%),
+    inset 0 1px 0 rgb(160 210 255 / 8%);
+  backdrop-filter: blur(3px);
+}
+
+.hud-time-label {
+  font-family: var(--font-ui);
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+
+.hud-time-value {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--text-bright);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 6px;
+}
+
+.hud-time-label--eta {
+  color: var(--accent-amber);
+  margin-top: 2px;
+}
+
+.hud-time-value--eta {
+  color: var(--accent-amber);
+  margin-bottom: 0;
+}
+
+/* Comfort gauge */
+.comfort-gauge {
+  position: relative;
+  align-self: flex-end;
+  width: var(--hud-minimap-width);
+  color: var(--text-bright);
+}
+
+.comfort-gauge-icon {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translate(calc(100% + 8px), -50%);
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  color: #6bcf84;
+  font-size: 0.72rem;
+  border: 1px solid rgb(107 207 132 / 65%);
+  border-radius: 999px;
+  background: rgb(8 22 14 / 85%);
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgb(107 207 132 / 45%));
+}
+
+.comfort-gauge-icon-glyph {
+  display: block;
+  line-height: 1;
+  transform: translateY(1px);
+}
+
+.comfort-gauge-track {
+  position: relative;
+  width: 100%;
+  height: 14px;
+  border-radius: 3px;
+  background: rgb(5 12 20 / 80%);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 3px rgb(0 0 0 / 55%),
+    0 3px 10px rgb(0 0 0 / 26%);
+}
+
+/* tick marks */
+.comfort-gauge-track::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to right,
+    rgb(255 255 255 / 0%) 0 10px,
+    rgb(255 255 255 / 20%) 10px 11px,
+    rgb(255 255 255 / 0%) 11px 21px,
+    rgb(255 255 255 / 8%) 21px 22px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.comfort-gauge-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    #cc4848 0%,
+    #e09640 26%,
+    #a8d456 55%,
+    #52cc7e 100%
+  );
+  transition: width 180ms linear;
+}
+
+.comfort-gauge.is-warning .comfort-gauge-icon {
+  color: #f5c84a;
+  filter: drop-shadow(0 0 6px rgb(245 200 74 / 45%));
+}
+
+.comfort-gauge.is-low .comfort-gauge-icon {
+  color: #f08080;
+  filter: drop-shadow(0 0 6px rgb(240 128 128 / 45%));
+}
+
+/* ─── Throttle overlay ───────────────────────────────────────────────────────── */
+
+.throttle-overlay-canvas {
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* ─── Brake button ───────────────────────────────────────────────────────────── */
+
+.brake-button {
+  position: absolute;
+  right: var(--ui-control-safe-right);
+  bottom: var(--ui-control-safe-bottom);
+  width: 122px;
+  height: 122px;
+  border-radius: 999px;
+  border: 2px solid rgb(255 200 200 / 60%);
+  background:
+    radial-gradient(
+      circle at 35% 28%,
+      rgb(255 155 155 / 36%) 0%,
+      transparent 44%
+    ),
+    linear-gradient(160deg, rgb(195 46 46 / 96%), rgb(88 8 8 / 97%));
+  color: #ffeaec;
+  font-family: var(--font-ui);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow:
+    inset 0 1px 0 rgb(255 200 200 / 30%),
+    inset 0 -3px 10px rgb(40 0 0 / 40%),
+    0 0 0 4px rgb(180 30 30 / 18%),
+    0 10px 24px rgb(0 0 0 / 44%);
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  transition:
+    transform 90ms ease,
+    box-shadow 120ms ease,
+    filter 120ms ease;
+}
+
+.brake-button.is-pressed {
+  transform: translateY(1px) scale(0.97);
+  box-shadow:
+    inset 0 2px 8px rgb(50 0 0 / 44%),
+    inset 0 -1px 0 rgb(255 210 210 / 24%),
+    0 0 0 4px rgb(180 30 30 / 14%),
+    0 5px 14px rgb(0 0 0 / 34%);
+}
+
+.brake-button.is-braking {
+  filter: brightness(1.12) saturate(1.2);
+  box-shadow:
+    inset 0 1px 0 rgb(255 200 200 / 36%),
+    inset 0 -3px 10px rgb(40 0 0 / 36%),
+    0 0 0 3px rgb(220 90 90 / 38%),
+    0 0 22px rgb(220 60 60 / 30%),
+    0 12px 24px rgb(0 0 0 / 46%);
+}
